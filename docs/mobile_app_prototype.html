@@ -1,0 +1,1145 @@
+<div style="background: var(--color-background-secondary); border-radius: var(--border-radius-lg); padding: 2rem; display: flex; justify-content: center;">
+  <div id="phone" style="width: 360px; height: 780px; background: #0a0a0a; border-radius: 32px; border: 0.5px solid var(--color-border-secondary); overflow: hidden; font-family: var(--font-sans); color: #e8e8e8; position: relative;">
+
+<div class="statusbar" style="display: flex; justify-content: space-between; align-items: center; padding: 14px 24px 6px; font-size: 12px; color: #888; position: sticky; top: 0; background: #0a0a0a; z-index: 5;">
+  <span>9:41</span>
+  <span style="letter-spacing: 1px;">•••</span>
+</div>
+
+<div id="screens" style="position: absolute; top: 32px; left: 0; right: 0; bottom: 0; overflow: hidden;">
+
+<div id="screen-dashboard" class="screen" style="display: block; position: absolute; inset: 0; overflow-y: auto;">
+  <div style="padding: 18px 24px 8px; display: flex; align-items: center; justify-content: space-between;">
+    <div style="display: flex; align-items: center; gap: 12px;">
+      <div style="font-size: 34px; color: #EF9F27; line-height: 1; font-weight: 400;">紐</div>
+      <div>
+        <div style="font-size: 22px; font-weight: 500; color: #fafafa; line-height: 1;">Himo</div>
+        <div style="font-size: 10px; color: #666; letter-spacing: 1.5px; text-transform: uppercase; margin-top: 4px;">проверка кабеля</div>
+      </div>
+    </div>
+    <button class="ble-badge" onclick="toggleBle(event)" style="display: flex; align-items: center; gap: 6px; padding: 6px 10px; background: rgba(239,159,39,0.1); border: 0.5px solid rgba(239,159,39,0.4); border-radius: 20px; cursor: pointer; font-family: var(--font-sans);">
+      <div style="width: 6px; height: 6px; border-radius: 50%; background: #EF9F27;"></div>
+      <span style="font-size: 11px; color: #EF9F27; font-weight: 500;">BLE</span>
+    </button>
+  </div>
+
+  <div style="padding: 14px 24px 12px;">
+    <div style="background: #111; border: 0.5px solid #1f1f1f; border-radius: 12px; padding: 16px;">
+      <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
+        <div>
+          <div style="font-size: 10px; color: #666; text-transform: uppercase; letter-spacing: 1.5px;">Коллекция</div>
+          <div style="font-size: 26px; font-weight: 500; color: #fafafa; margin-top: 2px;">24 <span style="font-size: 12px; color: #666; font-weight: 400;">кабеля</span></div>
+        </div>
+        <div style="text-align: right;">
+          <div style="font-size: 10px; color: #666; text-transform: uppercase; letter-spacing: 1.5px;">Последняя</div>
+          <div style="font-size: 12px; color: #aaa; margin-top: 6px;">2 часа назад</div>
+        </div>
+      </div>
+      <div style="display: flex; gap: 4px; height: 4px; border-radius: 2px; overflow: hidden; margin-bottom: 8px;">
+        <div style="flex: 18; background: #639922;"></div>
+        <div style="flex: 4; background: #EF9F27;"></div>
+        <div style="flex: 2; background: #E24B4A;"></div>
+      </div>
+      <div style="display: flex; justify-content: space-between; font-size: 10px; color: #888;">
+        <span><span style="color: #97C459;">●</span> 18 исправны</span>
+        <span><span style="color: #EF9F27;">●</span> 4 внимание</span>
+        <span><span style="color: #E24B4A;">●</span> 2 брак</span>
+      </div>
+    </div>
+  </div>
+
+  <div style="padding: 4px 24px 12px;">
+    <button onclick="goto('testSetup')" style="width: 100%; background: #EF9F27; color: #2a1a00; border: none; border-radius: 12px; padding: 16px; font-size: 14px; font-weight: 500; font-family: var(--font-sans); cursor: pointer; display: flex; align-items: center; justify-content: space-between;">
+      <span style="display: flex; align-items: center; gap: 10px;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2a1a00" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M10 8l6 4-6 4V8z" fill="#2a1a00"/></svg>
+        Запустить тестирование
+      </span>
+      <span style="font-size: 16px;">→</span>
+    </button>
+  </div>
+
+  <div style="padding: 0 24px 14px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+    <button onclick="goto('collection')" style="background: #111; border: 0.5px solid #1f1f1f; border-radius: 12px; padding: 14px 12px; text-align: left; cursor: pointer; color: #e8e8e8; font-family: var(--font-sans);">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#EF9F27" stroke-width="1.8" stroke-linecap="round" style="margin-bottom: 8px;"><rect x="3" y="4" width="18" height="4" rx="1"/><rect x="3" y="10" width="18" height="4" rx="1"/><rect x="3" y="16" width="18" height="4" rx="1"/></svg>
+      <div style="font-size: 12px; font-weight: 500; color: #fafafa;">Коллекция</div>
+      <div style="font-size: 10px; color: #666; margin-top: 2px;">Все кабели</div>
+    </button>
+    <button onclick="goto('device')" style="background: #111; border: 0.5px solid #1f1f1f; border-radius: 12px; padding: 14px 12px; text-align: left; cursor: pointer; color: #e8e8e8; font-family: var(--font-sans);">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#EF9F27" stroke-width="1.8" stroke-linecap="round" style="margin-bottom: 8px;"><rect x="5" y="7" width="15" height="10" rx="2"/><path d="M20 11v2"/><path d="M8 11v2M12 10v4"/></svg>
+      <div style="font-size: 12px; font-weight: 500; color: #fafafa;">Устройство</div>
+      <div style="font-size: 10px; color: #666; margin-top: 2px;">78% · откалибровано</div>
+    </button>
+  </div>
+
+  <div style="padding: 0 24px 80px;">
+    <div style="font-size: 10px; color: #666; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 10px;">Последние проверки</div>
+    <div style="display: flex; flex-direction: column; gap: 6px;">
+      <button onclick="goto('cableDetail')" style="background: #111; border: 0.5px solid #1f1f1f; border-radius: 10px; padding: 10px 12px; cursor: pointer; font-family: var(--font-sans); text-align: left; display: flex; align-items: center; gap: 12px;">
+        <div style="width: 7px; height: 28px; border-radius: 3px; background: #639922;"></div>
+        <div style="flex: 1; min-width: 0;">
+          <div style="font-size: 12px; font-weight: 500; color: #fafafa;">Mogami #1 · XLR</div>
+          <div style="font-size: 10px; color: #666;">CMRR 68 дБ · 2 часа назад</div>
+        </div>
+        <span style="font-size: 14px; color: #444;">›</span>
+      </button>
+      <button onclick="goto('cableDetail')" style="background: #111; border: 0.5px solid #1f1f1f; border-radius: 10px; padding: 10px 12px; cursor: pointer; font-family: var(--font-sans); text-align: left; display: flex; align-items: center; gap: 12px;">
+        <div style="width: 7px; height: 28px; border-radius: 3px; background: #EF9F27;"></div>
+        <div style="flex: 1; min-width: 0;">
+          <div style="font-size: 12px; font-weight: 500; color: #fafafa;">Гитарный длинный · Jack</div>
+          <div style="font-size: 10px; color: #666;">сопр. растёт · вчера</div>
+        </div>
+        <span style="font-size: 14px; color: #444;">›</span>
+      </button>
+      <button onclick="goto('cableDetail')" style="background: #111; border: 0.5px solid #1f1f1f; border-radius: 10px; padding: 10px 12px; cursor: pointer; font-family: var(--font-sans); text-align: left; display: flex; align-items: center; gap: 12px;">
+        <div style="width: 7px; height: 28px; border-radius: 3px; background: #E24B4A;"></div>
+        <div style="flex: 1; min-width: 0;">
+          <div style="font-size: 12px; font-weight: 500; color: #fafafa;">XLR #07 · XLR</div>
+          <div style="font-size: 10px; color: #666;">обрыв pin 3 · 3 дня</div>
+        </div>
+        <span style="font-size: 14px; color: #444;">›</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<div id="screen-testSetup" class="screen" style="display: none; position: absolute; inset: 0; overflow-y: auto;">
+  <div style="padding: 12px 20px 6px; display: flex; align-items: center; justify-content: space-between;">
+    <button onclick="goto('dashboard')" style="background: transparent; border: none; color: #888; font-size: 22px; cursor: pointer; padding: 4px 8px; font-family: var(--font-sans);">‹</button>
+    <div style="font-size: 14px; font-weight: 500; color: #fafafa;">Новый тест</div>
+    <button class="ble-badge" onclick="toggleBle(event)" style="display: flex; align-items: center; gap: 5px; padding: 5px 9px; background: rgba(239,159,39,0.1); border: 0.5px solid rgba(239,159,39,0.4); border-radius: 20px; cursor: pointer;">
+      <div style="width: 5px; height: 5px; border-radius: 50%; background: #EF9F27;"></div>
+      <span style="font-size: 10px; color: #EF9F27; font-weight: 500;">BLE</span>
+    </button>
+  </div>
+
+  <div style="padding: 14px 24px 6px;">
+    <div style="font-size: 10px; color: #666; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 10px;">1 · Тип кабеля</div>
+    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px;">
+      <button id="type-ts" onclick="selectType('ts')" class="type-btn" style="background: rgba(239,159,39,0.08); border: 0.5px solid #EF9F27; border-radius: 10px; padding: 12px 6px; cursor: pointer; font-family: var(--font-sans); display: flex; flex-direction: column; align-items: center; gap: 6px;">
+        <svg width="26" height="26" viewBox="0 0 40 28"><rect x="2" y="11" width="10" height="6" rx="0.5" fill="none" stroke="#888" stroke-width="0.8"/><rect x="12" y="9" width="3" height="10" rx="0.5" fill="#666"/><rect x="15" y="11" width="22" height="6" rx="0.5" fill="none" stroke="#EF9F27" stroke-width="1.2"/><rect x="32" y="11" width="0.8" height="6" fill="#EF9F27"/><circle cx="37" cy="14" r="1.5" fill="#EF9F27"/></svg>
+        <div style="font-size: 11px; font-weight: 500; color: #fafafa;">Jack TS</div>
+      </button>
+      <button id="type-trs" onclick="selectType('trs')" class="type-btn" style="background: #111; border: 0.5px solid #1f1f1f; border-radius: 10px; padding: 12px 6px; cursor: pointer; font-family: var(--font-sans); display: flex; flex-direction: column; align-items: center; gap: 6px;">
+        <svg width="26" height="26" viewBox="0 0 40 28"><rect x="2" y="11" width="10" height="6" rx="0.5" fill="none" stroke="#555" stroke-width="0.8"/><rect x="12" y="9" width="3" height="10" rx="0.5" fill="#444"/><rect x="15" y="11" width="22" height="6" rx="0.5" fill="none" stroke="#666" stroke-width="1.2"/><rect x="28" y="11" width="0.8" height="6" fill="#666"/><rect x="32" y="11" width="0.8" height="6" fill="#666"/><circle cx="37" cy="14" r="1.5" fill="#666"/></svg>
+        <div style="font-size: 11px; font-weight: 500; color: #aaa;">Jack TRS</div>
+      </button>
+      <button id="type-xlr" onclick="selectType('xlr')" class="type-btn" style="background: #111; border: 0.5px solid #1f1f1f; border-radius: 10px; padding: 12px 6px; cursor: pointer; font-family: var(--font-sans); display: flex; flex-direction: column; align-items: center; gap: 6px;">
+        <svg width="26" height="26" viewBox="0 0 40 28"><rect x="2" y="9" width="11" height="10" rx="1" fill="none" stroke="#555" stroke-width="0.8"/><circle cx="22" cy="14" r="7" fill="none" stroke="#666" stroke-width="1.2"/><circle cx="22" cy="11" r="1.1" fill="#666"/><circle cx="19.5" cy="16" r="1.1" fill="#666"/><circle cx="24.5" cy="16" r="1.1" fill="#666"/><rect x="29" y="13" width="9" height="2" fill="#444"/></svg>
+        <div style="font-size: 11px; font-weight: 500; color: #aaa;">XLR</div>
+      </button>
+    </div>
+  </div>
+
+  <div style="padding: 14px 24px 6px;">
+    <div style="font-size: 10px; color: #666; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 10px;">2 · Подключение</div>
+    <div style="background: #111; border: 0.5px solid #1f1f1f; border-radius: 12px; padding: 14px;">
+      <div style="font-size: 11px; color: #aaa; text-align: center; line-height: 1.5;">Подключите оба конца кабеля к разъёмам <span style="color: #EF9F27;">A</span> и <span style="color: #EF9F27;">B</span> на приборе</div>
+    </div>
+  </div>
+
+  <div style="padding: 14px 24px 6px;">
+    <div style="font-size: 10px; color: #666; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 10px;">3 · Будут выполнены тесты</div>
+    <div style="display: flex; flex-direction: column; gap: 6px;">
+      <div style="display: flex; align-items: center; gap: 10px; padding: 10px 12px; background: #111; border: 0.5px solid #1f1f1f; border-radius: 10px;">
+        <div style="width: 22px; height: 22px; border-radius: 50%; background: rgba(239,159,39,0.1); border: 0.5px solid rgba(239,159,39,0.4); display: flex; align-items: center; justify-content: center; font-size: 10px; color: #EF9F27; font-weight: 500;">1</div>
+        <div style="flex: 1; font-size: 12px; font-weight: 500; color: #fafafa;">Целостность</div>
+        <span style="font-size: 10px; color: #555;">~3с</span>
+      </div>
+      <div id="setup-cmrr" style="display: flex; align-items: center; gap: 10px; padding: 10px 12px; background: #0d0d0d; border: 0.5px solid #1a1a1a; border-radius: 10px; opacity: 0.55;">
+        <div id="setup-cmrr-num" style="width: 22px; height: 22px; border-radius: 50%; background: #1a1a1a; border: 0.5px solid #2a2a2a; display: flex; align-items: center; justify-content: center; font-size: 10px; color: #555; font-weight: 500;">2</div>
+        <div style="flex: 1;">
+          <span id="setup-cmrr-title" style="font-size: 12px; font-weight: 500; color: #888;">CMRR</span>
+          <span id="setup-cmrr-tag" style="font-size: 10px; color: #444;"> · только балансные</span>
+        </div>
+        <span style="font-size: 10px; color: #444;">~5с</span>
+      </div>
+      <div style="display: flex; align-items: center; gap: 10px; padding: 10px 12px; background: #111; border: 0.5px solid #1f1f1f; border-radius: 10px;">
+        <div style="width: 22px; height: 22px; border-radius: 50%; background: rgba(239,159,39,0.1); border: 0.5px solid rgba(239,159,39,0.4); display: flex; align-items: center; justify-content: center; font-size: 10px; color: #EF9F27; font-weight: 500;">3</div>
+        <div style="flex: 1; font-size: 12px; font-weight: 500; color: #fafafa;">АЧХ</div>
+        <span style="font-size: 10px; color: #555;">~12с</span>
+      </div>
+    </div>
+  </div>
+
+  <div style="padding: 14px 24px 80px;">
+    <button onclick="goto('testRunning')" style="width: 100%; background: #EF9F27; color: #2a1a00; border: none; border-radius: 12px; padding: 16px; font-size: 14px; font-weight: 500; font-family: var(--font-sans); cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2a1a00" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M10 8l6 4-6 4V8z" fill="#2a1a00"/></svg>
+      <span id="start-time">Старт · ~15 секунд</span>
+    </button>
+  </div>
+</div>
+
+<div id="screen-testRunning" class="screen" style="display: none; position: absolute; inset: 0; overflow-y: auto;">
+  <div style="padding: 12px 20px 6px; display: flex; align-items: center; justify-content: space-between;">
+    <div style="width: 30px;"></div>
+    <div style="font-size: 14px; font-weight: 500; color: #fafafa;">Тестирование</div>
+    <button class="ble-badge" onclick="toggleBle(event)" style="display: flex; align-items: center; gap: 5px; padding: 5px 9px; background: rgba(239,159,39,0.1); border: 0.5px solid rgba(239,159,39,0.4); border-radius: 20px; cursor: pointer;">
+      <div style="width: 5px; height: 5px; border-radius: 50%; background: #EF9F27;"></div>
+      <span style="font-size: 10px; color: #EF9F27; font-weight: 500;">BLE</span>
+    </button>
+  </div>
+
+  <div style="padding: 20px 24px 4px; text-align: center;">
+    <div style="font-size: 10px; color: #666; text-transform: uppercase; letter-spacing: 2px;">XLR · 3-pin</div>
+    <div style="font-size: 12px; color: #888; margin-top: 4px;">тест <span id="run-step">1</span> из 3</div>
+  </div>
+
+  <div style="padding: 8px 24px 16px; display: flex; justify-content: center;">
+    <div style="position: relative; width: 160px; height: 160px;">
+      <svg width="160" height="160" viewBox="0 0 200 200">
+        <circle cx="100" cy="100" r="86" fill="none" stroke="#1a1a1a" stroke-width="3"/>
+        <circle id="run-ring" cx="100" cy="100" r="86" fill="none" stroke="#EF9F27" stroke-width="3" stroke-linecap="round" stroke-dasharray="540" stroke-dashoffset="540" transform="rotate(-90 100 100)"/>
+      </svg>
+      <div style="position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+        <div id="run-label" style="font-size: 10px; color: #666; text-transform: uppercase; letter-spacing: 1.5px;">Целостность</div>
+        <div id="run-percent" style="font-size: 30px; font-weight: 500; color: #fafafa; margin-top: 4px; line-height: 1;">0<span style="font-size: 14px; color: #888;">%</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div style="padding: 0 24px 10px;">
+    <div style="font-size: 10px; color: #666; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 10px;">Этапы</div>
+    <div id="run-stages" style="display: flex; flex-direction: column; gap: 6px;"></div>
+  </div>
+
+  <div style="padding: 10px 24px 80px;">
+    <button onclick="openCancelDialog()" style="width: 100%; background: transparent; color: #888; border: 0.5px solid #2a2a2a; border-radius: 12px; padding: 13px; font-size: 12px; font-weight: 500; font-family: var(--font-sans); cursor: pointer;">Отменить</button>
+  </div>
+</div>
+
+<div id="screen-results" class="screen" style="display: none; position: absolute; inset: 0; overflow-y: auto;">
+  <div style="padding: 12px 20px 6px; display: flex; align-items: center; justify-content: space-between;">
+    <button onclick="goto('dashboard')" style="background: transparent; border: none; color: #888; font-size: 22px; cursor: pointer; padding: 4px 8px; font-family: var(--font-sans);">×</button>
+    <div style="font-size: 14px; font-weight: 500; color: #fafafa;">Результаты</div>
+    <button class="ble-badge" onclick="toggleBle(event)" style="display: flex; align-items: center; gap: 5px; padding: 5px 9px; background: rgba(239,159,39,0.1); border: 0.5px solid rgba(239,159,39,0.4); border-radius: 20px; cursor: pointer;">
+      <div style="width: 5px; height: 5px; border-radius: 50%; background: #EF9F27;"></div>
+      <span style="font-size: 10px; color: #EF9F27; font-weight: 500;">BLE</span>
+    </button>
+  </div>
+
+  <div style="padding: 14px 24px 6px;">
+    <div style="background: linear-gradient(180deg, rgba(99,153,34,0.12) 0%, rgba(99,153,34,0.02) 100%); border: 0.5px solid rgba(151,196,89,0.35); border-radius: 14px; padding: 18px; text-align: center;">
+      <div style="display: inline-flex; align-items: center; gap: 8px; padding: 4px 10px; background: rgba(99,153,34,0.18); border-radius: 20px; margin-bottom: 10px;">
+        <div style="width: 5px; height: 5px; border-radius: 50%; background: #97C459;"></div>
+        <span style="font-size: 10px; color: #97C459; font-weight: 500; letter-spacing: 0.5px;">ИСПРАВЕН</span>
+      </div>
+      <div style="font-size: 46px; font-weight: 500; color: #fafafa; line-height: 1; font-variant-numeric: tabular-nums;">92<span style="font-size: 18px; color: #888;"> / 100</span></div>
+      <div style="font-size: 11px; color: #888; margin-top: 8px;">XLR · 3-pin · 18.4 с</div>
+    </div>
+  </div>
+
+  <div style="padding: 14px 24px 6px;">
+    <div style="font-size: 10px; color: #666; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 10px;">Измерения</div>
+    <div style="display: flex; flex-direction: column; gap: 6px;">
+      <div style="display: flex; align-items: center; gap: 10px; padding: 12px; background: #111; border: 0.5px solid #1f1f1f; border-radius: 10px;">
+        <div style="width: 24px; height: 24px; border-radius: 50%; background: rgba(99,153,34,0.12); border: 0.5px solid rgba(151,196,89,0.5); display: flex; align-items: center; justify-content: center;">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#97C459" stroke-width="3" stroke-linecap="round"><path d="M5 12l5 5L20 7"/></svg>
+        </div>
+        <div style="flex: 1;">
+          <div style="font-size: 12px; font-weight: 500; color: #fafafa;">Целостность</div>
+          <div style="font-size: 10px; color: #666;">0.9–1.4 Ом</div>
+        </div>
+      </div>
+      <div style="display: flex; align-items: center; gap: 10px; padding: 12px; background: #111; border: 0.5px solid #1f1f1f; border-radius: 10px;">
+        <div style="width: 24px; height: 24px; border-radius: 50%; background: rgba(99,153,34,0.12); border: 0.5px solid rgba(151,196,89,0.5); display: flex; align-items: center; justify-content: center;">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#97C459" stroke-width="3" stroke-linecap="round"><path d="M5 12l5 5L20 7"/></svg>
+        </div>
+        <div style="flex: 1; font-size: 12px; font-weight: 500; color: #fafafa;">CMRR</div>
+        <div style="text-align: right;"><div style="font-size: 14px; font-weight: 500; color: #97C459; font-variant-numeric: tabular-nums;">68 <span style="font-size: 10px; color: #888;">дБ</span></div></div>
+      </div>
+      <div style="padding: 12px; background: #111; border: 0.5px solid #1f1f1f; border-radius: 10px;">
+        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+          <div style="width: 24px; height: 24px; border-radius: 50%; background: rgba(239,159,39,0.12); border: 0.5px solid rgba(239,159,39,0.5); display: flex; align-items: center; justify-content: center;">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#EF9F27" stroke-width="2.6" stroke-linecap="round"><path d="M12 8v5"/><circle cx="12" cy="16.5" r="0.5" fill="#EF9F27" stroke="none"/></svg>
+          </div>
+          <div style="flex: 1;">
+            <div style="font-size: 12px; font-weight: 500; color: #fafafa;">АЧХ</div>
+            <div style="font-size: 10px; color: #666;">Спад −2.1 дБ на 20 кГц</div>
+          </div>
+          <button onclick="openFrModal()" style="background: transparent; border: 0.5px solid #2a2a2a; color: #aaa; font-size: 10px; font-family: var(--font-sans); padding: 4px 9px; border-radius: 6px; cursor: pointer;">детали</button>
+        </div>
+        <svg width="100%" height="46" viewBox="0 0 300 50" preserveAspectRatio="none">
+          <line x1="0" y1="14" x2="300" y2="14" stroke="#1f1f1f" stroke-width="0.5" stroke-dasharray="2,3"/>
+          <line x1="0" y1="25" x2="300" y2="25" stroke="#1f1f1f" stroke-width="0.5"/>
+          <line x1="0" y1="36" x2="300" y2="36" stroke="#1f1f1f" stroke-width="0.5" stroke-dasharray="2,3"/>
+          <path d="M 0 27 L 30 26 L 60 25 L 90 25 L 150 25 L 210 26 L 250 28 L 280 33 L 300 40" fill="none" stroke="#EF9F27" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+    </div>
+  </div>
+
+  <div style="padding: 10px 24px 14px;">
+    <div style="background: rgba(239,159,39,0.06); border: 0.5px solid rgba(239,159,39,0.25); border-radius: 10px; padding: 10px 12px; display: flex; gap: 8px; align-items: flex-start;">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#EF9F27" stroke-width="1.8" stroke-linecap="round" style="flex-shrink: 0; margin-top: 1px;"><circle cx="12" cy="12" r="9"/><path d="M12 8v4M12 16h.01"/></svg>
+      <div style="font-size: 10px; color: #aaa; line-height: 1.5;">Лёгкий завал на верхах — нормально для длинных кабелей.</div>
+    </div>
+  </div>
+
+  <div style="padding: 0 24px 80px;">
+    <button onclick="openSaveSheet()" style="width: 100%; background: #EF9F27; color: #2a1a00; border: none; border-radius: 12px; padding: 14px; font-size: 13px; font-weight: 500; font-family: var(--font-sans); cursor: pointer; margin-bottom: 6px;">Сохранить в коллекцию</button>
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px;">
+      <button onclick="openRepeatDialog()" style="background: transparent; color: #aaa; border: 0.5px solid #2a2a2a; border-radius: 12px; padding: 11px; font-size: 11px; font-weight: 500; font-family: var(--font-sans); cursor: pointer;">Повторить</button>
+      <button onclick="discardResult()" style="background: transparent; color: #888; border: 0.5px solid #2a2a2a; border-radius: 12px; padding: 11px; font-size: 11px; font-weight: 500; font-family: var(--font-sans); cursor: pointer;">Отбросить</button>
+    </div>
+  </div>
+</div>
+
+<div id="screen-collection" class="screen" style="display: none; position: absolute; inset: 0; overflow-y: auto;">
+  <div style="padding: 16px 24px 12px; display: flex; align-items: center; justify-content: space-between; position: relative;">
+    <div>
+      <div style="font-size: 20px; font-weight: 500; color: #fafafa; line-height: 1;">Коллекция</div>
+      <div id="col-subtitle" style="font-size: 10px; color: #666; margin-top: 4px;">24 кабеля · по дате проверки</div>
+    </div>
+    <div style="display: flex; gap: 6px;">
+      <button style="background: #111; border: 0.5px solid #1f1f1f; border-radius: 10px; width: 32px; height: 32px; cursor: pointer; display: flex; align-items: center; justify-content: center;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#aaa" stroke-width="1.8" stroke-linecap="round"><path d="M3 6h18M6 12h12M10 18h4"/></svg>
+      </button>
+      <button id="sort-btn" onclick="toggleSortDd(event)" style="background: #111; border: 0.5px solid #1f1f1f; border-radius: 10px; width: 32px; height: 32px; cursor: pointer; display: flex; align-items: center; justify-content: center;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#aaa" stroke-width="1.8" stroke-linecap="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+      </button>
+    </div>
+
+    <div id="sort-dd" style="display: none; position: absolute; top: 52px; right: 24px; background: #141414; border: 0.5px solid #2a2a2a; border-radius: 12px; padding: 6px; min-width: 220px; z-index: 15; box-shadow: 0 8px 24px rgba(0,0,0,0.6);">
+      <div style="font-size: 9px; color: #666; text-transform: uppercase; letter-spacing: 1.2px; padding: 8px 12px 4px;">Сортировать</div>
+      <button onclick="selectSort('date', 'по дате проверки')" class="sort-item" data-key="date" style="width: 100%; background: rgba(239,159,39,0.08); border: none; padding: 10px 12px; cursor: pointer; font-family: var(--font-sans); text-align: left; display: flex; align-items: center; justify-content: space-between; border-radius: 8px; color: #fafafa;">
+        <span style="font-size: 12px;">По дате проверки</span>
+        <svg class="check" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#EF9F27" stroke-width="3" stroke-linecap="round"><path d="M5 12l5 5L20 7"/></svg>
+      </button>
+      <button onclick="selectSort('score', 'худшие сверху')" class="sort-item" data-key="score" style="width: 100%; background: transparent; border: none; padding: 10px 12px; cursor: pointer; font-family: var(--font-sans); text-align: left; display: flex; align-items: center; justify-content: space-between; border-radius: 8px; color: #e8e8e8;">
+        <span style="font-size: 12px;">По Health Score</span>
+        <svg class="check" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#EF9F27" stroke-width="3" stroke-linecap="round" style="display: none;"><path d="M5 12l5 5L20 7"/></svg>
+      </button>
+      <button onclick="selectSort('name', 'по имени')" class="sort-item" data-key="name" style="width: 100%; background: transparent; border: none; padding: 10px 12px; cursor: pointer; font-family: var(--font-sans); text-align: left; display: flex; align-items: center; justify-content: space-between; border-radius: 8px; color: #e8e8e8;">
+        <span style="font-size: 12px;">По имени (А–Я)</span>
+        <svg class="check" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#EF9F27" stroke-width="3" stroke-linecap="round" style="display: none;"><path d="M5 12l5 5L20 7"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <div style="padding: 0 24px 10px;">
+    <div style="position: relative;">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#666" stroke-width="2" stroke-linecap="round" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%);"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+      <input type="text" placeholder="Поиск по названию" style="width: 100%; background: #111; border: 0.5px solid #1f1f1f; border-radius: 10px; padding: 10px 12px 10px 32px; font-size: 12px; color: #fafafa; font-family: var(--font-sans); box-sizing: border-box; outline: none;"/>
+    </div>
+  </div>
+
+  <div class="himo-chips" style="padding: 0 24px 10px; display: flex; gap: 6px; overflow-x: auto;">
+    <button style="background: rgba(239,159,39,0.1); border: 0.5px solid rgba(239,159,39,0.45); border-radius: 14px; padding: 5px 10px; font-size: 10px; color: #EF9F27; font-weight: 500; font-family: var(--font-sans); cursor: pointer; white-space: nowrap;">Все · 24</button>
+    <button style="background: #111; border: 0.5px solid #1f1f1f; border-radius: 14px; padding: 5px 10px; font-size: 10px; color: #aaa; font-family: var(--font-sans); cursor: pointer; white-space: nowrap; display: flex; align-items: center; gap: 4px;"><span style="width: 5px; height: 5px; border-radius: 50%; background: #97C459;"></span>18</button>
+    <button style="background: #111; border: 0.5px solid #1f1f1f; border-radius: 14px; padding: 5px 10px; font-size: 10px; color: #aaa; font-family: var(--font-sans); cursor: pointer; white-space: nowrap; display: flex; align-items: center; gap: 4px;"><span style="width: 5px; height: 5px; border-radius: 50%; background: #EF9F27;"></span>4</button>
+    <button style="background: #111; border: 0.5px solid #1f1f1f; border-radius: 14px; padding: 5px 10px; font-size: 10px; color: #aaa; font-family: var(--font-sans); cursor: pointer; white-space: nowrap; display: flex; align-items: center; gap: 4px;"><span style="width: 5px; height: 5px; border-radius: 50%; background: #E24B4A;"></span>2</button>
+    <button style="background: #111; border: 0.5px solid #1f1f1f; border-radius: 14px; padding: 5px 10px; font-size: 10px; color: #aaa; font-family: var(--font-sans); cursor: pointer; white-space: nowrap;">XLR</button>
+    <button style="background: #111; border: 0.5px solid #1f1f1f; border-radius: 14px; padding: 5px 10px; font-size: 10px; color: #aaa; font-family: var(--font-sans); cursor: pointer; white-space: nowrap;">Jack TS</button>
+    <button style="background: #111; border: 0.5px solid #1f1f1f; border-radius: 14px; padding: 5px 10px; font-size: 10px; color: #aaa; font-family: var(--font-sans); cursor: pointer; white-space: nowrap;">Jack TRS</button>
+  </div>
+
+  <div style="padding: 0 24px 80px; display: flex; flex-direction: column; gap: 6px;">
+    <button onclick="goto('cableDetail')" class="cable-row" data-score="639922" data-val="94"><div class="strip" style="background: #639922;"></div><div class="main"><div class="ttl">Mogami #1 <span class="tag">XLR</span></div><div class="sub">5 проверок · 2 ч назад</div></div><div class="score">94<div>/100</div></div></button>
+    <button onclick="goto('cableDetail')" class="cable-row"><div class="strip" style="background: #639922;"></div><div class="main"><div class="ttl">Klotz патч <span class="tag">TRS</span></div><div class="sub">3 проверки · вчера</div></div><div class="score">91<div>/100</div></div></button>
+    <button onclick="goto('cableDetail')" class="cable-row"><div class="strip" style="background: #EF9F27;"></div><div class="main"><div class="ttl">Гитарный длинный <span class="tag">JACK</span></div><div class="sub" style="color: #EF9F27;">сопр. растёт · 7 проверок · вчера</div></div><div class="score">68<div>/100</div></div></button>
+    <button onclick="goto('cableDetail')" class="cable-row"><div class="strip" style="background: #639922;"></div><div class="main"><div class="ttl">Sommer микрофон <span class="tag">XLR</span></div><div class="sub">2 проверки · 3 дня назад</div></div><div class="score">96<div>/100</div></div></button>
+    <button onclick="goto('cableDetail')" class="cable-row"><div class="strip" style="background: #E24B4A;"></div><div class="main"><div class="ttl">XLR #07 <span class="tag">XLR</span></div><div class="sub" style="color: #E24B4A;">обрыв pin 3 · 3 дня назад</div></div><div class="score">12<div>/100</div></div></button>
+    <button onclick="goto('cableDetail')" class="cable-row"><div class="strip" style="background: #639922;"></div><div class="main"><div class="ttl">Бас короткий <span class="tag">JACK</span></div><div class="sub">2 проверки · неделю назад</div></div><div class="score">88<div>/100</div></div></button>
+  </div>
+</div>
+
+<div id="screen-cableDetail" class="screen" style="display: none; position: absolute; inset: 0; overflow-y: auto;">
+  <div style="padding: 12px 20px 6px; display: flex; align-items: center; justify-content: space-between; position: relative;">
+    <button onclick="goBack()" style="background: transparent; border: none; color: #888; font-size: 22px; cursor: pointer; padding: 4px 8px; font-family: var(--font-sans);">‹</button>
+    <div style="font-size: 14px; font-weight: 500; color: #fafafa;">Кабель</div>
+    <button id="cable-menu-btn" onclick="toggleCableMenu(event)" style="background: transparent; border: none; color: #888; font-size: 18px; cursor: pointer; padding: 4px 10px; font-family: var(--font-sans); letter-spacing: 1px;">···</button>
+
+    <div id="cable-menu" style="display: none; position: absolute; top: 44px; right: 16px; background: #141414; border: 0.5px solid #2a2a2a; border-radius: 12px; padding: 6px; min-width: 200px; z-index: 15; box-shadow: 0 8px 24px rgba(0,0,0,0.6);">
+      <button onclick="openRename()" style="width: 100%; background: transparent; border: none; padding: 10px 12px; cursor: pointer; font-family: var(--font-sans); text-align: left; display: flex; align-items: center; gap: 10px; border-radius: 8px; color: #e8e8e8;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#aaa" stroke-width="1.8" stroke-linecap="round"><path d="M12 20h9M16.5 3.5a2.121 2.121 0 113 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+        <span style="font-size: 12px;">Переименовать</span>
+      </button>
+      <button onclick="openNote()" style="width: 100%; background: transparent; border: none; padding: 10px 12px; cursor: pointer; font-family: var(--font-sans); text-align: left; display: flex; align-items: center; gap: 10px; border-radius: 8px; color: #e8e8e8;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#aaa" stroke-width="1.8" stroke-linecap="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/></svg>
+        <span style="font-size: 12px;">Изменить заметку</span>
+      </button>
+      <div style="height: 0.5px; background: #2a2a2a; margin: 4px 8px;"></div>
+      <button onclick="openDelete()" style="width: 100%; background: transparent; border: none; padding: 10px 12px; cursor: pointer; font-family: var(--font-sans); text-align: left; display: flex; align-items: center; gap: 10px; border-radius: 8px; color: #E24B4A;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#E24B4A" stroke-width="1.8" stroke-linecap="round"><path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
+        <span style="font-size: 12px;">Удалить кабель</span>
+      </button>
+    </div>
+  </div>
+
+  <div style="padding: 12px 24px 6px;">
+    <div style="display: flex; align-items: flex-start; gap: 12px; margin-bottom: 12px;">
+      <div style="width: 4px; align-self: stretch; background: #639922; border-radius: 2px; min-height: 50px;"></div>
+      <div style="flex: 1; min-width: 0;">
+        <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 4px;">
+          <div id="cable-name" style="font-size: 17px; font-weight: 500; color: #fafafa; line-height: 1.2;">Mogami #1</div>
+          <span style="font-size: 8px; color: #666; background: #1a1a1a; padding: 2px 5px; border-radius: 3px; text-transform: uppercase;">XLR</span>
+        </div>
+        <div style="font-size: 10px; color: #888;">Добавлен 12 фев · 5 проверок</div>
+        <div id="cable-note" style="font-size: 10px; color: #888; font-style: italic; margin-top: 2px;">«Купил в 2024, для вокала»</div>
+      </div>
+      <div style="text-align: right;">
+        <div style="font-size: 24px; font-weight: 500; color: #fafafa; line-height: 1;">94</div>
+        <div style="font-size: 8px; color: #666; margin-top: 2px;">/100</div>
+      </div>
+    </div>
+
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px;">
+      <button onclick="goto('testSetup')" style="background: #EF9F27; color: #2a1a00; border: none; border-radius: 10px; padding: 11px; font-size: 11px; font-weight: 500; font-family: var(--font-sans); cursor: pointer;">Перепроверить</button>
+      <button onclick="openSharePdf()" style="background: transparent; color: #aaa; border: 0.5px solid #2a2a2a; border-radius: 10px; padding: 11px; font-size: 11px; font-weight: 500; font-family: var(--font-sans); cursor: pointer;">Поделиться PDF</button>
+    </div>
+  </div>
+
+  <div style="padding: 14px 24px 6px;">
+    <div style="font-size: 10px; color: #666; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 8px;">Динамика Health Score</div>
+    <div style="background: #111; border: 0.5px solid #1f1f1f; border-radius: 12px; padding: 12px;">
+      <svg width="100%" height="90" viewBox="0 0 312 100">
+        <line x1="28" y1="20" x2="312" y2="20" stroke="#1a1a1a" stroke-width="0.5" stroke-dasharray="2,3"/>
+        <line x1="28" y1="50" x2="312" y2="50" stroke="#1a1a1a" stroke-width="0.5"/>
+        <line x1="28" y1="80" x2="312" y2="80" stroke="#1a1a1a" stroke-width="0.5" stroke-dasharray="2,3"/>
+        <text x="22" y="24" font-size="8" fill="#555" text-anchor="end">100</text>
+        <text x="22" y="54" font-size="8" fill="#555" text-anchor="end">80</text>
+        <text x="22" y="84" font-size="8" fill="#555" text-anchor="end">60</text>
+        <path d="M 50 30 L 110 32 L 170 28 L 230 36 L 290 26" fill="none" stroke="#EF9F27" stroke-width="1.8" stroke-linecap="round"/>
+        <circle cx="50" cy="30" r="3.5" fill="#0a0a0a" stroke="#97C459" stroke-width="1.6"/>
+        <circle cx="110" cy="32" r="3.5" fill="#0a0a0a" stroke="#97C459" stroke-width="1.6"/>
+        <circle cx="170" cy="28" r="3.5" fill="#0a0a0a" stroke="#97C459" stroke-width="1.6"/>
+        <circle cx="230" cy="36" r="3.5" fill="#0a0a0a" stroke="#97C459" stroke-width="1.6"/>
+        <circle cx="290" cy="26" r="4" fill="#97C459"/>
+      </svg>
+    </div>
+  </div>
+
+  <div style="padding: 14px 24px 6px;">
+    <div style="font-size: 10px; color: #666; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 8px;">Показатели</div>
+    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px;">
+      <div style="background: #111; border: 0.5px solid #1f1f1f; border-radius: 8px; padding: 10px;">
+        <div style="font-size: 8px; color: #666; text-transform: uppercase;">Сопр.</div>
+        <div style="font-size: 14px; font-weight: 500; color: #fafafa; margin-top: 2px;">1.4 <span style="font-size: 9px; color: #888;">Ом</span></div>
+      </div>
+      <div style="background: #111; border: 0.5px solid #1f1f1f; border-radius: 8px; padding: 10px;">
+        <div style="font-size: 8px; color: #666; text-transform: uppercase;">CMRR</div>
+        <div style="font-size: 14px; font-weight: 500; color: #fafafa; margin-top: 2px;">68 <span style="font-size: 9px; color: #888;">дБ</span></div>
+      </div>
+      <div style="background: #111; border: 0.5px solid #1f1f1f; border-radius: 8px; padding: 10px;">
+        <div style="font-size: 8px; color: #666; text-transform: uppercase;">−3 дБ</div>
+        <div style="font-size: 14px; font-weight: 500; color: #fafafa; margin-top: 2px;">22.4 <span style="font-size: 9px; color: #888;">кГц</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div style="padding: 14px 24px 80px;">
+    <div style="font-size: 10px; color: #666; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 8px;">История проверок</div>
+    <div style="display: flex; flex-direction: column; gap: 5px;">
+      <button onclick="goto('results')" style="background: #111; border: 0.5px solid #1f1f1f; border-radius: 8px; padding: 10px 12px; cursor: pointer; font-family: var(--font-sans); text-align: left; display: flex; align-items: center; gap: 10px;">
+        <div style="width: 28px; height: 28px; border-radius: 50%; background: rgba(99,153,34,0.12); border: 0.5px solid rgba(151,196,89,0.5); display: flex; align-items: center; justify-content: center; font-size: 10px; color: #97C459; font-weight: 500;">94</div>
+        <div style="flex: 1; min-width: 0;">
+          <div style="font-size: 11px; font-weight: 500; color: #fafafa;">Сегодня · 14:32</div>
+          <div style="font-size: 9px; color: #666;">CMRR 68 дБ · −2.1 дБ</div>
+        </div>
+        <span style="font-size: 12px; color: #444;">›</span>
+      </button>
+      <button onclick="goto('results')" style="background: #111; border: 0.5px solid #1f1f1f; border-radius: 8px; padding: 10px 12px; cursor: pointer; font-family: var(--font-sans); text-align: left; display: flex; align-items: center; gap: 10px;">
+        <div style="width: 28px; height: 28px; border-radius: 50%; background: rgba(99,153,34,0.12); border: 0.5px solid rgba(151,196,89,0.5); display: flex; align-items: center; justify-content: center; font-size: 10px; color: #97C459; font-weight: 500;">90</div>
+        <div style="flex: 1; min-width: 0;">
+          <div style="font-size: 11px; font-weight: 500; color: #fafafa;">2 апреля</div>
+          <div style="font-size: 9px; color: #666;">CMRR 67 дБ · −2.3 дБ</div>
+        </div>
+        <span style="font-size: 12px; color: #444;">›</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<div id="screen-device" class="screen" style="display: none; position: absolute; inset: 0; overflow-y: auto;">
+  <div style="padding: 12px 20px 6px; display: flex; align-items: center; justify-content: space-between;">
+    <button onclick="goBack()" style="background: transparent; border: none; color: #888; font-size: 22px; cursor: pointer; padding: 4px 8px; font-family: var(--font-sans);">‹</button>
+    <div style="font-size: 14px; font-weight: 500; color: #fafafa;">Устройство</div>
+    <div style="width: 30px;"></div>
+  </div>
+
+  <div style="padding: 14px 24px 6px;">
+    <div style="background: linear-gradient(180deg, rgba(239,159,39,0.08) 0%, rgba(239,159,39,0.02) 100%); border: 0.5px solid rgba(239,159,39,0.35); border-radius: 12px; padding: 16px; display: flex; align-items: center; gap: 14px;">
+      <div style="width: 46px; height: 46px; border-radius: 12px; background: #1a1205; border: 0.5px solid rgba(239,159,39,0.4); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#EF9F27" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="7" width="18" height="10" rx="2"/><path d="M21 11v2"/><path d="M7 11v2M11 10v4M15 11v2"/></svg>
+      </div>
+      <div style="flex: 1; min-width: 0;">
+        <div style="display: inline-flex; align-items: center; gap: 5px; padding: 3px 8px; background: rgba(99,153,34,0.15); border: 0.5px solid rgba(151,196,89,0.4); border-radius: 14px; margin-bottom: 4px;">
+          <div style="width: 4px; height: 4px; border-radius: 50%; background: #97C459;"></div>
+          <span style="font-size: 9px; color: #97C459; font-weight: 500;">ПОДКЛЮЧЕНО</span>
+        </div>
+        <div style="font-size: 13px; font-weight: 500; color: #fafafa;">Himo · HM-2A4F</div>
+        <div style="font-size: 10px; color: #888; margin-top: 2px;">в сети 42 мин</div>
+      </div>
+    </div>
+  </div>
+
+  <div style="padding: 12px 24px 6px;">
+    <div style="background: #111; border: 0.5px solid #1f1f1f; border-radius: 12px; padding: 14px;">
+      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+        <div style="font-size: 10px; color: #666; text-transform: uppercase; letter-spacing: 1.5px;">Батарея</div>
+      </div>
+      <div style="display: flex; align-items: baseline; gap: 10px; margin-bottom: 10px;">
+        <div style="font-size: 32px; font-weight: 500; color: #fafafa; line-height: 1;">78<span style="font-size: 16px; color: #888;">%</span></div>
+        <div style="font-size: 10px; color: #888;">~6 ч работы</div>
+      </div>
+      <div style="height: 5px; background: #1a1a1a; border-radius: 3px; overflow: hidden;">
+        <div style="width: 78%; height: 100%; background: #97C459; border-radius: 3px;"></div>
+      </div>
+    </div>
+  </div>
+
+  <div style="padding: 10px 24px 6px;">
+    <div style="background: rgba(55,138,221,0.08); border: 0.5px solid rgba(55,138,221,0.35); border-radius: 10px; padding: 12px; display: flex; align-items: center; gap: 12px;">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#378ADD" stroke-width="1.8" stroke-linecap="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+      <div style="flex: 1; min-width: 0;">
+        <div style="font-size: 12px; font-weight: 500; color: #fafafa;">Доступно обновление</div>
+        <div style="font-size: 9px; color: #888; margin-top: 1px;">Прошивка 1.3.0</div>
+      </div>
+      <button style="background: #378ADD; color: #041c33; border: none; border-radius: 7px; padding: 6px 10px; font-size: 10px; font-weight: 500; font-family: var(--font-sans); cursor: pointer;">Обновить</button>
+    </div>
+  </div>
+
+  <div style="padding: 12px 24px 6px;">
+    <div style="font-size: 10px; color: #666; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 8px;">О приборе</div>
+    <div style="background: #111; border: 0.5px solid #1f1f1f; border-radius: 10px; overflow: hidden;">
+      <div style="padding: 10px 14px; display: flex; justify-content: space-between; font-size: 11px;"><span style="color: #888;">Модель</span><span style="color: #e8e8e8; font-weight: 500;">Himo MVP rev 1</span></div>
+      <div style="height: 0.5px; background: #1a1a1a; margin: 0 14px;"></div>
+      <div style="padding: 10px 14px; display: flex; justify-content: space-between; font-size: 11px;"><span style="color: #888;">Серийный</span><span style="color: #e8e8e8; font-weight: 500;">HM2025-00142</span></div>
+      <div style="height: 0.5px; background: #1a1a1a; margin: 0 14px;"></div>
+      <div style="padding: 10px 14px; display: flex; justify-content: space-between; font-size: 11px;"><span style="color: #888;">Прошивка</span><span style="color: #e8e8e8; font-weight: 500;">1.2.4 → <span style="color: #378ADD;">1.3.0</span></span></div>
+    </div>
+  </div>
+
+  <div style="padding: 12px 24px 6px;">
+    <div style="font-size: 10px; color: #666; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 8px;">Калибровка</div>
+    <div style="background: #111; border: 0.5px solid #1f1f1f; border-radius: 10px; padding: 12px;">
+      <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
+        <div style="width: 22px; height: 22px; border-radius: 50%; background: rgba(99,153,34,0.12); border: 0.5px solid rgba(151,196,89,0.5); display: flex; align-items: center; justify-content: center;">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#97C459" stroke-width="3" stroke-linecap="round"><path d="M5 12l5 5L20 7"/></svg>
+        </div>
+        <div style="flex: 1;">
+          <div style="font-size: 12px; font-weight: 500; color: #fafafa;">Откалиброван</div>
+          <div style="font-size: 10px; color: #666;">28 марта · 16 дней назад</div>
+        </div>
+      </div>
+      <button style="width: 100%; background: transparent; color: #aaa; border: 0.5px solid #2a2a2a; border-radius: 8px; padding: 9px; font-size: 11px; font-weight: 500; font-family: var(--font-sans); cursor: pointer;">Откалибровать заново</button>
+    </div>
+  </div>
+
+  <div style="padding: 12px 24px 80px; display: grid; grid-template-columns: 1fr 1fr; gap: 6px;">
+    <button style="background: transparent; color: #aaa; border: 0.5px solid #2a2a2a; border-radius: 10px; padding: 11px; font-size: 11px; font-weight: 500; font-family: var(--font-sans); cursor: pointer;">Переподключить</button>
+    <button style="background: transparent; color: #E24B4A; border: 0.5px solid rgba(226,75,74,0.35); border-radius: 10px; padding: 11px; font-size: 11px; font-weight: 500; font-family: var(--font-sans); cursor: pointer;">Забыть</button>
+  </div>
+</div>
+
+<div id="screen-settings" class="screen" style="display: none; position: absolute; inset: 0; overflow-y: auto;">
+  <div style="padding: 12px 20px 6px; text-align: center;">
+    <div style="font-size: 14px; font-weight: 500; color: #fafafa;">Настройки</div>
+  </div>
+
+  <div style="padding: 14px 24px 6px;">
+    <div style="font-size: 10px; color: #666; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 8px;">Профиль</div>
+    <div style="background: #111; border: 0.5px solid #1f1f1f; border-radius: 12px; padding: 14px;">
+      <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
+        <div style="width: 42px; height: 42px; border-radius: 50%; background: rgba(239,159,39,0.12); border: 0.5px solid rgba(239,159,39,0.4); display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 500; color: #EF9F27;">АП</div>
+        <div style="flex: 1; min-width: 0;">
+          <div style="font-size: 13px; font-weight: 500; color: #fafafa;">Алексей Петров</div>
+          <div style="font-size: 10px; color: #888;">a.petrov@example.com</div>
+        </div>
+        <button style="background: transparent; color: #aaa; border: 0.5px solid #2a2a2a; border-radius: 8px; padding: 5px 10px; font-size: 10px; font-weight: 500; font-family: var(--font-sans); cursor: pointer;">Изменить</button>
+      </div>
+      <div style="background: rgba(239,159,39,0.06); border: 0.5px solid rgba(239,159,39,0.25); border-radius: 8px; padding: 11px;">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
+          <div style="display: flex; align-items: center; gap: 6px;">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#EF9F27" stroke-width="2" stroke-linecap="round"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg>
+            <span style="font-size: 11px; font-weight: 500; color: #fafafa;">Free</span>
+          </div>
+          <span style="font-size: 9px; color: #888;">текущий план</span>
+        </div>
+        <button style="width: 100%; background: #EF9F27; color: #2a1a00; border: none; border-radius: 7px; padding: 9px; font-size: 11px; font-weight: 500; font-family: var(--font-sans); cursor: pointer; margin-top: 4px;">Премиум · 29 € / год</button>
+      </div>
+    </div>
+  </div>
+
+  <div style="padding: 12px 24px 6px;">
+    <div style="font-size: 10px; color: #666; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 8px;">О приложении</div>
+    <div style="background: #111; border: 0.5px solid #1f1f1f; border-radius: 10px; overflow: hidden;">
+      <div style="padding: 10px 14px; display: flex; justify-content: space-between; font-size: 11px;"><span style="color: #888;">Версия</span><span style="color: #e8e8e8; font-weight: 500;">0.9.2 (142)</span></div>
+      <div style="height: 0.5px; background: #1a1a1a; margin: 0 14px;"></div>
+      <button style="width: 100%; background: transparent; border: none; padding: 10px 14px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; font-family: var(--font-sans);"><span style="font-size: 11px; color: #e8e8e8;">Сайт проекта</span><span style="font-size: 10px; color: #666;">himo.app ↗</span></button>
+      <div style="height: 0.5px; background: #1a1a1a; margin: 0 14px;"></div>
+      <button style="width: 100%; background: transparent; border: none; padding: 10px 14px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; font-family: var(--font-sans);"><span style="font-size: 11px; color: #e8e8e8;">Политика приватности</span><span style="font-size: 12px; color: #444;">›</span></button>
+    </div>
+  </div>
+
+  <div style="padding: 12px 24px 80px;">
+    <div style="font-size: 10px; color: #666; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 8px;">Обратная связь</div>
+    <div style="background: #111; border: 0.5px solid #1f1f1f; border-radius: 10px; overflow: hidden;">
+      <button style="width: 100%; background: transparent; border: none; padding: 12px 14px; cursor: pointer; display: flex; align-items: center; gap: 10px; font-family: var(--font-sans);">
+        <div style="width: 24px; height: 24px; border-radius: 7px; background: rgba(226,75,74,0.1); display: flex; align-items: center; justify-content: center;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#E24B4A" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v4M12 16h.01"/></svg></div>
+        <span style="flex: 1; font-size: 11px; color: #fafafa; text-align: left;">Сообщить об ошибке</span>
+        <span style="font-size: 12px; color: #444;">›</span>
+      </button>
+      <div style="height: 0.5px; background: #1a1a1a; margin: 0 14px;"></div>
+      <button style="width: 100%; background: transparent; border: none; padding: 12px 14px; cursor: pointer; display: flex; align-items: center; gap: 10px; font-family: var(--font-sans);">
+        <div style="width: 24px; height: 24px; border-radius: 7px; background: rgba(239,159,39,0.1); display: flex; align-items: center; justify-content: center;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#EF9F27" stroke-width="2" stroke-linecap="round"><path d="M9 18h6M10 22h4M12 2a7 7 0 00-4 12.7V18h8v-3.3A7 7 0 0012 2z"/></svg></div>
+        <span style="flex: 1; font-size: 11px; color: #fafafa; text-align: left;">Предложить идею</span>
+        <span style="font-size: 12px; color: #444;">›</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+</div>
+
+<nav id="bottom-nav" style="position: absolute; left: 0; right: 0; bottom: 0; display: flex; justify-content: space-around; padding: 10px 0 14px; border-top: 0.5px solid #1a1a1a; background: #0a0a0a; z-index: 4;">
+  <button onclick="navTab('dashboard')" id="nav-dashboard" style="background: transparent; border: none; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 3px; font-family: var(--font-sans);">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#EF9F27" stroke-width="1.8" stroke-linecap="round"><path d="M3 12l2-2 4 4 8-8 4 4"/></svg>
+    <span style="font-size: 9px; color: #EF9F27;">Главная</span>
+  </button>
+  <button onclick="navTab('collection')" id="nav-collection" style="background: transparent; border: none; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 3px; font-family: var(--font-sans);">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#555" stroke-width="1.8" stroke-linecap="round"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M4 10h16M10 4v16"/></svg>
+    <span style="font-size: 9px; color: #555;">Коллекция</span>
+  </button>
+  <button onclick="navTab('settings')" id="nav-settings" style="background: transparent; border: none; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 3px; font-family: var(--font-sans);">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#555" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/></svg>
+    <span style="font-size: 9px; color: #555;">Настройки</span>
+  </button>
+</nav>
+
+<div id="ble-dropdown" style="display: none; position: absolute; top: 58px; right: 20px; background: #141414; border: 0.5px solid #2a2a2a; border-radius: 12px; padding: 6px; min-width: 200px; z-index: 50; box-shadow: 0 8px 24px rgba(0,0,0,0.6);">
+  <div style="padding: 8px 12px 6px;">
+    <div style="font-size: 9px; color: #666; text-transform: uppercase;">Статус</div>
+    <div style="font-size: 12px; color: #fafafa; font-weight: 500; margin-top: 2px;">Himo · HM-2A4F</div>
+    <div style="font-size: 10px; color: #97C459; margin-top: 1px;">Подключено · 42 мин</div>
+  </div>
+  <div style="height: 0.5px; background: #2a2a2a; margin: 4px 8px;"></div>
+  <button onclick="closeBle(); goto('device')" style="width: 100%; background: transparent; border: none; padding: 10px 12px; cursor: pointer; text-align: left; display: flex; align-items: center; gap: 10px; border-radius: 8px; color: #e8e8e8; font-family: var(--font-sans);">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#aaa" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="7" width="18" height="10" rx="2"/><path d="M21 11v2"/></svg>
+    <span style="font-size: 12px;">Открыть устройство</span>
+  </button>
+  <button onclick="reconnectBle()" style="width: 100%; background: transparent; border: none; padding: 10px 12px; cursor: pointer; text-align: left; display: flex; align-items: center; gap: 10px; border-radius: 8px; color: #e8e8e8; font-family: var(--font-sans);">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#aaa" stroke-width="1.8" stroke-linecap="round"><path d="M21 12a9 9 0 11-3-6.7M21 3v6h-6"/></svg>
+    <span style="font-size: 12px;">Переподключить</span>
+  </button>
+</div>
+
+<div id="backdrop" onclick="closeAllModals()" style="display: none; position: absolute; inset: 0; background: rgba(0,0,0,0.7); z-index: 60;"></div>
+
+<div id="fr-modal" class="modal-screen" style="display: none; position: absolute; inset: 0; background: #0a0a0a; z-index: 70; overflow-y: auto;">
+  <div style="padding: 14px 20px 6px; display: flex; align-items: center; justify-content: space-between;">
+    <button onclick="closeFrModal()" style="background: transparent; border: none; color: #888; font-size: 22px; cursor: pointer; padding: 4px 8px; font-family: var(--font-sans);">‹</button>
+    <div style="font-size: 13px; font-weight: 500; color: #fafafa;">АЧХ детально</div>
+    <div style="width: 30px;"></div>
+  </div>
+  <div style="padding: 12px 20px;">
+    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; margin-bottom: 14px;">
+      <div style="background: #111; border: 0.5px solid #1f1f1f; border-radius: 8px; padding: 10px;"><div style="font-size: 8px; color: #666; text-transform: uppercase;">Полоса −3 дБ</div><div style="font-size: 14px; font-weight: 500; color: #fafafa; margin-top: 3px;">22.4 <span style="font-size: 9px; color: #888;">кГц</span></div></div>
+      <div style="background: #111; border: 0.5px solid #1f1f1f; border-radius: 8px; padding: 10px;"><div style="font-size: 8px; color: #666; text-transform: uppercase;">На 20 кГц</div><div style="font-size: 14px; font-weight: 500; color: #97C459; margin-top: 3px;">−2.1 <span style="font-size: 9px; color: #888;">дБ</span></div></div>
+      <div style="background: #111; border: 0.5px solid #1f1f1f; border-radius: 8px; padding: 10px;"><div style="font-size: 8px; color: #666; text-transform: uppercase;">Неравн.</div><div style="font-size: 14px; font-weight: 500; color: #fafafa; margin-top: 3px;">±0.4 <span style="font-size: 9px; color: #888;">дБ</span></div></div>
+    </div>
+    <div style="background: #111; border: 0.5px solid #1f1f1f; border-radius: 10px; padding: 14px;">
+      <svg width="100%" height="230" viewBox="0 0 320 260">
+        <line x1="30" y1="20" x2="320" y2="20" stroke="#1a1a1a" stroke-width="0.5" stroke-dasharray="2,3"/>
+        <line x1="30" y1="100" x2="320" y2="100" stroke="#2a2a2a" stroke-width="0.7"/>
+        <line x1="30" y1="220" x2="320" y2="220" stroke="#E24B4A" stroke-width="0.6" stroke-dasharray="3,3" opacity="0.5"/>
+        <text x="24" y="24" font-size="9" fill="#555" text-anchor="end">+2</text>
+        <text x="24" y="104" font-size="9" fill="#555" text-anchor="end">0</text>
+        <text x="24" y="224" font-size="9" fill="#555" text-anchor="end">−3</text>
+        <line x1="30" y1="14" x2="30" y2="228" stroke="#2a2a2a" stroke-width="0.5"/>
+        <text x="30" y="244" font-size="9" fill="#666" text-anchor="middle">10 Гц</text>
+        <text x="190" y="244" font-size="9" fill="#666" text-anchor="middle">1 кГц</text>
+        <text x="318" y="244" font-size="9" fill="#666" text-anchor="end">40 кГц</text>
+        <line x1="30" y1="100" x2="320" y2="100" stroke="#888" stroke-width="1.2" stroke-dasharray="4,4" opacity="0.55"/>
+        <path d="M 30 112 L 50 106 L 90 102 L 130 100 L 190 100 L 240 100 L 280 106 L 300 138 L 320 194" fill="none" stroke="#EF9F27" stroke-width="2" stroke-linecap="round"/>
+        <circle cx="300" cy="138" r="4" fill="#0a0a0a" stroke="#EF9F27" stroke-width="1.5"/>
+        <text x="300" y="260" font-size="9" fill="#EF9F27" text-anchor="middle" font-weight="500">20 кГц</text>
+      </svg>
+    </div>
+    <div style="background: #111; border: 0.5px solid #1f1f1f; border-radius: 10px; padding: 12px; margin-top: 14px;">
+      <div style="font-size: 9px; color: #666; text-transform: uppercase; letter-spacing: 1.2px; margin-bottom: 6px;">Что это значит</div>
+      <div style="font-size: 11px; color: #ccc; line-height: 1.55;">Кабель ровно передаёт всю слышимую полосу до 20 кГц с минимальными потерями. Для гитары, вокала и большинства инструментов — отличный результат.</div>
+    </div>
+  </div>
+</div>
+
+<div id="save-sheet" class="bottom-sheet" style="display: none; position: absolute; left: 0; right: 0; bottom: 0; background: #0f0f0f; border-top-left-radius: 20px; border-top-right-radius: 20px; border-top: 0.5px solid #2a2a2a; padding: 10px 20px 18px; z-index: 65; max-height: 85%; overflow-y: auto;">
+  <div style="width: 36px; height: 4px; background: #2a2a2a; border-radius: 2px; margin: 0 auto 12px;"></div>
+  <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px;">
+    <div style="font-size: 14px; font-weight: 500; color: #fafafa;">Сохранить результат</div>
+    <button onclick="closeAllModals()" style="background: transparent; border: none; color: #666; font-size: 20px; cursor: pointer; font-family: var(--font-sans);">×</button>
+  </div>
+  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 14px;">
+    <div style="background: rgba(239,159,39,0.08); border: 0.5px solid #EF9F27; border-radius: 8px; padding: 10px;">
+      <div style="font-size: 11px; font-weight: 500; color: #fafafa;">+ Новый кабель</div>
+      <div style="font-size: 9px; color: #888; margin-top: 2px;">Добавить в коллекцию</div>
+    </div>
+    <div style="background: #111; border: 0.5px solid #1f1f1f; border-radius: 8px; padding: 10px;">
+      <div style="font-size: 11px; font-weight: 500; color: #aaa;">К существующему</div>
+      <div style="font-size: 9px; color: #666; margin-top: 2px;">В историю</div>
+    </div>
+  </div>
+  <label style="font-size: 9px; color: #666; text-transform: uppercase; display: block; margin-bottom: 6px;">Название *</label>
+  <input type="text" placeholder="Например: Mogami студийный" style="width: 100%; background: #111; border: 0.5px solid #1f1f1f; border-radius: 8px; padding: 10px 12px; font-size: 12px; color: #fafafa; font-family: var(--font-sans); box-sizing: border-box; outline: none; margin-bottom: 12px;"/>
+  <label style="font-size: 9px; color: #666; text-transform: uppercase; display: block; margin-bottom: 6px;">Заметка · опционально</label>
+  <textarea rows="2" placeholder="Купил в 2024…" style="width: 100%; background: #111; border: 0.5px solid #1f1f1f; border-radius: 8px; padding: 10px 12px; font-size: 12px; color: #fafafa; font-family: var(--font-sans); box-sizing: border-box; outline: none; resize: none; margin-bottom: 14px;"></textarea>
+  <button onclick="confirmSave()" style="width: 100%; background: #EF9F27; color: #2a1a00; border: none; border-radius: 10px; padding: 13px; font-size: 13px; font-weight: 500; font-family: var(--font-sans); cursor: pointer;">Сохранить</button>
+</div>
+
+<div id="share-sheet" class="bottom-sheet" style="display: none; position: absolute; left: 0; right: 0; bottom: 0; background: #0f0f0f; border-top-left-radius: 20px; border-top-right-radius: 20px; border-top: 0.5px solid #2a2a2a; padding: 10px 20px 18px; z-index: 65;">
+  <div style="width: 36px; height: 4px; background: #2a2a2a; border-radius: 2px; margin: 0 auto 12px;"></div>
+  <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px;">
+    <div style="font-size: 14px; font-weight: 500; color: #fafafa;">Поделиться паспортом</div>
+    <button onclick="closeAllModals()" style="background: transparent; border: none; color: #666; font-size: 20px; cursor: pointer; font-family: var(--font-sans);">×</button>
+  </div>
+  <div style="background: #111; border: 0.5px solid #1f1f1f; border-radius: 10px; padding: 12px; display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
+    <div style="width: 38px; height: 46px; background: #1a1a1a; border: 0.5px solid #2a2a2a; border-radius: 3px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+      <div style="font-size: 7px; color: #EF9F27; font-weight: 500;">PDF</div>
+    </div>
+    <div style="flex: 1; min-width: 0;">
+      <div style="font-size: 12px; font-weight: 500; color: #fafafa;">Mogami-1_passport.pdf</div>
+      <div style="font-size: 10px; color: #666; margin-top: 2px;">3 страницы · 142 КБ</div>
+    </div>
+  </div>
+  <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px;">
+    <button style="background: #111; border: 0.5px solid #1f1f1f; border-radius: 8px; padding: 10px 4px; cursor: pointer; font-family: var(--font-sans); display: flex; flex-direction: column; align-items: center; gap: 4px;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#aaa" stroke-width="1.8" stroke-linecap="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M22 7l-10 5L2 7"/></svg>
+      <span style="font-size: 9px; color: #aaa;">Почта</span>
+    </button>
+    <button style="background: #111; border: 0.5px solid #1f1f1f; border-radius: 8px; padding: 10px 4px; cursor: pointer; font-family: var(--font-sans); display: flex; flex-direction: column; align-items: center; gap: 4px;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#aaa" stroke-width="1.8" stroke-linecap="round"><path d="M21 3L3 10l6 3 3 7 9-17z"/></svg>
+      <span style="font-size: 9px; color: #aaa;">Telegram</span>
+    </button>
+    <button style="background: #111; border: 0.5px solid #1f1f1f; border-radius: 8px; padding: 10px 4px; cursor: pointer; font-family: var(--font-sans); display: flex; flex-direction: column; align-items: center; gap: 4px;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#aaa" stroke-width="1.8" stroke-linecap="round"><path d="M3 7v13a1 1 0 001 1h16a1 1 0 001-1V9a1 1 0 00-1-1h-8l-2-3H4a1 1 0 00-1 1z"/></svg>
+      <span style="font-size: 9px; color: #aaa;">Файлы</span>
+    </button>
+    <button style="background: #111; border: 0.5px solid #1f1f1f; border-radius: 8px; padding: 10px 4px; cursor: pointer; font-family: var(--font-sans); display: flex; flex-direction: column; align-items: center; gap: 4px;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#aaa"><circle cx="5" cy="12" r="1.5" fill="#aaa"/><circle cx="12" cy="12" r="1.5" fill="#aaa"/><circle cx="19" cy="12" r="1.5" fill="#aaa"/></svg>
+      <span style="font-size: 9px; color: #aaa;">Ещё</span>
+    </button>
+  </div>
+</div>
+
+<div id="dialog" style="display: none; position: absolute; left: 20px; right: 20px; top: 50%; transform: translateY(-50%); background: #141414; border: 0.5px solid #2a2a2a; border-radius: 14px; padding: 20px; z-index: 70;">
+  <div id="dialog-icon" style="display: flex; justify-content: center; margin-bottom: 12px;"></div>
+  <div id="dialog-title" style="font-size: 15px; font-weight: 500; color: #fafafa; text-align: center; margin-bottom: 6px;"></div>
+  <div id="dialog-text" style="font-size: 11px; color: #888; text-align: center; line-height: 1.5; margin-bottom: 16px;"></div>
+  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px;">
+    <button id="dialog-cancel" style="background: transparent; color: #aaa; border: 0.5px solid #2a2a2a; border-radius: 8px; padding: 11px; font-size: 12px; font-weight: 500; font-family: var(--font-sans); cursor: pointer;">Отмена</button>
+    <button id="dialog-confirm" style="background: #EF9F27; color: #2a1a00; border: none; border-radius: 8px; padding: 11px; font-size: 12px; font-weight: 500; font-family: var(--font-sans); cursor: pointer;">OK</button>
+  </div>
+</div>
+
+<div id="rename-sheet" class="bottom-sheet" style="display: none; position: absolute; left: 0; right: 0; bottom: 0; background: #0f0f0f; border-top-left-radius: 20px; border-top-right-radius: 20px; border-top: 0.5px solid #2a2a2a; padding: 10px 20px 18px; z-index: 65;">
+  <div style="width: 36px; height: 4px; background: #2a2a2a; border-radius: 2px; margin: 0 auto 12px;"></div>
+  <div style="font-size: 14px; font-weight: 500; color: #fafafa; margin-bottom: 12px;">Переименовать</div>
+  <input id="rename-input" type="text" value="Mogami #1" style="width: 100%; background: #111; border: 0.5px solid #1f1f1f; border-radius: 8px; padding: 10px 12px; font-size: 12px; color: #fafafa; font-family: var(--font-sans); box-sizing: border-box; outline: none; margin-bottom: 14px;"/>
+  <button onclick="applyRename()" style="width: 100%; background: #EF9F27; color: #2a1a00; border: none; border-radius: 10px; padding: 13px; font-size: 13px; font-weight: 500; font-family: var(--font-sans); cursor: pointer;">Сохранить</button>
+</div>
+
+<div id="note-sheet" class="bottom-sheet" style="display: none; position: absolute; left: 0; right: 0; bottom: 0; background: #0f0f0f; border-top-left-radius: 20px; border-top-right-radius: 20px; border-top: 0.5px solid #2a2a2a; padding: 10px 20px 18px; z-index: 65;">
+  <div style="width: 36px; height: 4px; background: #2a2a2a; border-radius: 2px; margin: 0 auto 12px;"></div>
+  <div style="font-size: 14px; font-weight: 500; color: #fafafa; margin-bottom: 12px;">Изменить заметку</div>
+  <textarea id="note-input" rows="3" style="width: 100%; background: #111; border: 0.5px solid #1f1f1f; border-radius: 8px; padding: 10px 12px; font-size: 12px; color: #fafafa; font-family: var(--font-sans); box-sizing: border-box; outline: none; resize: none; margin-bottom: 14px;">Купил в 2024, для вокала</textarea>
+  <button onclick="applyNote()" style="width: 100%; background: #EF9F27; color: #2a1a00; border: none; border-radius: 10px; padding: 13px; font-size: 13px; font-weight: 500; font-family: var(--font-sans); cursor: pointer;">Сохранить</button>
+</div>
+
+<div id="toast" style="display: none; position: absolute; left: 16px; right: 16px; bottom: 70px; background: #1c1c1c; border: 0.5px solid #2a2a2a; border-radius: 10px; padding: 10px 14px; z-index: 80; font-family: var(--font-sans); align-items: center; gap: 10px;">
+  <svg id="toast-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#97C459" stroke-width="2.6" stroke-linecap="round"><path d="M5 12l5 5L20 7"/></svg>
+  <span id="toast-text" style="flex: 1; font-size: 12px; color: #e8e8e8;">Готово</span>
+  <button id="toast-action" onclick="undoToast()" style="display: none; background: transparent; color: #EF9F27; border: 0.5px solid rgba(239,159,39,0.4); border-radius: 6px; padding: 5px 10px; font-size: 10px; font-weight: 500; font-family: var(--font-sans); cursor: pointer;">Вернуть</button>
+</div>
+
+</div>
+</div>
+
+<style>
+.cable-row { background: #111; border: 0.5px solid #1f1f1f; border-radius: 10px; padding: 10px 12px; cursor: pointer; font-family: var(--font-sans); text-align: left; display: flex; align-items: center; gap: 10px; }
+.cable-row .strip { width: 3px; height: 36px; border-radius: 2px; flex-shrink: 0; }
+.cable-row .main { flex: 1; min-width: 0; }
+.cable-row .ttl { font-size: 12px; font-weight: 500; color: #fafafa; display: flex; align-items: center; gap: 6px; }
+.cable-row .tag { font-size: 8px; color: #666; background: #1a1a1a; padding: 2px 5px; border-radius: 3px; text-transform: uppercase; }
+.cable-row .sub { font-size: 10px; color: #888; margin-top: 2px; }
+.cable-row .score { font-size: 15px; font-weight: 500; color: #fafafa; text-align: right; line-height: 1; }
+.cable-row .score div { font-size: 8px; color: #666; margin-top: 2px; }
+.himo-chips::-webkit-scrollbar { height: 3px; }
+.himo-chips::-webkit-scrollbar-track { background: transparent; }
+.himo-chips::-webkit-scrollbar-thumb { background: #2a2a2a; border-radius: 2px; }
+#screens > .screen { scrollbar-width: thin; scrollbar-color: #2a2a2a transparent; }
+@keyframes himo-spin { to { transform: rotate(360deg); } }
+.spin { animation: himo-spin 0.9s linear infinite; }
+</style>
+
+<script>
+let current = 'dashboard';
+let navStack = ['dashboard'];
+let selectedType = 'ts';
+let undoTimer = null;
+let runAnimation = null;
+
+function goto(screen) {
+  const screens = document.querySelectorAll('.screen');
+  screens.forEach(s => s.style.display = 'none');
+  const target = document.getElementById('screen-' + screen);
+  if (target) {
+    target.style.display = 'block';
+    target.scrollTop = 0;
+  }
+  if (navStack[navStack.length - 1] !== screen) navStack.push(screen);
+  current = screen;
+  updateNav(screen);
+  closeAllDropdowns();
+  if (screen === 'testRunning') startRunAnimation();
+  else stopRunAnimation();
+}
+
+function goBack() {
+  if (navStack.length > 1) {
+    navStack.pop();
+    const prev = navStack[navStack.length - 1];
+    const screens = document.querySelectorAll('.screen');
+    screens.forEach(s => s.style.display = 'none');
+    document.getElementById('screen-' + prev).style.display = 'block';
+    current = prev;
+    updateNav(prev);
+    closeAllDropdowns();
+  }
+}
+
+function navTab(screen) {
+  navStack = [screen];
+  goto(screen);
+  navStack = [screen];
+}
+
+function updateNav(screen) {
+  const tabs = ['dashboard', 'collection', 'settings'];
+  const active = tabs.includes(screen) ? screen : null;
+  tabs.forEach(t => {
+    const btn = document.getElementById('nav-' + t);
+    if (!btn) return;
+    const svg = btn.querySelector('svg');
+    const span = btn.querySelector('span');
+    if (t === active) {
+      svg.setAttribute('stroke', '#EF9F27');
+      span.style.color = '#EF9F27';
+    } else {
+      svg.setAttribute('stroke', '#555');
+      span.style.color = '#555';
+    }
+  });
+}
+
+function closeAllDropdowns() {
+  document.getElementById('ble-dropdown').style.display = 'none';
+  const sortDd = document.getElementById('sort-dd');
+  if (sortDd) sortDd.style.display = 'none';
+  const cableMenu = document.getElementById('cable-menu');
+  if (cableMenu) cableMenu.style.display = 'none';
+}
+
+function closeAllModals() {
+  document.getElementById('backdrop').style.display = 'none';
+  document.querySelectorAll('.bottom-sheet').forEach(s => s.style.display = 'none');
+  document.getElementById('dialog').style.display = 'none';
+  document.getElementById('fr-modal').style.display = 'none';
+}
+
+function toggleBle(e) {
+  e.stopPropagation();
+  const dd = document.getElementById('ble-dropdown');
+  dd.style.display = dd.style.display === 'block' ? 'none' : 'block';
+}
+
+function closeBle() {
+  document.getElementById('ble-dropdown').style.display = 'none';
+}
+
+function reconnectBle() {
+  closeBle();
+  showToast('Переподключение…', 'spin');
+  setTimeout(() => showToast('Прибор подключён', 'check'), 2000);
+}
+
+function selectType(type) {
+  selectedType = type;
+  ['ts', 'trs', 'xlr'].forEach(t => {
+    const btn = document.getElementById('type-' + t);
+    const label = btn.querySelector('div');
+    if (t === type) {
+      btn.style.background = 'rgba(239,159,39,0.08)';
+      btn.style.border = '0.5px solid #EF9F27';
+      label.style.color = '#fafafa';
+    } else {
+      btn.style.background = '#111';
+      btn.style.border = '0.5px solid #1f1f1f';
+      label.style.color = '#aaa';
+    }
+  });
+  const cmrr = document.getElementById('setup-cmrr');
+  const num = document.getElementById('setup-cmrr-num');
+  const title = document.getElementById('setup-cmrr-title');
+  const tag = document.getElementById('setup-cmrr-tag');
+  if (type === 'ts') {
+    cmrr.style.opacity = '0.55';
+    num.style.background = '#1a1a1a';
+    num.style.color = '#555';
+    title.style.color = '#888';
+    tag.style.display = 'inline';
+  } else {
+    cmrr.style.opacity = '1';
+    num.style.background = 'rgba(239,159,39,0.1)';
+    num.style.color = '#EF9F27';
+    title.style.color = '#fafafa';
+    tag.style.display = 'none';
+  }
+  const times = { ts: '~15 секунд', trs: '~20 секунд', xlr: '~20 секунд' };
+  document.getElementById('start-time').textContent = 'Старт · ' + times[type];
+}
+
+function startRunAnimation() {
+  stopRunAnimation();
+  let step = 0;
+  const stages = [
+    { label: 'Целостность', time: 2500 },
+    { label: 'CMRR', time: 2500 },
+    { label: 'АЧХ', time: 3000 }
+  ];
+  const stagesEl = document.getElementById('run-stages');
+  function render() {
+    stagesEl.innerHTML = '';
+    stages.forEach((s, i) => {
+      let bg, opacity, iconHtml;
+      if (i < step) {
+        bg = '#111'; opacity = '1';
+        iconHtml = '<div style="width: 22px; height: 22px; border-radius: 50%; background: rgba(99,153,34,0.12); border: 0.5px solid rgba(151,196,89,0.5); display: flex; align-items: center; justify-content: center;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#97C459" stroke-width="3" stroke-linecap="round"><path d="M5 12l5 5L20 7"/></svg></div>';
+      } else if (i === step) {
+        bg = 'rgba(239,159,39,0.06)'; opacity = '1';
+        iconHtml = '<div style="width: 22px; height: 22px; border-radius: 50%; background: rgba(239,159,39,0.15); border: 0.5px solid rgba(239,159,39,0.6); display: flex; align-items: center; justify-content: center;"><div class="spin" style="width: 8px; height: 8px; border: 1.5px solid #EF9F27; border-right-color: transparent; border-radius: 50%;"></div></div>';
+      } else {
+        bg = '#0d0d0d'; opacity = '0.55';
+        iconHtml = '<div style="width: 22px; height: 22px; border-radius: 50%; background: #1a1a1a; border: 0.5px solid #2a2a2a; display: flex; align-items: center; justify-content: center; font-size: 10px; color: #555; font-weight: 500;">' + (i+1) + '</div>';
+      }
+      stagesEl.innerHTML += '<div style="display: flex; align-items: center; gap: 10px; padding: 10px 12px; background: ' + bg + '; border: 0.5px solid #1f1f1f; border-radius: 10px; opacity: ' + opacity + ';">' + iconHtml + '<div style="flex: 1; font-size: 12px; font-weight: 500; color: ' + (i <= step ? '#fafafa' : '#888') + ';">' + s.label + '</div></div>';
+    });
+  }
+  render();
+  document.getElementById('run-step').textContent = (step + 1);
+  document.getElementById('run-label').textContent = stages[step].label;
+  const ring = document.getElementById('run-ring');
+  let startTime = Date.now();
+  runAnimation = setInterval(() => {
+    const elapsed = Date.now() - startTime;
+    const pct = Math.min(100, Math.round(elapsed / stages[step].time * 100));
+    ring.setAttribute('stroke-dashoffset', 540 - (540 * pct / 100));
+    document.getElementById('run-percent').innerHTML = pct + '<span style="font-size: 14px; color: #888;">%</span>';
+    if (pct >= 100) {
+      step++;
+      if (step >= stages.length) {
+        clearInterval(runAnimation);
+        runAnimation = null;
+        setTimeout(() => goto('results'), 400);
+      } else {
+        startTime = Date.now();
+        document.getElementById('run-step').textContent = (step + 1);
+        document.getElementById('run-label').textContent = stages[step].label;
+        render();
+      }
+    }
+  }, 60);
+}
+
+function stopRunAnimation() {
+  if (runAnimation) { clearInterval(runAnimation); runAnimation = null; }
+}
+
+function toggleSortDd(e) {
+  e.stopPropagation();
+  const dd = document.getElementById('sort-dd');
+  dd.style.display = dd.style.display === 'block' ? 'none' : 'block';
+}
+
+function selectSort(key, label) {
+  document.querySelectorAll('.sort-item').forEach(btn => {
+    const check = btn.querySelector('.check');
+    if (btn.dataset.key === key) {
+      btn.style.background = 'rgba(239,159,39,0.08)';
+      btn.style.color = '#fafafa';
+      check.style.display = 'block';
+    } else {
+      btn.style.background = 'transparent';
+      btn.style.color = '#e8e8e8';
+      check.style.display = 'none';
+    }
+  });
+  document.getElementById('col-subtitle').textContent = '24 кабеля · ' + label;
+  setTimeout(() => document.getElementById('sort-dd').style.display = 'none', 200);
+}
+
+function toggleCableMenu(e) {
+  e.stopPropagation();
+  const m = document.getElementById('cable-menu');
+  m.style.display = m.style.display === 'block' ? 'none' : 'block';
+}
+
+function openCancelDialog() {
+  showDialog({
+    icon: '<div style="width: 44px; height: 44px; border-radius: 50%; background: rgba(239,159,39,0.1); border: 0.5px solid rgba(239,159,39,0.4); display: flex; align-items: center; justify-content: center;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#EF9F27" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 8v4M12 16h.01"/></svg></div>',
+    title: 'Прервать тест?',
+    text: 'Промежуточные результаты не сохранятся.',
+    cancelText: 'Продолжить',
+    confirmText: 'Прервать',
+    confirmStyle: 'secondary',
+    onConfirm: () => { closeAllModals(); stopRunAnimation(); goto('dashboard'); }
+  });
+}
+
+function openRepeatDialog() {
+  showDialog({
+    icon: '<div style="width: 44px; height: 44px; border-radius: 50%; background: rgba(239,159,39,0.1); border: 0.5px solid rgba(239,159,39,0.4); display: flex; align-items: center; justify-content: center;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#EF9F27" stroke-width="2" stroke-linecap="round"><path d="M21 12a9 9 0 11-3-6.7M21 3v6h-6"/></svg></div>',
+    title: 'Повторить тест?',
+    text: 'Текущий результат (Health Score 92) будет отброшен.',
+    cancelText: 'Отмена',
+    confirmText: 'Повторить',
+    onConfirm: () => { closeAllModals(); goto('testRunning'); }
+  });
+}
+
+function openDelete() {
+  closeAllDropdowns();
+  showDialog({
+    icon: '<div style="width: 44px; height: 44px; border-radius: 50%; background: rgba(226,75,74,0.1); border: 0.5px solid rgba(226,75,74,0.4); display: flex; align-items: center; justify-content: center;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#E24B4A" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg></div>',
+    title: 'Удалить «' + document.getElementById('cable-name').textContent + '»?',
+    text: 'Все 5 проверок и история динамики будут удалены.',
+    cancelText: 'Отмена',
+    confirmText: 'Удалить',
+    confirmStyle: 'danger',
+    onConfirm: () => { closeAllModals(); goto('collection'); showToast('Кабель удалён'); }
+  });
+}
+
+function showDialog(opts) {
+  document.getElementById('backdrop').style.display = 'block';
+  document.getElementById('dialog-icon').innerHTML = opts.icon;
+  document.getElementById('dialog-title').textContent = opts.title;
+  document.getElementById('dialog-text').textContent = opts.text;
+  const cancel = document.getElementById('dialog-cancel');
+  const confirm = document.getElementById('dialog-confirm');
+  cancel.textContent = opts.cancelText || 'Отмена';
+  confirm.textContent = opts.confirmText || 'OK';
+  if (opts.confirmStyle === 'danger') {
+    confirm.style.background = '#E24B4A';
+    confirm.style.color = '#2a0606';
+  } else if (opts.confirmStyle === 'secondary') {
+    confirm.style.background = 'transparent';
+    confirm.style.color = '#aaa';
+    confirm.style.border = '0.5px solid #2a2a2a';
+    cancel.style.background = '#EF9F27';
+    cancel.style.color = '#2a1a00';
+    cancel.style.border = 'none';
+  } else {
+    confirm.style.background = '#EF9F27';
+    confirm.style.color = '#2a1a00';
+    confirm.style.border = 'none';
+  }
+  cancel.onclick = () => {
+    closeAllModals();
+    cancel.style.background = 'transparent';
+    cancel.style.color = '#aaa';
+    cancel.style.border = '0.5px solid #2a2a2a';
+  };
+  confirm.onclick = opts.onConfirm;
+  document.getElementById('dialog').style.display = 'block';
+}
+
+function openSaveSheet() {
+  document.getElementById('backdrop').style.display = 'block';
+  document.getElementById('save-sheet').style.display = 'block';
+}
+
+function confirmSave() {
+  closeAllModals();
+  showToast('Сохранено в коллекцию');
+  setTimeout(() => goto('cableDetail'), 800);
+}
+
+function openSharePdf() {
+  closeAllDropdowns();
+  document.getElementById('backdrop').style.display = 'block';
+  document.getElementById('share-sheet').style.display = 'block';
+}
+
+function openFrModal() {
+  document.getElementById('backdrop').style.display = 'block';
+  document.getElementById('fr-modal').style.display = 'block';
+}
+
+function closeFrModal() {
+  document.getElementById('backdrop').style.display = 'none';
+  document.getElementById('fr-modal').style.display = 'none';
+}
+
+function openRename() {
+  closeAllDropdowns();
+  document.getElementById('backdrop').style.display = 'block';
+  document.getElementById('rename-sheet').style.display = 'block';
+}
+
+function applyRename() {
+  const v = document.getElementById('rename-input').value.trim();
+  if (v) document.getElementById('cable-name').textContent = v;
+  closeAllModals();
+  showToast('Имя обновлено');
+}
+
+function openNote() {
+  closeAllDropdowns();
+  document.getElementById('backdrop').style.display = 'block';
+  document.getElementById('note-sheet').style.display = 'block';
+}
+
+function applyNote() {
+  const v = document.getElementById('note-input').value.trim();
+  document.getElementById('cable-note').textContent = v ? '«' + v + '»' : '';
+  closeAllModals();
+  showToast('Заметка обновлена');
+}
+
+function discardResult() {
+  goto('dashboard');
+  showToast('Результат отброшен', 'trash', true);
+}
+
+function showToast(text, icon, withUndo) {
+  clearTimeout(undoTimer);
+  const toast = document.getElementById('toast');
+  document.getElementById('toast-text').textContent = text;
+  const iconEl = document.getElementById('toast-icon');
+  if (icon === 'spin') {
+    iconEl.outerHTML = '<div id="toast-icon" class="spin" style="width: 12px; height: 12px; border: 1.5px solid #EF9F27; border-right-color: transparent; border-radius: 50%;"></div>';
+  } else if (icon === 'trash') {
+    document.getElementById('toast-icon').outerHTML = '<svg id="toast-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#888" stroke-width="1.8" stroke-linecap="round"><path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>';
+  } else {
+    document.getElementById('toast-icon').outerHTML = '<svg id="toast-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#97C459" stroke-width="2.6" stroke-linecap="round"><path d="M5 12l5 5L20 7"/></svg>';
+  }
+  document.getElementById('toast-action').style.display = withUndo ? 'block' : 'none';
+  toast.style.display = 'flex';
+  undoTimer = setTimeout(() => toast.style.display = 'none', withUndo ? 4000 : 2200);
+}
+
+function undoToast() {
+  clearTimeout(undoTimer);
+  document.getElementById('toast').style.display = 'none';
+  goto('results');
+}
+
+document.addEventListener('click', function(e) {
+  const bleDd = document.getElementById('ble-dropdown');
+  const sortDd = document.getElementById('sort-dd');
+  const cableMenu = document.getElementById('cable-menu');
+  if (bleDd && !e.target.closest('.ble-badge') && !bleDd.contains(e.target)) bleDd.style.display = 'none';
+  if (sortDd && !e.target.closest('#sort-btn') && !sortDd.contains(e.target)) sortDd.style.display = 'none';
+  if (cableMenu && !e.target.closest('#cable-menu-btn') && !cableMenu.contains(e.target)) cableMenu.style.display = 'none';
+});
+</script>
