@@ -1,0 +1,355 @@
+{
+  "_note": "Мок BLE DATA-пакетов для разработки и отладки приложения Himo без физического устройства. Протокол: ble-protocol.md v1.0. Все ts — Unix-секунды (апрель 2026).",
+  "_freq_table": [10, 13, 18, 24, 31, 42, 56, 74, 99, 131, 175, 232, 309, 412, 548, 730, 1000, 1293, 1721, 2291, 3050, 4060, 5404, 7192, 9574, 12742, 16959, 22573, 30043, 40000],
+  "_freq_table_note": "index 16 = 1000 Гц — опорная точка. v[16] всегда 0.0. r = 99999.0 означает обрыв (open), r = 0.01 — КЗ (short).",
+
+  "status": {
+    "idle": {
+      "type": "status", "pv": 1, "ts": 0, "state": "idle"
+    },
+    "testing_continuity_start": {
+      "type": "status", "pv": 1, "ts": 1776168000, "state": "testing", "test": "continuity", "progress": 0.0
+    },
+    "testing_continuity_half": {
+      "type": "status", "pv": 1, "ts": 1776168000, "state": "testing", "test": "continuity", "progress": 0.5
+    },
+    "testing_cmrr_start": {
+      "type": "status", "pv": 1, "ts": 1776168000, "state": "testing", "test": "cmrr", "progress": 0.0
+    },
+    "testing_cmrr_half": {
+      "type": "status", "pv": 1, "ts": 1776168000, "state": "testing", "test": "cmrr", "progress": 0.5
+    },
+    "testing_freq_response_start": {
+      "type": "status", "pv": 1, "ts": 1776168000, "state": "testing", "test": "freq_response", "progress": 0.0
+    },
+    "testing_freq_response_third": {
+      "type": "status", "pv": 1, "ts": 1776168000, "state": "testing", "test": "freq_response", "progress": 0.33
+    },
+    "testing_freq_response_two_thirds": {
+      "type": "status", "pv": 1, "ts": 1776168000, "state": "testing", "test": "freq_response", "progress": 0.67
+    },
+    "done": {
+      "type": "status", "pv": 1, "ts": 1776168000, "state": "done"
+    },
+    "error_short_circuit": {
+      "type": "status", "pv": 1, "ts": 1776168000, "state": "error", "err_code": 1
+    },
+    "error_no_signal": {
+      "type": "status", "pv": 1, "ts": 1776168000, "state": "error", "err_code": 2
+    },
+    "error_timeout": {
+      "type": "status", "pv": 1, "ts": 1776168000, "state": "error", "err_code": 3
+    }
+  },
+
+  "results": {
+
+    "continuity": {
+
+      "jack_ts_ok": {
+        "type": "result:continuity", "pv": 1, "ts": 1776168003,
+        "cable": "jack_ts", "status": "ok",
+        "conductors": {
+          "tip":    {"r": 0.85, "s": "ok"},
+          "sleeve": {"r": 0.72, "s": "ok"}
+        }
+      },
+
+      "jack_ts_open_tip": {
+        "_note": "Обрыв жилы tip — кабель порван внутри разъёма",
+        "type": "result:continuity", "pv": 1, "ts": 1776168063,
+        "cable": "jack_ts", "status": "fail",
+        "conductors": {
+          "tip":    {"r": 99999.0, "s": "open"},
+          "sleeve": {"r": 0.91, "s": "ok"}
+        }
+      },
+
+      "jack_ts_short": {
+        "_note": "КЗ tip и sleeve — пайка замкнула жилы",
+        "type": "result:continuity", "pv": 1, "ts": 1776168123,
+        "cable": "jack_ts", "status": "fail",
+        "conductors": {
+          "tip":    {"r": 0.01, "s": "short"},
+          "sleeve": {"r": 0.01, "s": "short"}
+        }
+      },
+
+      "jack_trs_ok": {
+        "type": "result:continuity", "pv": 1, "ts": 1776168183,
+        "cable": "jack_trs", "status": "ok",
+        "conductors": {
+          "tip":    {"r": 1.20, "s": "ok"},
+          "ring":   {"r": 1.54, "s": "ok"},
+          "sleeve": {"r": 0.83, "s": "ok"}
+        }
+      },
+
+      "jack_trs_warning_ring": {
+        "_note": "Высокое сопротивление ring — плохой контакт в разъёме или окисление",
+        "type": "result:continuity", "pv": 1, "ts": 1776168243,
+        "cable": "jack_trs", "status": "warning",
+        "conductors": {
+          "tip":    {"r": 1.10, "s": "ok"},
+          "ring":   {"r": 18.70, "s": "warning"},
+          "sleeve": {"r": 0.95, "s": "ok"}
+        }
+      },
+
+      "jack_trs_open_sleeve": {
+        "_note": "Обрыв экрана sleeve",
+        "type": "result:continuity", "pv": 1, "ts": 1776168303,
+        "cable": "jack_trs", "status": "fail",
+        "conductors": {
+          "tip":    {"r": 1.30, "s": "ok"},
+          "ring":   {"r": 1.60, "s": "ok"},
+          "sleeve": {"r": 99999.0, "s": "open"}
+        }
+      },
+
+      "xlr_ok": {
+        "type": "result:continuity", "pv": 1, "ts": 1776168363,
+        "cable": "xlr", "status": "ok",
+        "conductors": {
+          "pin1": {"r": 0.68, "s": "ok"},
+          "pin2": {"r": 0.74, "s": "ok"},
+          "pin3": {"r": 0.71, "s": "ok"}
+        }
+      },
+
+      "xlr_warning_pin2": {
+        "_note": "Высокое сопротивление pin2 (hot) — подозрение на окисление пина",
+        "type": "result:continuity", "pv": 1, "ts": 1776168423,
+        "cable": "xlr", "status": "warning",
+        "conductors": {
+          "pin1": {"r": 0.70, "s": "ok"},
+          "pin2": {"r": 32.40, "s": "warning"},
+          "pin3": {"r": 0.69, "s": "ok"}
+        }
+      },
+
+      "xlr_open_pin3": {
+        "_note": "Обрыв pin3 (cold) — полурабочий балансный кабель",
+        "type": "result:continuity", "pv": 1, "ts": 1776168483,
+        "cable": "xlr", "status": "fail",
+        "conductors": {
+          "pin1": {"r": 0.65, "s": "ok"},
+          "pin2": {"r": 0.70, "s": "ok"},
+          "pin3": {"r": 99999.0, "s": "open"}
+        }
+      }
+    },
+
+    "cmrr": {
+
+      "xlr_excellent": {
+        "type": "result:cmrr", "pv": 1, "ts": 1776168008,
+        "cable": "xlr", "status": "excellent", "cmrr_db": 72.4
+      },
+
+      "xlr_ok": {
+        "type": "result:cmrr", "pv": 1, "ts": 1776168068,
+        "cable": "xlr", "status": "ok", "cmrr_db": 51.8
+      },
+
+      "xlr_fail": {
+        "_note": "Плохое экранирование или деградация балансной схемы",
+        "type": "result:cmrr", "pv": 1, "ts": 1776168128,
+        "cable": "xlr", "status": "fail", "cmrr_db": 28.3
+      },
+
+      "jack_trs_excellent": {
+        "type": "result:cmrr", "pv": 1, "ts": 1776168188,
+        "cable": "jack_trs", "status": "excellent", "cmrr_db": 65.1
+      },
+
+      "jack_trs_ok": {
+        "type": "result:cmrr", "pv": 1, "ts": 1776168248,
+        "cable": "jack_trs", "status": "ok", "cmrr_db": 44.7
+      },
+
+      "jack_trs_fail": {
+        "type": "result:cmrr", "pv": 1, "ts": 1776168308,
+        "cable": "jack_trs", "status": "fail", "cmrr_db": 31.2
+      }
+    },
+
+    "freq_response": {
+
+      "jack_ts_excellent": {
+        "_note": "Плоская АЧХ — новый качественный кабель",
+        "type": "result:freq_response", "pv": 1, "ts": 1776168023,
+        "cable": "jack_ts", "status": "excellent",
+        "v": [ 0.1,  0.1,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,
+               0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,
+               0.0, -0.1, -0.1, -0.2, -0.3, -0.5, -0.7, -0.8, -0.9, -1.0]
+      },
+
+      "jack_ts_ok": {
+        "_note": "Небольшой завал на верхних — длинный или бюджетный кабель",
+        "type": "result:freq_response", "pv": 1, "ts": 1776168083,
+        "cable": "jack_ts", "status": "ok",
+        "v": [ 0.2,  0.1,  0.1,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,
+               0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0, -0.1, -0.2,
+              -0.4, -0.7, -1.1, -1.6, -2.0, -2.4, -2.7, -2.9, -3.0, -3.2]
+      },
+
+      "jack_ts_fail": {
+        "_note": "Сильный завал — повреждённый или очень высокоёмкостной кабель",
+        "type": "result:freq_response", "pv": 1, "ts": 1776168143,
+        "cable": "jack_ts", "status": "fail",
+        "v": [ 0.3,  0.2,  0.1,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,
+               0.0,  0.0,  0.0, -0.1, -0.2, -0.3,  0.0, -0.5, -0.9, -1.5,
+              -2.4, -3.6, -5.0, -6.5, -8.1, -9.7,-11.3,-13.0,-14.8,-16.5]
+      },
+
+      "jack_trs_excellent": {
+        "type": "result:freq_response", "pv": 1, "ts": 1776168203,
+        "cable": "jack_trs", "status": "excellent",
+        "v": [ 0.1,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,
+               0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,
+               0.0, -0.1, -0.2, -0.3, -0.4, -0.6, -0.8, -0.9, -1.0, -1.1]
+      },
+
+      "jack_trs_ok": {
+        "type": "result:freq_response", "pv": 1, "ts": 1776168263,
+        "cable": "jack_trs", "status": "ok",
+        "v": [ 0.2,  0.1,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,
+               0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0, -0.1, -0.3,
+              -0.6, -1.0, -1.5, -2.0, -2.4, -2.7, -2.9, -3.0, -3.2, -3.5]
+      },
+
+      "jack_trs_fail": {
+        "_note": "Высокая ёмкость кабеля — сильный завал выше 3 кГц",
+        "type": "result:freq_response", "pv": 1, "ts": 1776168323,
+        "cable": "jack_trs", "status": "fail",
+        "v": [ 0.4,  0.3,  0.2,  0.1,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,
+               0.0,  0.0, -0.1, -0.2, -0.4, -0.5,  0.0, -0.7, -1.2, -2.0,
+              -3.1, -4.4, -5.9, -7.5, -9.1,-10.8,-12.4,-14.0,-15.7,-17.3]
+      },
+
+      "xlr_excellent": {
+        "_note": "Студийный балансный кабель — практически идеальная АЧХ",
+        "type": "result:freq_response", "pv": 1, "ts": 1776168383,
+        "cable": "xlr", "status": "excellent",
+        "v": [ 0.1,  0.1,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,
+               0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,
+               0.0, -0.1, -0.1, -0.2, -0.3, -0.4, -0.5, -0.6, -0.8, -0.9]
+      },
+
+      "xlr_ok": {
+        "type": "result:freq_response", "pv": 1, "ts": 1776168443,
+        "cable": "xlr", "status": "ok",
+        "v": [ 0.2,  0.1,  0.1,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,
+               0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0, -0.1, -0.2,
+              -0.4, -0.7, -1.1, -1.6, -2.1, -2.5, -2.8, -2.9, -2.9, -3.0]
+      },
+
+      "xlr_fail": {
+        "_note": "Повреждённый кабель — обрыв или деградация экрана даёт паразитную ёмкость",
+        "type": "result:freq_response", "pv": 1, "ts": 1776168503,
+        "cable": "xlr", "status": "fail",
+        "v": [ 0.3,  0.2,  0.1,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,
+               0.0,  0.0,  0.0, -0.1, -0.2, -0.3,  0.0, -0.5, -0.8, -1.4,
+              -2.2, -3.3, -4.8, -6.1, -7.5, -8.9,-10.2,-11.8,-13.5,-15.0]
+      }
+    }
+  },
+
+  "sequences": {
+    "_note": "Полные сценарии — массивы DATA-пакетов в хронологическом порядке. Поле _cmd показывает CMD-пакет, который инициирует последовательность (app → устройство, не входит в массив packets).",
+
+    "full_xlr_excellent": {
+      "_note": "Полный тест XLR-кабеля — все три теста отличные. Базовый happy path.",
+      "_cmd": {"type": "cmd", "pv": 1, "cmd": "start_test", "test": "full", "cable": "xlr", "ts": 1776168000},
+      "packets": [
+        {"type": "status", "pv": 1, "ts": 1776168000, "state": "testing", "test": "continuity", "progress": 0.0},
+        {"type": "status", "pv": 1, "ts": 1776168000, "state": "testing", "test": "continuity", "progress": 1.0},
+        {"type": "result:continuity", "pv": 1, "ts": 1776168000, "cable": "xlr", "status": "ok",
+          "conductors": {
+            "pin1": {"r": 0.68, "s": "ok"},
+            "pin2": {"r": 0.74, "s": "ok"},
+            "pin3": {"r": 0.71, "s": "ok"}
+          }
+        },
+        {"type": "status", "pv": 1, "ts": 1776168000, "state": "testing", "test": "cmrr", "progress": 0.0},
+        {"type": "status", "pv": 1, "ts": 1776168000, "state": "testing", "test": "cmrr", "progress": 1.0},
+        {"type": "result:cmrr", "pv": 1, "ts": 1776168000, "cable": "xlr", "status": "excellent", "cmrr_db": 72.4},
+        {"type": "status", "pv": 1, "ts": 1776168000, "state": "testing", "test": "freq_response", "progress": 0.0},
+        {"type": "status", "pv": 1, "ts": 1776168000, "state": "testing", "test": "freq_response", "progress": 0.33},
+        {"type": "status", "pv": 1, "ts": 1776168000, "state": "testing", "test": "freq_response", "progress": 0.67},
+        {"type": "status", "pv": 1, "ts": 1776168000, "state": "testing", "test": "freq_response", "progress": 1.0},
+        {"type": "result:freq_response", "pv": 1, "ts": 1776168000, "cable": "xlr", "status": "excellent",
+          "v": [ 0.1,  0.1,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,
+                 0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,
+                 0.0, -0.1, -0.1, -0.2, -0.3, -0.4, -0.5, -0.6, -0.8, -0.9]
+        },
+        {"type": "status", "pv": 1, "ts": 1776168000, "state": "done"}
+      ]
+    },
+
+    "full_jack_trs_mixed": {
+      "_note": "Полный TRS-тест: целостность OK, CMRR удовлетворительный, АЧХ провалена. Сценарий для отображения частичного Health Score.",
+      "_cmd": {"type": "cmd", "pv": 1, "cmd": "start_test", "test": "full", "cable": "jack_trs", "ts": 1776168600},
+      "packets": [
+        {"type": "status", "pv": 1, "ts": 1776168600, "state": "testing", "test": "continuity", "progress": 0.0},
+        {"type": "status", "pv": 1, "ts": 1776168600, "state": "testing", "test": "continuity", "progress": 1.0},
+        {"type": "result:continuity", "pv": 1, "ts": 1776168600, "cable": "jack_trs", "status": "ok",
+          "conductors": {
+            "tip":    {"r": 1.20, "s": "ok"},
+            "ring":   {"r": 1.54, "s": "ok"},
+            "sleeve": {"r": 0.83, "s": "ok"}
+          }
+        },
+        {"type": "status", "pv": 1, "ts": 1776168600, "state": "testing", "test": "cmrr", "progress": 0.0},
+        {"type": "status", "pv": 1, "ts": 1776168600, "state": "testing", "test": "cmrr", "progress": 1.0},
+        {"type": "result:cmrr", "pv": 1, "ts": 1776168600, "cable": "jack_trs", "status": "ok", "cmrr_db": 44.7},
+        {"type": "status", "pv": 1, "ts": 1776168600, "state": "testing", "test": "freq_response", "progress": 0.0},
+        {"type": "status", "pv": 1, "ts": 1776168600, "state": "testing", "test": "freq_response", "progress": 0.33},
+        {"type": "status", "pv": 1, "ts": 1776168600, "state": "testing", "test": "freq_response", "progress": 0.67},
+        {"type": "status", "pv": 1, "ts": 1776168600, "state": "testing", "test": "freq_response", "progress": 1.0},
+        {"type": "result:freq_response", "pv": 1, "ts": 1776168600, "cable": "jack_trs", "status": "fail",
+          "v": [ 0.4,  0.3,  0.2,  0.1,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,
+                 0.0,  0.0, -0.1, -0.2, -0.4, -0.5,  0.0, -0.7, -1.2, -2.0,
+                -3.1, -4.4, -5.9, -7.5, -9.1,-10.8,-12.4,-14.0,-15.7,-17.3]
+        },
+        {"type": "status", "pv": 1, "ts": 1776168600, "state": "done"}
+      ]
+    },
+
+    "continuity_only_jack_ts_open": {
+      "_note": "Разовый тест целостности Jack TS — обрыв tip. Сценарий для экрана одиночного теста.",
+      "_cmd": {"type": "cmd", "pv": 1, "cmd": "start_test", "test": "continuity", "cable": "jack_ts", "ts": 1776169200},
+      "packets": [
+        {"type": "status", "pv": 1, "ts": 1776169200, "state": "testing", "test": "continuity", "progress": 0.0},
+        {"type": "status", "pv": 1, "ts": 1776169200, "state": "testing", "test": "continuity", "progress": 1.0},
+        {"type": "result:continuity", "pv": 1, "ts": 1776169200, "cable": "jack_ts", "status": "fail",
+          "conductors": {
+            "tip":    {"r": 99999.0, "s": "open"},
+            "sleeve": {"r": 0.91,   "s": "ok"}
+          }
+        },
+        {"type": "status", "pv": 1, "ts": 1776169200, "state": "done"}
+      ]
+    },
+
+    "error_mid_test": {
+      "_note": "Кабель вытащили в процессе теста CMRR — устройство возвращает err_code 2 (NO_SIGNAL). Сценарий для экрана ошибки и состояния idle после неё.",
+      "_cmd": {"type": "cmd", "pv": 1, "cmd": "start_test", "test": "full", "cable": "xlr", "ts": 1776169800},
+      "packets": [
+        {"type": "status", "pv": 1, "ts": 1776169800, "state": "testing", "test": "continuity", "progress": 0.0},
+        {"type": "status", "pv": 1, "ts": 1776169800, "state": "testing", "test": "continuity", "progress": 1.0},
+        {"type": "result:continuity", "pv": 1, "ts": 1776169800, "cable": "xlr", "status": "ok",
+          "conductors": {
+            "pin1": {"r": 0.68, "s": "ok"},
+            "pin2": {"r": 0.74, "s": "ok"},
+            "pin3": {"r": 0.71, "s": "ok"}
+          }
+        },
+        {"type": "status", "pv": 1, "ts": 1776169800, "state": "testing", "test": "cmrr", "progress": 0.0},
+        {"type": "status", "pv": 1, "ts": 1776169800, "state": "testing", "test": "cmrr", "progress": 0.4},
+        {"type": "status", "pv": 1, "ts": 1776169800, "state": "error", "err_code": 2}
+      ]
+    }
+  }
+}
