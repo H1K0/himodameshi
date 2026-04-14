@@ -26,7 +26,7 @@ himodameshi/
 
 | Документ                                                 | Описание                                                           |
 | -------------------------------------------------------- | ------------------------------------------------------------------ |
-| [GIT_CONVENTIONS.md](./GIT_CONVENTIONS.md)               | Структура репозитория, соглашения по коммитам и ветками            |
+| [GIT_CONVENTIONS.md](./GIT_CONVENTIONS.md)               | Структура репозитория, соглашения по коммитам и веткам             |
 | [docs/spec/requirements.md](./docs/spec/requirements.md) | Функционально-технические требования (ФТТ)                         |
 | [docs/spec/architecture.md](./docs/spec/architecture.md) | Техническая архитектура: стек, протокол, компоненты                |
 | [docs/adr/](./docs/adr/)                                 | Architecture Decision Records — почему принято то или иное решение |
