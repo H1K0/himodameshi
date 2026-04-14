@@ -1,1 +1,53 @@
+# ─── Default ───────────────────────────────────────────────────────────────────
+# Normalise line endings to LF in the repo; check out as LF everywhere.
+# Windows devs: set core.autocrlf=false in global git config.
+* text=auto eol=lf
+
+# ─── Source files ──────────────────────────────────────────────────────────────
+*.dart   text eol=lf
+*.c      text eol=lf
+*.cpp    text eol=lf
+*.h      text eol=lf
+*.ino    text eol=lf
+# ─── Config / data ─────────────────────────────────────────────────────────────
+*.yaml   text eol=lf
+*.yml    text eol=lf
+*.json   text eol=lf
+*.toml   text eol=lf
+*.ini    text eol=lf
+*.md     text eol=lf
+*.txt    text eol=lf
+# KiCad project files are XML-based text
+*.kicad_pcb  text eol=lf
+*.kicad_sch  text eol=lf
+*.kicad_pro  text eol=lf
+*.kicad_mod  text eol=lf
+*.kicad_sym  text eol=lf
+*.kicad_wks  text eol=lf
+# Draw.io diagrams are XML
+*.drawio  text eol=lf
+# ─── Windows-only scripts ──────────────────────────────────────────────────────
+*.bat  text eol=crlf
+*.cmd  text eol=crlf
+*.ps1  text eol=crlf
+# ─── Binary files ──────────────────────────────────────────────────────────────
 *.pdf   binary
+*.png   binary
+*.jpg   binary
+*.jpeg  binary
+*.gif   binary
+*.ico   binary
+*.ttf   binary
+*.otf   binary
+*.woff  binary
+*.woff2 binary
+*.zip   binary
+*.gz    binary
+*.tar   binary
+*.apk   binary
+*.ipa   binary
+# ─── GitHub Linguist ───────────────────────────────────────────────────────────
+# Exclude the interactive prototype from language statistics
+docs/assets/*.html  linguist-documentation=true
+# Mark mock data as generated so it doesn't dominate JSON stats
+app/mock/**  linguist-generated=true
