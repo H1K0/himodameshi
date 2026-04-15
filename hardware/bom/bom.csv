@@ -1,7 +1,7 @@
 Ref,Qty,Description,Part / Model,Package,Supplier,Unit Price (RUB),Total (RUB),Notes
 U1,1,Главный контроллер BLE/USB-C,ESP32-S3 DevKitC-1,DevKit,OZON,500,500,8 MB Flash
 U2,1,DDS-генератор синусоид 10 Гц–40 кГц SPI,AD9833 module,Breakout,OZON,280,280,Модуль с обвязкой
-U3,1,16-bit АЦП I2C,ADS1115 module,Breakout,OZON / AliExpress,200,200,4 дифф. канала; I2C 0x48
+U3,1,12-bit SAR АЦП SPI 100кSPS 8 каналов,MCP3208,DIP-16,OZON / Chipdip,200,200,Единый АЦП для всех трёх тестов; CS отдельный от AD9833; ADR-009
 U4,1,Инструментальный усилитель CMRR≥100dB,INA128P,DIP-8,Chipdip,220,220,ADR-002
 U5,1,16-канальный аналоговый мультиплексор,CD74HC4067 module,Breakout,OZON,100,100,Коммутация контактов разъёмов
 U6,1,OLED 128x64 I2C,SSD1306 module 0.96",Breakout,OZON / AliExpress,280,280,I2C 0x3C; ADR-007

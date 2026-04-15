@@ -33,7 +33,8 @@ himodameshi/
 | [docs/spec/roadmap.md](./docs/spec/roadmap.md)                                 | Дорожная карта MVP: фазы, задачи по участникам, точки синхронизации      |
 | [docs/spec/plan-b-minus.md](./docs/spec/plan-b-minus.md)                       | Триггеры сокращения объёма при рисках (план Б-минус)                     |
 | [docs/spec/cmrr-requirements.md](./docs/spec/cmrr-requirements.md)             | Требования к схеме CMRR: методика, калибровка, критерии готовности       |
-| [docs/spec/continuity-requirements.md](./docs/spec/continuity-requirements.md) | Требования к тесту целостности: схема, алгоритм КЗ, калибровка, критерии |
+| [docs/spec/continuity-requirements.md](./docs/spec/continuity-requirements.md)   | Требования к тесту целостности: схема, алгоритм КЗ, калибровка, критерии  |
+| [docs/spec/freq-response-requirements.md](./docs/spec/freq-response-requirements.md) | Требования к тесту АЧХ: пиковый детектор, алгоритм свипа, калибровка |
 | [docs/spec/glossary.md](./docs/spec/glossary.md)                               | Глоссарий терминов, сокращений и компонентов                             |
 | [docs/adr/](./docs/adr/)                                                       | Architecture Decision Records — почему принято то или иное решение       |
 
@@ -46,7 +47,7 @@ himodameshi/
 | Мобильное приложение | Flutter (Dart), Clean Architecture, Riverpod, drift, flutter_blue_plus |
 | Прошивка             | Arduino framework (ESP-IDF), C++, NimBLE-Arduino, ArduinoJson          |
 | Микроконтроллер      | ESP32-S3                                                               |
-| Ключевые компоненты  | INA128P, ADS1115, AD9833, CD74HC4067                                   |
+| Ключевые компоненты  | INA128P, MCP3208, AD9833, CD74HC4067                                   |
 | Связь                | Bluetooth Low Energy (BLE GATT)                                        |
 | Локальная БД         | SQLite                                                                 |
 
