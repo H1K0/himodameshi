@@ -24,17 +24,17 @@ himodameshi/
 
 ## Документация
 
-| Документ                                                               | Описание                                                           |
-| ---------------------------------------------------------------------- | ------------------------------------------------------------------ |
-| [GIT_CONVENTIONS.md](./GIT_CONVENTIONS.md)                             | Структура репозитория, соглашения по коммитам и веткам             |
-| [docs/spec/requirements.md](./docs/spec/requirements.md)               | Функционально-технические требования (ФТТ)                         |
-| [docs/spec/architecture.md](./docs/spec/architecture.md)               | Техническая архитектура: стек, протокол, компоненты                |
-| [docs/spec/ble-protocol.md](./docs/spec/ble-protocol.md)               | BLE-протокол v1.0 — контракт между прошивкой и приложением         |
-| [docs/spec/roadmap.md](./docs/spec/roadmap.md)                         | Дорожная карта MVP: фазы, задачи по участникам, точки синхронизации |
-| [docs/spec/plan-b-minus.md](./docs/spec/plan-b-minus.md)               | Триггеры сокращения объёма при рисках (план Б-минус)               |
-| [docs/spec/cmrr-requirements.md](./docs/spec/cmrr-requirements.md)     | Требования к схеме CMRR: методика, калибровка, критерии готовности |
-| [docs/spec/glossary.md](./docs/spec/glossary.md)                       | Глоссарий терминов, сокращений и компонентов                       |
-| [docs/adr/](./docs/adr/)                                               | Architecture Decision Records — почему принято то или иное решение |
+| Документ                                                           | Описание                                                            |
+| ------------------------------------------------------------------ | ------------------------------------------------------------------- |
+| [GIT_CONVENTIONS.md](./GIT_CONVENTIONS.md)                         | Структура репозитория, соглашения по коммитам и веткам              |
+| [docs/spec/requirements.md](./docs/spec/requirements.md)           | Функционально-технические требования (ФТТ)                          |
+| [docs/spec/architecture.md](./docs/spec/architecture.md)           | Техническая архитектура: стек, протокол, компоненты                 |
+| [docs/spec/ble-protocol.md](./docs/spec/ble-protocol.md)           | BLE-протокол v1.0 — контракт между прошивкой и приложением          |
+| [docs/spec/roadmap.md](./docs/spec/roadmap.md)                     | Дорожная карта MVP: фазы, задачи по участникам, точки синхронизации |
+| [docs/spec/plan-b-minus.md](./docs/spec/plan-b-minus.md)           | Триггеры сокращения объёма при рисках (план Б-минус)                |
+| [docs/spec/cmrr-requirements.md](./docs/spec/cmrr-requirements.md) | Требования к схеме CMRR: методика, калибровка, критерии готовности  |
+| [docs/spec/glossary.md](./docs/spec/glossary.md)                   | Глоссарий терминов, сокращений и компонентов                        |
+| [docs/adr/](./docs/adr/)                                           | Architecture Decision Records — почему принято то или иное решение  |
 
 ---
 
