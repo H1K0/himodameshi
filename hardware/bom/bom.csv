@@ -1,0 +1,29 @@
+Ref,Qty,Description,Part / Model,Package,Supplier,Unit Price (RUB),Total (RUB),Notes
+U1,1,Главный контроллер BLE/USB-C,ESP32-S3 DevKitC-1,DevKit,OZON,500,500,8 MB Flash
+U2,1,DDS-генератор синусоид 10 Гц–40 кГц SPI,AD9833 module,Breakout,OZON,280,280,Модуль с обвязкой
+U3,1,16-bit АЦП I2C,ADS1115 module,Breakout,OZON / AliExpress,200,200,4 дифф. канала; I2C 0x48
+U4,1,Инструментальный усилитель CMRR≥100dB,INA128P,DIP-8,Chipdip,220,220,ADR-002
+U5,1,16-канальный аналоговый мультиплексор,CD74HC4067 module,Breakout,OZON,100,100,Коммутация контактов разъёмов
+U6,1,OLED 128x64 I2C,SSD1306 module 0.96",Breakout,OZON / AliExpress,280,280,I2C 0x3C; ADR-007
+D1,1,RGB LED Health Score индикатор,KY-016 module,Breakout,OZON / AliExpress,50,50,Общий катод; 3x PWM; ADR-008
+BT1,1,Li-Ion аккумулятор,18650 2500-3000mAh,18650,OZON / Chipdip,250,250,Samsung INR18650-25R или аналог
+U7,1,Контроллер заряда Li-Ion с USB-C,TP4056 module USB-C,Breakout,OZON,80,80,С защитой от перезаряда
+J1,1,XLR 3-pin Female панельный монтаж,XLR-3F panel,Panel,OZON / Chipdip,200,200,Приём XLR Male-вилки кабеля
+J2,1,XLR 3-pin Male панельный монтаж,XLR-3M panel,Panel,OZON / Chipdip,200,200,Приём XLR Female-розетки кабеля
+J3,1,Jack 6.35мм стерео панельный монтаж конец A,TRS 6.35mm panel,Panel,OZON,120,120,Конец A кабеля
+J4,1,Jack 6.35мм стерео панельный монтаж конец B,TRS 6.35mm panel,Panel,OZON,120,120,Конец B кабеля
+SW1,1,Тактовая кнопка 6x6мм,Tact switch 6x6mm,THT,OZON / Chipdip,15,15,Запуск теста / навигация OLED
+-,1,Держатель аккумулятора 18650,18650 single holder,THT,OZON,40,40,С пружинными контактами
+-,1,Корпус пластиковый ~120x80x40мм,Project box 120x80x40,Enclosure,OZON,400,400,Подбирается по габаритам платы
+-,1,Макетная плата / перфоборд,Perfboard 70x90mm+,PCB,OZON,150,150,Для прототипной сборки
+R1-R2,2,Резистор источника синфазного сигнала (CMRR),470 Ohm 0.1% or matched pair from 1%,DIP,Chipdip,20,40,Критично: подбирать из одной партии
+R3-R10,8,Резистор общего назначения,10K 1%,DIP / 0603,Chipdip,5,40,Делители делитель АЦП подтяжки
+R11-R14,4,Резистор токоограничение,100 Ohm 1%,DIP,Chipdip,5,20,Токоограничение согласование
+C1-C4,4,Конденсатор керамический развязка,100nF 50V X7R,0603,Chipdip,5,20,У ножек питания INA128P и ADS1115
+C5-C6,2,Конденсатор электролитический развязка,10uF 25V,5mm,Chipdip,15,30,На линии питания аналоговой части
+C7-C8,2,Конденсатор керамический входные цепи,10nF 50V,0603,Chipdip,5,10,ВЧ-фильтрация входов INA128P
+U8 (opt),1,[OPTIONAL] Буферный ОУ для CMRR,OPA2134 or TL072,DIP-8,Chipdip,150,150,Без буфера потолок CMRR ~50-55dB
+U9 (opt),1,[OPTIONAL] DC-DC повышающий для ±5В INA128P,MT3608 module,Breakout,OZON,80,80,Рекомендуется для двухполярного питания INA128P
+-,1,Провода для макетки набор (Dupont),Dupont wire kit 20cm,Wire,OZON,150,150,M-M M-F F-F
+-,1,Припой,ПОС-61 0.8mm,Spool,Chipdip,100,100,
+-,1,Термоусадка набор,Heat shrink kit,Assorted,OZON,80,80,
