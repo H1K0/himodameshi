@@ -2,7 +2,7 @@
 
 Версия 0.3 · Апрель 2026
 
-Глоссарий терминов → [glossary.md](glossary.md) · Триггеры сокращения объёма при рисках → [plan-b-minus.md](plan-b-minus.md)
+Глоссарий терминов → [glossary.md](glossary.md) · Триггеры сокращения и расширения объёма → [scope-triggers.md](scope-triggers.md)
 
 ---
 

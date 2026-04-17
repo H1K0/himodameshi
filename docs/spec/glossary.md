@@ -3,7 +3,7 @@
 Сводный словарь терминов, сокращений и компонентов, использованных в документах:
 
 - [roadmap.md](roadmap.md) — дорожная карта MVP
-- [plan-b-minus.md](plan-b-minus.md) — триггеры сокращения объёма
+- [scope-triggers.md](scope-triggers.md) — триггеры сокращения и расширения объёма (Б-минус / Б-плюс)
 - [cmrr-requirements.md](cmrr-requirements.md) — требования к блоку CMRR
 
 ---
