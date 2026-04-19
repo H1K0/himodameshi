@@ -137,6 +137,17 @@
           "pin2": {"r": 0.70, "s": "ok"},
           "pin3": {"r": 99999.0, "s": "open"}
         }
+      },
+
+      "xlr_short": {
+        "_note": "КЗ между pin1 и pin2 — типичный дефект разъёма XLR при неаккуратной пайке",
+        "type": "result:continuity", "pv": 1, "ts": 1776168543,
+        "cable": "xlr", "status": "fail",
+        "conductors": {
+          "pin1": {"r": 0.01, "s": "short"},
+          "pin2": {"r": 0.01, "s": "short"},
+          "pin3": {"r": 0.69, "s": "ok"}
+        }
       }
     },
 
@@ -349,6 +360,43 @@
         {"type": "status", "pv": 1, "ts": 1776169800, "state": "testing", "test": "cmrr", "progress": 0.0},
         {"type": "status", "pv": 1, "ts": 1776169800, "state": "testing", "test": "cmrr", "progress": 0.4},
         {"type": "status", "pv": 1, "ts": 1776169800, "state": "error", "err_code": 2}
+      ]
+    },
+
+    "cmrr_only_xlr": {
+      "_note": "Одиночный CMRR-тест XLR. test=cmrr в CMD — устройство пропускает continuity и freq_response.",
+      "_cmd": {"type": "cmd", "pv": 1, "cmd": "start_test", "test": "cmrr", "cable": "xlr", "ts": 1776170400},
+      "packets": [
+        {"type": "status", "pv": 1, "ts": 1776170400, "state": "testing", "test": "cmrr", "progress": 0.0},
+        {"type": "status", "pv": 1, "ts": 1776170400, "state": "testing", "test": "cmrr", "progress": 1.0},
+        {"type": "result:cmrr", "pv": 1, "ts": 1776170400, "cable": "xlr", "status": "excellent", "cmrr_db": 72.4},
+        {"type": "status", "pv": 1, "ts": 1776170400, "state": "done"}
+      ]
+    },
+
+    "freq_response_only_jack_ts": {
+      "_note": "Одиночный АЧХ-тест Jack TS. test=freq_response в CMD.",
+      "_cmd": {"type": "cmd", "pv": 1, "cmd": "start_test", "test": "freq_response", "cable": "jack_ts", "ts": 1776171000},
+      "packets": [
+        {"type": "status", "pv": 1, "ts": 1776171000, "state": "testing", "test": "freq_response", "progress": 0.0},
+        {"type": "status", "pv": 1, "ts": 1776171000, "state": "testing", "test": "freq_response", "progress": 0.33},
+        {"type": "status", "pv": 1, "ts": 1776171000, "state": "testing", "test": "freq_response", "progress": 0.67},
+        {"type": "status", "pv": 1, "ts": 1776171000, "state": "testing", "test": "freq_response", "progress": 1.0},
+        {"type": "result:freq_response", "pv": 1, "ts": 1776171000, "cable": "jack_ts", "status": "ok",
+          "v": [ 0.2,  0.1,  0.1,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,
+                 0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0, -0.1, -0.2,
+                -0.4, -0.7, -1.1, -1.6, -2.0, -2.4, -2.7, -2.9, -3.0, -3.2]
+        },
+        {"type": "status", "pv": 1, "ts": 1776171000, "state": "done"}
+      ]
+    },
+
+    "error_unknown": {
+      "_note": "Неклассифицированная ошибка прошивки — err_code 4 (UNKNOWN_ERROR, §5).",
+      "_cmd": {"type": "cmd", "pv": 1, "cmd": "start_test", "test": "full", "cable": "xlr", "ts": 1776171600},
+      "packets": [
+        {"type": "status", "pv": 1, "ts": 1776171600, "state": "testing", "test": "continuity", "progress": 0.0},
+        {"type": "status", "pv": 1, "ts": 1776171600, "state": "error", "err_code": 4}
       ]
     }
   }
