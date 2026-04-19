@@ -78,7 +78,55 @@
 
 Подробнее — [ADR-004](../adr/004-insight-generator.md).
 
-### 4.3 Прошивка
+### 4.3 Схема локальной базы данных
+
+Реализована через drift ORM (SQLite). Четыре таблицы; результаты трёх тестов хранятся в отдельных таблицах, чтобы запросы по типу теста не требовали разбора JSON.
+
+```sql
+CREATE TABLE cables (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    name        TEXT    NOT NULL,
+    color       TEXT    NOT NULL,   -- hex, напр. '#639922'
+    photo_path  TEXT,               -- NULL если фото не добавлено
+    cable_type  TEXT    NOT NULL,   -- 'jack_ts' | 'jack_trs' | 'xlr'
+    created_at  INTEGER NOT NULL    -- unix timestamp
+);
+
+CREATE TABLE test_sessions (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    cable_id      INTEGER NOT NULL REFERENCES cables(id) ON DELETE CASCADE,
+    started_at    INTEGER NOT NULL,  -- unix timestamp
+    health_score  INTEGER,           -- 0–100; NULL если тест не завершён
+    ble_device_id TEXT    NOT NULL   -- MAC или UUID BLE-устройства
+);
+
+CREATE TABLE continuity_results (
+    session_id   INTEGER PRIMARY KEY REFERENCES test_sessions(id) ON DELETE CASCADE,
+    status       TEXT NOT NULL,  -- 'ok' | 'warning' | 'open' | 'short'
+    conductors   TEXT NOT NULL   -- JSON: {"pin1":{"r":0.9,"s":"ok"}, ...}
+);
+
+CREATE TABLE cmrr_results (
+    session_id  INTEGER PRIMARY KEY REFERENCES test_sessions(id) ON DELETE CASCADE,
+    value_db    REAL NOT NULL,
+    status      TEXT NOT NULL   -- 'excellent' | 'ok' | 'fail'
+);
+
+CREATE TABLE freq_response_results (
+    session_id  INTEGER PRIMARY KEY REFERENCES test_sessions(id) ON DELETE CASCADE,
+    status      TEXT NOT NULL,  -- 'excellent' | 'ok' | 'fail'
+    points      TEXT NOT NULL   -- JSON: [[freq_hz, amplitude_db], ...]
+);
+```
+
+**Ключевые решения:**
+
+- `conductors` хранится как JSON — структура зависит от типа кабеля (2 проводника у Jack TS, 3 у XLR), жёсткая схема усложнила бы миграции без выигрыша.
+- `freq_response_results.points` — JSON-массив пар `[Гц, дБ]`; в MVP достаточно, в версии 2 можно вынести в отдельную таблицу при необходимости индексации по частоте.
+- `ON DELETE CASCADE` — удаление кабеля удаляет весь журнал тестов.
+- `health_score` в `test_sessions` кэширует результат формулы `100 − Σ штрафов`; пересчитывается при изменении результатов.
+
+### 4.4 Прошивка
 
 | Назначение          | Технологии             |
 | ------------------- | ---------------------- |
