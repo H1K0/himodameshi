@@ -138,26 +138,35 @@
   </div>
 
   <div style="padding: 14px 24px 6px;">
-    <div style="font-size: 10px; color: #666; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 10px;">3 · Будут выполнены тесты</div>
+    <div style="font-size: 10px; color: #666; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 10px;">3 · Выберите тесты</div>
     <div style="display: flex; flex-direction: column; gap: 6px;">
-      <div style="display: flex; align-items: center; gap: 10px; padding: 10px 12px; background: #111; border: 0.5px solid #1f1f1f; border-radius: 10px;">
+      <button id="setup-cont" onclick="toggleTest('cont')" style="display: flex; align-items: center; gap: 10px; padding: 10px 12px; background: #111; border: 0.5px solid #1f1f1f; border-radius: 10px; cursor: pointer; font-family: var(--font-sans); text-align: left; width: 100%;">
         <div style="width: 22px; height: 22px; border-radius: 50%; background: rgba(239,159,39,0.1); border: 0.5px solid rgba(239,159,39,0.4); display: flex; align-items: center; justify-content: center; font-size: 10px; color: #EF9F27; font-weight: 500;">1</div>
         <div style="flex: 1; font-size: 12px; font-weight: 500; color: #fafafa;">Целостность</div>
         <span style="font-size: 10px; color: #555;">~3с</span>
-      </div>
-      <div id="setup-cmrr" style="display: flex; align-items: center; gap: 10px; padding: 10px 12px; background: #0d0d0d; border: 0.5px solid #1a1a1a; border-radius: 10px; opacity: 0.55;">
+        <div id="setup-cont-check" style="width: 18px; height: 18px; border-radius: 50%; background: rgba(99,153,34,0.15); border: 0.5px solid rgba(151,196,89,0.6); display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-left: 2px;">
+          <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#97C459" stroke-width="3.5" stroke-linecap="round"><path d="M5 12l5 5L20 7"/></svg>
+        </div>
+      </button>
+      <button id="setup-cmrr" onclick="toggleTest('cmrr')" style="display: flex; align-items: center; gap: 10px; padding: 10px 12px; background: #0d0d0d; border: 0.5px solid #1a1a1a; border-radius: 10px; opacity: 0.55; cursor: pointer; font-family: var(--font-sans); text-align: left; width: 100%;">
         <div id="setup-cmrr-num" style="width: 22px; height: 22px; border-radius: 50%; background: #1a1a1a; border: 0.5px solid #2a2a2a; display: flex; align-items: center; justify-content: center; font-size: 10px; color: #555; font-weight: 500;">2</div>
         <div style="flex: 1;">
           <span id="setup-cmrr-title" style="font-size: 12px; font-weight: 500; color: #888;">CMRR</span>
           <span id="setup-cmrr-tag" style="font-size: 10px; color: #444;"> · только балансные</span>
         </div>
         <span style="font-size: 10px; color: #444;">~5с</span>
-      </div>
-      <div style="display: flex; align-items: center; gap: 10px; padding: 10px 12px; background: #111; border: 0.5px solid #1f1f1f; border-radius: 10px;">
+        <div id="setup-cmrr-check" style="width: 18px; height: 18px; border-radius: 50%; background: #1a1a1a; border: 0.5px solid #2a2a2a; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-left: 2px;">
+          <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#444" stroke-width="3.5" stroke-linecap="round"><path d="M5 12l5 5L20 7"/></svg>
+        </div>
+      </button>
+      <button id="setup-ach" onclick="toggleTest('ach')" style="display: flex; align-items: center; gap: 10px; padding: 10px 12px; background: #111; border: 0.5px solid #1f1f1f; border-radius: 10px; cursor: pointer; font-family: var(--font-sans); text-align: left; width: 100%;">
         <div style="width: 22px; height: 22px; border-radius: 50%; background: rgba(239,159,39,0.1); border: 0.5px solid rgba(239,159,39,0.4); display: flex; align-items: center; justify-content: center; font-size: 10px; color: #EF9F27; font-weight: 500;">3</div>
         <div style="flex: 1; font-size: 12px; font-weight: 500; color: #fafafa;">АЧХ</div>
         <span style="font-size: 10px; color: #555;">~12с</span>
-      </div>
+        <div id="setup-ach-check" style="width: 18px; height: 18px; border-radius: 50%; background: rgba(99,153,34,0.15); border: 0.5px solid rgba(151,196,89,0.6); display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-left: 2px;">
+          <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#97C459" stroke-width="3.5" stroke-linecap="round"><path d="M5 12l5 5L20 7"/></svg>
+        </div>
+      </button>
     </div>
   </div>
 
@@ -698,6 +707,15 @@
       <div style="font-size: 9px; color: #666; margin-top: 2px;">В историю</div>
     </div>
   </div>
+  <label style="font-size: 9px; color: #666; text-transform: uppercase; display: block; margin-bottom: 6px;">Цветовая метка</label>
+  <div id="color-palette" style="display: flex; gap: 8px; margin-bottom: 14px;">
+    <button onclick="pickColor('#639922', this)" style="width: 26px; height: 26px; border-radius: 50%; background: #639922; border: 2.5px solid #97C459; cursor: pointer; padding: 0; flex-shrink: 0;"></button>
+    <button onclick="pickColor('#EF9F27', this)" style="width: 26px; height: 26px; border-radius: 50%; background: #EF9F27; border: 2.5px solid transparent; cursor: pointer; padding: 0; flex-shrink: 0;"></button>
+    <button onclick="pickColor('#E24B4A', this)" style="width: 26px; height: 26px; border-radius: 50%; background: #E24B4A; border: 2.5px solid transparent; cursor: pointer; padding: 0; flex-shrink: 0;"></button>
+    <button onclick="pickColor('#378ADD', this)" style="width: 26px; height: 26px; border-radius: 50%; background: #378ADD; border: 2.5px solid transparent; cursor: pointer; padding: 0; flex-shrink: 0;"></button>
+    <button onclick="pickColor('#9B59B6', this)" style="width: 26px; height: 26px; border-radius: 50%; background: #9B59B6; border: 2.5px solid transparent; cursor: pointer; padding: 0; flex-shrink: 0;"></button>
+    <button onclick="pickColor('#1ABC9C', this)" style="width: 26px; height: 26px; border-radius: 50%; background: #1ABC9C; border: 2.5px solid transparent; cursor: pointer; padding: 0; flex-shrink: 0;"></button>
+  </div>
   <label style="font-size: 9px; color: #666; text-transform: uppercase; display: block; margin-bottom: 6px;">Название *</label>
   <input type="text" placeholder="Например: Mogami студийный" style="width: 100%; background: #111; border: 0.5px solid #1f1f1f; border-radius: 8px; padding: 10px 12px; font-size: 12px; color: #fafafa; font-family: var(--font-sans); box-sizing: border-box; outline: none; margin-bottom: 12px;"/>
   <label style="font-size: 9px; color: #666; text-transform: uppercase; display: block; margin-bottom: 6px;">Заметка · опционально</label>
@@ -794,6 +812,8 @@
 let current = 'dashboard';
 let navStack = ['dashboard'];
 let selectedType = 'ts';
+let selectedTests = { cont: true, cmrr: false, ach: true };
+let selectedColor = '#639922';
 let undoTimer = null;
 let runAnimation = null;
 
@@ -856,6 +876,8 @@ function closeAllDropdowns() {
   if (sortDd) sortDd.style.display = 'none';
   const cableMenu = document.getElementById('cable-menu');
   if (cableMenu) cableMenu.style.display = 'none';
+  const photoMenu = document.getElementById('photo-menu');
+  if (photoMenu) photoMenu.style.display = 'none';
 }
 
 function closeAllModals() {
@@ -913,8 +935,9 @@ function selectType(type) {
     title.style.color = '#fafafa';
     tag.style.display = 'none';
   }
-  const times = { ts: '~15 секунд', trs: '~20 секунд', xlr: '~20 секунд' };
-  document.getElementById('start-time').textContent = 'Старт · ' + times[type];
+  selectedTests.cmrr = (type !== 'ts');
+  applyTestRowStyle('cmrr');
+  updateStartTime();
 }
 
 function startRunAnimation() {
@@ -1006,6 +1029,47 @@ function togglePhotoMenu(e) {
   e.stopPropagation();
   const m = document.getElementById('photo-menu');
   m.style.display = m.style.display === 'block' ? 'none' : 'block';
+}
+
+function toggleTest(name) {
+  if (name === 'cmrr' && selectedType === 'ts') return;
+  const activeCount = Object.values(selectedTests).filter(Boolean).length;
+  if (selectedTests[name] && activeCount <= 1) return;
+  selectedTests[name] = !selectedTests[name];
+  applyTestRowStyle(name);
+  updateStartTime();
+}
+
+function applyTestRowStyle(name) {
+  const row = document.getElementById('setup-' + name);
+  const check = document.getElementById('setup-' + name + '-check');
+  if (!row || !check) return;
+  const on = selectedTests[name];
+  row.style.background = on ? '#111' : '#0d0d0d';
+  row.style.border = on ? '0.5px solid #1f1f1f' : '0.5px solid #1a1a1a';
+  row.style.opacity = on ? '1' : '0.55';
+  check.style.background = on ? 'rgba(99,153,34,0.15)' : '#1a1a1a';
+  check.style.border = on ? '0.5px solid rgba(151,196,89,0.6)' : '0.5px solid #2a2a2a';
+  check.querySelector('svg').setAttribute('stroke', on ? '#97C459' : '#444');
+  if (name === 'cmrr') {
+    const num = document.getElementById('setup-cmrr-num');
+    const title = document.getElementById('setup-cmrr-title');
+    if (num) { num.style.background = on ? 'rgba(239,159,39,0.1)' : '#1a1a1a'; num.style.color = on ? '#EF9F27' : '#555'; }
+    if (title) title.style.color = on ? '#fafafa' : '#888';
+  }
+}
+
+function updateStartTime() {
+  const times = { cont: 3, cmrr: 5, ach: 12 };
+  let total = Object.keys(selectedTests).reduce((s, k) => s + (selectedTests[k] ? times[k] : 0), 0);
+  const el = document.getElementById('start-time');
+  if (el) el.textContent = 'Старт · ~' + total + ' секунд';
+}
+
+function pickColor(color, btn) {
+  selectedColor = color;
+  document.querySelectorAll('#color-palette button').forEach(b => b.style.border = '2.5px solid transparent');
+  btn.style.border = '2.5px solid #fafafa';
 }
 
 function openCancelDialog() {
