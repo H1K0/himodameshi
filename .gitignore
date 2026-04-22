@@ -28,6 +28,9 @@ hardware/**/fp-info-cache
 # Per-user project-local settings (last view, grid, etc.) — not shared
 hardware/**/*.kicad_prl
 
+# ─── Claude Code ───────────────────────────────────────────────────────────────
+.claude/
+
 # ─── IDEs ──────────────────────────────────────────────────────────────────────
 .idea/
 *.iml
