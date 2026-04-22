@@ -1,3 +1,4 @@
+// app_settings_screen.dart
 import 'package:flutter/material.dart';
 
 class AppSettingsScreen extends StatelessWidget {
@@ -12,8 +13,8 @@ class AppSettingsScreen extends StatelessWidget {
           Icon(Icons.settings, size: 64, color: Colors.grey),
           SizedBox(height: 16),
           Text(
-            'Настройки приложения',
-            style: TextStyle(fontSize: 24, fontWeight: FontWeight.w500),
+            'Настройки',
+            style: TextStyle(fontSize: 24, fontWeight: FontWeight.w500, color: Color(0xFFFAFAFA)),
           ),
           SizedBox(height: 8),
           Text(

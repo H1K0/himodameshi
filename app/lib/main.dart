@@ -1,11 +1,8 @@
 import 'package:flutter/material.dart';
 import 'presentation/startup_screen.dart';
-import 'presentation/bottom_nav_bar.dart';
-import 'presentation/cable_passport_screen.dart';
 import 'presentation/collection_screen.dart';
 import 'presentation/app_settings_screen.dart';
-import 'presentation/device_settings_screen.dart';
-import 'presentation/testing_screen.dart';
+import 'presentation/bottom_nav_bar.dart';
 
 void main() {
   runApp(const MyApp());
@@ -17,9 +14,15 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Кабельный помощник',
+      title: 'Himo',
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
+        brightness: Brightness.dark,
+        scaffoldBackgroundColor: const Color(0xFF0A0A0A),
+        colorScheme: const ColorScheme.dark(
+          primary: Color(0xFFEF9F27),
+          surface: Color(0xFF0A0A0A),
+          background: Color(0xFF0A0A0A),
+        ),
         useMaterial3: true,
       ),
       home: const MainScreen(),
@@ -38,13 +41,9 @@ class MainScreen extends StatefulWidget {
 class _MainScreenState extends State<MainScreen> {
   int _selectedIndex = 0;
 
-  // Список экранов (заглушек)
   final List<Widget> _screens = const [
     StartupScreen(),
-    TestingScreen(),
-    CablePassportScreen(),
     CollectionScreen(),
-    DeviceSettingsScreen(),
     AppSettingsScreen(),
   ];
 
