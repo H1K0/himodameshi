@@ -3,6 +3,7 @@ import 'testing_screen.dart';
 import 'device_settings_screen.dart';
 import 'cable_passport_screen.dart';
 import '/data/ble_mock_provider.dart';
+import 'ble_menu.dart';
 
 class StartupScreen extends StatefulWidget {
   final VoidCallback? onNavigateToCollection;
@@ -18,20 +19,54 @@ class _StartupScreenState extends State<StartupScreen> {
   String? _selectedCableId;
   List<Map<String, dynamic>> _recentCables = [];
   bool _isLoading = true;
+  bool _isBleMenuVisible = false;
+  BleConnectionStatus _bleStatus = bleProvider.currentStatus;
 
   @override
   void initState() {
     super.initState();
     _loadCables();
+    // Подписываемся на изменения статуса BLE
+    bleProvider.statusStream.listen((status) {
+      if (mounted) {
+        setState(() {
+          _bleStatus = status;
+        });
+        // Если подключились, перезагружаем данные
+        if (status == BleConnectionStatus.connected) {
+          _loadCables();
+        }
+      }
+    });
+    // Автоматически подключаемся при старте
+    _autoConnect();
   }
 
-  void _loadCables() async {
-    await for (final cables in getCmrrResultsStream()) {
+  void _autoConnect() async {
+    await bleProvider.connect();
+  }
+
+  Future<void> _loadCables() async {
+    setState(() {
+      _isLoading = true;
+    });
+    await for (final cables in bleProvider.getCmrrResultsStream()) {
       setState(() {
         _recentCables = cables;
         _isLoading = false;
       });
       break;
+    }
+  }
+
+  Color _getBleDotColor() {
+    switch (_bleStatus) {
+      case BleConnectionStatus.connected:
+        return const Color(0xFF97C459);
+      case BleConnectionStatus.disconnected:
+        return const Color(0xFFE24B4A);
+      case BleConnectionStatus.connecting:
+        return const Color(0xFFEF9F27);
     }
   }
 
@@ -74,6 +109,18 @@ class _StartupScreenState extends State<StartupScreen> {
     });
   }
 
+  void _toggleBleMenu() {
+    setState(() {
+      _isBleMenuVisible = !_isBleMenuVisible;
+    });
+  }
+
+  void _closeBleMenu() {
+    setState(() {
+      _isBleMenuVisible = false;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_currentView == 'testing') {
@@ -88,7 +135,31 @@ class _StartupScreenState extends State<StartupScreen> {
         onBack: _showMain,
       );
     }
-    return _buildMainContent();
+    return Stack(
+      children: [
+        _buildMainContent(),
+        // Затемнение фона при открытом меню (снизу)
+        if (_isBleMenuVisible)
+          Positioned.fill(
+            child: GestureDetector(
+              onTap: _closeBleMenu,
+              child: Container(
+                color: Colors.transparent,
+              ),
+            ),
+          ),
+        // BLE Menu Overlay (СВЕРХУ, чтобы получать касания первым)
+        if (_isBleMenuVisible)
+          Positioned(
+            top: 70,
+            right: 20,
+            child: BleMenu(
+              onClose: _closeBleMenu,
+              onNavigateToDevice: _showDevice,
+            ),
+          ),
+      ],
+    );
   }
 
   Widget _buildMainContent() {
@@ -327,6 +398,29 @@ class _StartupScreenState extends State<StartupScreen> {
                       ),
                     ),
                   )
+                else if (_bleStatus == BleConnectionStatus.disconnected)
+                  Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(32),
+                      child: Column(
+                        children: [
+                          const Icon(
+                            Icons.bluetooth_disabled,
+                            size: 40,
+                            color: Color(0xFF666666),
+                          ),
+                          const SizedBox(height: 12),
+                          Text(
+                            'Нет подключения к устройству',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey[600],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  )
                 else
                   ..._recentCables.map((cable) => Padding(
                     padding: const EdgeInsets.only(bottom: 6),
@@ -347,9 +441,7 @@ class _StartupScreenState extends State<StartupScreen> {
 
   Widget _buildBleButton() {
     return GestureDetector(
-      onTap: () {
-        // TODO: показать BLE меню
-      },
+      onTap: _toggleBleMenu,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
         decoration: BoxDecoration(
@@ -363,8 +455,8 @@ class _StartupScreenState extends State<StartupScreen> {
             Container(
               width: 6,
               height: 6,
-              decoration: const BoxDecoration(
-                color: Color(0xFFEF9F27),
+              decoration: BoxDecoration(
+                color: _getBleDotColor(),
                 shape: BoxShape.circle,
               ),
             ),

@@ -2,118 +2,151 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/services.dart' show rootBundle;
 
-/// Единственная функция, которая делает всю работу:
-/// - принимает название последовательности (например "full_xlr_excellent")
-/// - загружает JSON из файла
-/// - находит нужную последовательность
-/// - выдаёт пакеты по одному с интервалом 0.5 секунды
-Stream<Map<String, dynamic>> getBlePacketStream(String sequenceName) async* {
-  try {
-    final jsonString = await rootBundle.loadString('mock/ble_mock_packets.json');
-    final Map<String, dynamic> jsonData = jsonDecode(jsonString);
-    final sequences = jsonData['sequences'] as Map<String, dynamic>;
+enum BleConnectionStatus {
+  connected,
+  disconnected,
+  connecting,
+}
 
-    if (!sequences.containsKey(sequenceName)) {
-      yield {
-        'type': 'error',
-        'message': 'Последовательность "$sequenceName" не найдена',
-        'available': sequences.keys.toList(),
-      };
+class BleMockProvider {
+  static final BleMockProvider _instance = BleMockProvider._internal();
+  factory BleMockProvider() => _instance;
+  BleMockProvider._internal();
+
+  final _statusController = StreamController<BleConnectionStatus>.broadcast();
+  Stream<BleConnectionStatus> get statusStream => _statusController.stream;
+
+  BleConnectionStatus _currentStatus = BleConnectionStatus.disconnected;
+  BleConnectionStatus get currentStatus => _currentStatus;
+
+  StreamSubscription? _currentSubscription;
+
+  void _setStatus(BleConnectionStatus status) {
+    _currentStatus = status;
+    _statusController.add(status);
+  }
+
+  Future<void> connect() async {
+    if (_currentStatus == BleConnectionStatus.connected) {
       return;
     }
 
-    final packets = sequences[sequenceName]['packets'] as List;
+    _setStatus(BleConnectionStatus.connecting);
 
-    for (var packet in packets) {
-      await Future.delayed(const Duration(milliseconds: 500));
-      yield packet as Map<String, dynamic>;
+    // Имитируем подключение через BLE
+    await Future.delayed(const Duration(milliseconds: 800));
+    _setStatus(BleConnectionStatus.connected);
+  }
+
+  Future<void> disconnect() async {
+    if (_currentSubscription != null) {
+      await _currentSubscription?.cancel();
+      _currentSubscription = null;
+    }
+    _setStatus(BleConnectionStatus.disconnected);
+  }
+
+  Future<void> reconnect() async {
+    await disconnect();
+    await Future.delayed(const Duration(milliseconds: 500));
+    await connect();
+  }
+
+  /// Получить все результаты CMRR через Stream (для имитации BLE)
+  Stream<List<Map<String, dynamic>>> getCmrrResultsStream() async* {
+    // Ждём подключения
+    while (_currentStatus != BleConnectionStatus.connected) {
+      await Future.delayed(const Duration(milliseconds: 100));
+      if (_currentStatus == BleConnectionStatus.disconnected) {
+        yield [];
+        return;
+      }
     }
 
-    yield {
-      'type': 'finished',
-      'message': '✅ Последовательность "$sequenceName" завершена',
-    };
+    try {
+      final jsonString = await rootBundle.loadString('mock/ble_mock_packets.json');
+      final Map<String, dynamic> jsonData = jsonDecode(jsonString);
+      final cmrrResults = jsonData['results']['cmrr'] as Map<String, dynamic>;
 
-  } catch (e) {
-    yield {
-      'type': 'error',
-      'message': 'Ошибка: $e',
-    };
-  }
-}
-
-/// Список всех доступных последовательностей (для удобства)
-Future<List<String>> getAvailableSequences() async {
-  try {
-    final jsonString = await rootBundle.loadString('mock/ble_mock_packets.json');
-    final Map<String, dynamic> jsonData = jsonDecode(jsonString);
-    final sequences = jsonData['sequences'] as Map<String, dynamic>;
-    return sequences.keys.toList();
-  } catch (e) {
-    return [];
-  }
-}
-
-/// Получить все результаты CMRR через Stream (для имитации BLE)
-Stream<List<Map<String, dynamic>>> getCmrrResultsStream() async* {
-  try {
-    final jsonString = await rootBundle.loadString('mock/ble_mock_packets.json');
-    final Map<String, dynamic> jsonData = jsonDecode(jsonString);
-    final cmrrResults = jsonData['results']['cmrr'] as Map<String, dynamic>;
-
-    final List<Map<String, dynamic>> results = [];
-    cmrrResults.forEach((key, value) {
-      results.add({
-        'id': key,
-        'name': _formatName(key),
-        'cable': value['cable'],
-        'status': value['status'],
-        'cmrr_db': value['cmrr_db'],
+      final List<Map<String, dynamic>> results = [];
+      cmrrResults.forEach((key, value) {
+        results.add({
+          'id': key,
+          'name': _formatName(key),
+          'cable': value['cable'],
+          'status': value['status'],
+          'cmrr_db': value['cmrr_db'],
+        });
       });
-    });
 
-    // Имитируем задержку получения данных через BLE
-    await Future.delayed(const Duration(milliseconds: 300));
-    yield results;
+      // Имитируем задержку получения данных через BLE
+      await Future.delayed(const Duration(milliseconds: 300));
+      yield results;
 
-  } catch (e) {
-    yield [];
+    } catch (e) {
+      yield [];
+    }
   }
-}
 
-/// Получить конкретный результат CMRR по ID через Stream
-Stream<Map<String, dynamic>?> getCmrrResultByIdStream(String id) async* {
-  try {
-    final jsonString = await rootBundle.loadString('mock/ble_mock_packets.json');
-    final Map<String, dynamic> jsonData = jsonDecode(jsonString);
-    final cmrrResults = jsonData['results']['cmrr'] as Map<String, dynamic>;
+  /// Получить конкретный результат CMRR по ID через Stream
+  Stream<Map<String, dynamic>?> getCmrrResultByIdStream(String id) async* {
+    // Ждём подключения
+    while (_currentStatus != BleConnectionStatus.connected) {
+      await Future.delayed(const Duration(milliseconds: 100));
+      if (_currentStatus == BleConnectionStatus.disconnected) {
+        yield null;
+        return;
+      }
+    }
 
-    await Future.delayed(const Duration(milliseconds: 200));
+    try {
+      final jsonString = await rootBundle.loadString('mock/ble_mock_packets.json');
+      final Map<String, dynamic> jsonData = jsonDecode(jsonString);
+      final cmrrResults = jsonData['results']['cmrr'] as Map<String, dynamic>;
 
-    if (cmrrResults.containsKey(id)) {
-      final value = cmrrResults[id];
-      yield {
-        'id': id,
-        'name': _formatName(id),
-        'cable': value['cable'],
-        'status': value['status'],
-        'cmrr_db': value['cmrr_db'],
-      };
-    } else {
+      await Future.delayed(const Duration(milliseconds: 200));
+
+      if (cmrrResults.containsKey(id)) {
+        final value = cmrrResults[id];
+        yield {
+          'id': id,
+          'name': _formatName(id),
+          'cable': value['cable'],
+          'status': value['status'],
+          'cmrr_db': value['cmrr_db'],
+        };
+      } else {
+        yield null;
+      }
+
+    } catch (e) {
       yield null;
     }
+  }
 
-  } catch (e) {
-    yield null;
+  String _formatName(String key) {
+    final parts = key.split('_');
+    if (parts.length >= 2) {
+      final type = parts[0].toUpperCase();
+      final status = parts[1];
+      return '$type ${status[0].toUpperCase()}${status.substring(1)}';
+    }
+    return key;
+  }
+
+  void dispose() {
+    _statusController.close();
+    _currentSubscription?.cancel();
   }
 }
 
-String _formatName(String key) {
-  final parts = key.split('_');
-  if (parts.length >= 2) {
-    final type = parts[0].toUpperCase();
-    final status = parts[1];
-    return '$type ${status[0].toUpperCase()}${status.substring(1)}';
-  }
-  return key;
+// Для обратной совместимости с существующим кодом
+final bleProvider = BleMockProvider();
+
+Stream<List<Map<String, dynamic>>> getCmrrResultsStream() {
+  return bleProvider.getCmrrResultsStream();
+}
+
+Stream<Map<String, dynamic>?> getCmrrResultByIdStream(String id) {
+  return bleProvider.getCmrrResultByIdStream(id);
 }
