@@ -1,10 +1,97 @@
 import 'package:flutter/material.dart';
+import 'testing_screen.dart';
+import 'device_settings_screen.dart';
+import 'cable_passport_screen.dart';
+import '/data/ble_mock_provider.dart';
 
-class StartupScreen extends StatelessWidget {
-  const StartupScreen({super.key});
+class StartupScreen extends StatefulWidget {
+  final VoidCallback? onNavigateToCollection;
+
+  const StartupScreen({super.key, this.onNavigateToCollection});
+
+  @override
+  State<StartupScreen> createState() => _StartupScreenState();
+}
+
+class _StartupScreenState extends State<StartupScreen> {
+  String _currentView = 'main';
+  String? _selectedCableId;
+  List<Map<String, dynamic>> _recentCables = [];
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCables();
+  }
+
+  void _loadCables() async {
+    await for (final cables in getCmrrResultsStream()) {
+      setState(() {
+        _recentCables = cables;
+        _isLoading = false;
+      });
+      break;
+    }
+  }
+
+  Color _getStatusColor(String status) {
+    switch (status) {
+      case 'excellent':
+        return const Color(0xFF639922);
+      case 'ok':
+        return const Color(0xFFEF9F27);
+      case 'fail':
+        return const Color(0xFFE24B4A);
+      default:
+        return const Color(0xFF888888);
+    }
+  }
+
+  void _showTesting() {
+    setState(() {
+      _currentView = 'testing';
+    });
+  }
+
+  void _showDevice() {
+    setState(() {
+      _currentView = 'device';
+    });
+  }
+
+  void _showCablePassport(String cableId) {
+    setState(() {
+      _selectedCableId = cableId;
+      _currentView = 'cable_passport';
+    });
+  }
+
+  void _showMain() {
+    setState(() {
+      _currentView = 'main';
+      _selectedCableId = null;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
+    if (_currentView == 'testing') {
+      return TestingScreen(onBack: _showMain);
+    }
+    if (_currentView == 'device') {
+      return DeviceSettingsScreen(onBack: _showMain);
+    }
+    if (_currentView == 'cable_passport' && _selectedCableId != null) {
+      return CablePassportScreen(
+        cableId: _selectedCableId!,
+        onBack: _showMain,
+      );
+    }
+    return _buildMainContent();
+  }
+
+  Widget _buildMainContent() {
     return SingleChildScrollView(
       padding: const EdgeInsets.only(bottom: 20),
       child: Column(
@@ -163,9 +250,7 @@ class StartupScreen extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.fromLTRB(24, 4, 24, 12),
             child: ElevatedButton(
-              onPressed: () {
-                // TODO: перейти на экран тестирования
-              },
+              onPressed: _showTesting,
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFFEF9F27),
                 foregroundColor: const Color(0xFF2A1A00),
@@ -201,7 +286,7 @@ class StartupScreen extends StatelessWidget {
                     title: 'Коллекция',
                     subtitle: 'Все кабели',
                     onTap: () {
-                      // TODO: перейти на коллекцию
+                      widget.onNavigateToCollection?.call();
                     },
                   ),
                 ),
@@ -211,9 +296,7 @@ class StartupScreen extends StatelessWidget {
                     icon: Icons.devices_outlined,
                     title: 'Устройство',
                     subtitle: '78% · откалибровано',
-                    onTap: () {
-                      // TODO: перейти на устройство
-                    },
+                    onTap: _showDevice,
                   ),
                 ),
               ],
@@ -235,23 +318,25 @@ class StartupScreen extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 10),
-                _buildHistoryItem(
-                  color: const Color(0xFF639922),
-                  title: 'Mogami #1 · XLR',
-                  subtitle: 'CMRR 68 дБ · 2 часа назад',
-                ),
-                const SizedBox(height: 6),
-                _buildHistoryItem(
-                  color: const Color(0xFFEF9F27),
-                  title: 'Гитарный длинный · Jack',
-                  subtitle: 'сопр. растёт · вчера',
-                ),
-                const SizedBox(height: 6),
-                _buildHistoryItem(
-                  color: const Color(0xFFE24B4A),
-                  title: 'XLR #07 · XLR',
-                  subtitle: 'обрыв pin 3 · 3 дня',
-                ),
+                if (_isLoading)
+                  const Center(
+                    child: Padding(
+                      padding: EdgeInsets.all(32),
+                      child: CircularProgressIndicator(
+                        color: Color(0xFFEF9F27),
+                      ),
+                    ),
+                  )
+                else
+                  ..._recentCables.map((cable) => Padding(
+                    padding: const EdgeInsets.only(bottom: 6),
+                    child: _buildHistoryItem(
+                      color: _getStatusColor(cable['status']),
+                      title: '${cable['name']} · ${cable['cable']?.toString().toUpperCase() ?? 'UNKNOWN'}',
+                      subtitle: 'cmrr ${cable['cmrr_db']} дБ',
+                      cableId: cable['id'],
+                    ),
+                  )),
               ],
             ),
           ),
@@ -364,10 +449,11 @@ class StartupScreen extends StatelessWidget {
     required Color color,
     required String title,
     required String subtitle,
+    required String cableId,
   }) {
     return GestureDetector(
       onTap: () {
-        // TODO: перейти на детали кабеля
+        _showCablePassport(cableId);
       },
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),

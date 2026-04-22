@@ -41,16 +41,28 @@ class MainScreen extends StatefulWidget {
 class _MainScreenState extends State<MainScreen> {
   int _selectedIndex = 0;
 
-  final List<Widget> _screens = const [
-    StartupScreen(),
-    CollectionScreen(),
-    AppSettingsScreen(),
-  ];
+  late final List<Widget> _mainScreens;
+
+  @override
+  void initState() {
+    super.initState();
+    _mainScreens = [
+      StartupScreen(
+        onNavigateToCollection: () {
+          setState(() {
+            _selectedIndex = 1;
+          });
+        },
+      ),
+      const CollectionScreen(),
+      const AppSettingsScreen(),
+    ];
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: _screens[_selectedIndex],
+      body: _mainScreens[_selectedIndex],
       bottomNavigationBar: BottomNavBar(
         currentIndex: _selectedIndex,
         onTap: (index) {
