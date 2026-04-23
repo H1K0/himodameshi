@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "author": "himodameshi",
+  "author": "H1K0",
   "editor": "wokwi",
   "parts": [
     {
@@ -13,22 +13,24 @@
     {
       "type": "wokwi-led",
       "id": "led1",
-      "top": -30,
-      "left": 150,
+      "top": 60,
+      "left": 175,
+      "rotate": 180,
       "attrs": { "color": "red" }
     },
     {
       "type": "wokwi-resistor",
       "id": "r1",
-      "top": 30,
-      "left": 150,
+      "top": 225,
+      "left": 185,
+      "rotate": 180,
       "attrs": { "value": "220" }
     }
   ],
   "connections": [
-    [ "esp32:GPIO2", "led1:A", "red", [] ],
-    [ "led1:C", "r1:1", "red", [] ],
-    [ "r1:2", "esp32:GND.1", "black", [] ]
+    [ "esp32:2",    "led1:A", "red",   [] ],
+    [ "led1:C",     "r1:1",   "red",   [] ],
+    [ "r1:2",       "esp32:GND.4", "black", [] ]
   ],
   "dependencies": {}
 }
