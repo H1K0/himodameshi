@@ -85,19 +85,19 @@
 ```sql
 CREATE TABLE cables (
     id          INTEGER PRIMARY KEY AUTOINCREMENT,
-    name        TEXT    NOT NULL,
-    color       TEXT    NOT NULL,   -- hex, напр. '#639922'
+    name        TEXT     NOT NULL,
+    color       TEXT     NOT NULL,  -- hex без '#', напр. '639922'
     photo_path  TEXT,               -- NULL если фото не добавлено
-    cable_type  TEXT    NOT NULL,   -- 'jack_ts' | 'jack_trs' | 'xlr'
-    created_at  INTEGER NOT NULL    -- unix timestamp
+    cable_type  TEXT     NOT NULL,  -- 'jack_ts' | 'jack_trs' | 'xlr'
+    created_at  INTEGER  NOT NULL   -- unix timestamp
 );
 
 CREATE TABLE test_sessions (
-    id            INTEGER PRIMARY KEY AUTOINCREMENT,
-    cable_id      INTEGER NOT NULL REFERENCES cables(id) ON DELETE CASCADE,
-    started_at    INTEGER NOT NULL,  -- unix timestamp
-    health_score  INTEGER,           -- 0–100; NULL если тест не завершён
-    ble_device_id TEXT    NOT NULL   -- MAC или UUID BLE-устройства
+    id             INTEGER PRIMARY KEY AUTOINCREMENT,
+    cable_id       INTEGER NOT NULL REFERENCES cables(id) ON DELETE CASCADE,
+    started_at     INTEGER NOT NULL,  -- unix timestamp
+    health_score   INTEGER,           -- 0–100; NULL если тест не завершён
+    ble_device_id  TEXT    NOT NULL   -- MAC или UUID BLE-устройства
 );
 
 CREATE TABLE continuity_results (
