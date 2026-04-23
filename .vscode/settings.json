@@ -1,0 +1,4 @@
+{
+    "platformio-ide.customPATH": "${workspaceFolder}/firmware/.venv/Scripts",
+    "python.defaultInterpreterPath": "${workspaceFolder}/firmware/.venv/Scripts/python.exe"
+}
