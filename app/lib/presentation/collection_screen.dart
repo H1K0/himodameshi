@@ -1,3 +1,4 @@
+// collection_screen.dart
 import 'package:flutter/material.dart';
 
 class CollectionScreen extends StatelessWidget {
@@ -13,7 +14,7 @@ class CollectionScreen extends StatelessWidget {
           SizedBox(height: 16),
           Text(
             'Коллекция',
-            style: TextStyle(fontSize: 24, fontWeight: FontWeight.w500),
+            style: TextStyle(fontSize: 24, fontWeight: FontWeight.w500, color: Color(0xFFFAFAFA)),
           ),
           SizedBox(height: 8),
           Text(
