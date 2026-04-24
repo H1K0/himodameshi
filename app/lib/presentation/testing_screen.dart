@@ -216,21 +216,21 @@ class _TestingScreenState extends State<TestingScreen> {
                 children: [
                   _buildTestCard(
                     test: TestType.continuity,
-                    duration: 10,
+                    duration: 3,
                     isSelected: _selectedTests.contains(TestType.continuity),
                     isBlocked: false,
                   ),
                   const SizedBox(height: 6),
                   _buildTestCard(
                     test: TestType.cmrr,
-                    duration: 10,
+                    duration: 3,
                     isSelected: _selectedTests.contains(TestType.cmrr),
                     isBlocked: _isCmrrBlocked,
                   ),
                   const SizedBox(height: 6),
                   _buildTestCard(
                     test: TestType.freqResponse,
-                    duration: 10,
+                    duration: 3,
                     isSelected: _selectedTests.contains(TestType.freqResponse),
                     isBlocked: false,
                   ),

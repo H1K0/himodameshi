@@ -23,10 +23,12 @@ class _TestingProgressScreenState extends State<TestingProgressScreen> {
   int _currentTestIndex = 0;
   double _progress = 0.0;
   Timer? _timer;
+  double _totalElapsedSeconds = 0.0;
+  Timer? _totalTimer;
   DateTime? _testStartTime;
 
   // Длительность каждого теста в секундах
-  static const int _testDurationSeconds = 10;
+  static const int _testDurationSeconds = 3;
 
   List<TestType> get _tests => widget.selectedTests;
 
@@ -47,12 +49,49 @@ class _TestingProgressScreenState extends State<TestingProgressScreen> {
   void initState() {
     super.initState();
     _startCurrentTest();
+    _startTotalTimer();
   }
 
+  void _startTotalTimer() {
+    _totalTimer = Timer.periodic(const Duration(milliseconds: 100), (timer) {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
+      setState(() {
+        _totalElapsedSeconds += 0.1;
+      });
+    });
+  }
+
+  // В dispose останавливаем
   @override
   void dispose() {
     _timer?.cancel();
+    _totalTimer?.cancel();
     super.dispose();
+  }
+
+  // При завершении всех тестов передаём реальное время
+  void _onTestComplete() {
+    if (_currentTestIndex + 1 < _tests.length) {
+      setState(() {
+        _currentTestIndex++;
+      });
+      _startCurrentTest();
+    } else {
+      _totalTimer?.cancel();
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (context) => TestingResultsScreen(
+            cableType: widget.cableType,
+            selectedTests: _tests,
+            totalTimeSeconds: _totalElapsedSeconds, // передаём реальное время
+          ),
+        ),
+      );
+    }
   }
 
   void _startCurrentTest() {
@@ -77,27 +116,6 @@ class _TestingProgressScreenState extends State<TestingProgressScreen> {
         _onTestComplete();
       }
     });
-  }
-
-  void _onTestComplete() {
-    if (_currentTestIndex + 1 < _tests.length) {
-      // Переходим к следующему тесту
-      setState(() {
-        _currentTestIndex++;
-      });
-      _startCurrentTest();
-    } else {
-      // Все тесты завершены
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (context) => TestingResultsScreen(
-            cableType: widget.cableType,
-            selectedTests: _tests,
-          ),
-        ),
-      );
-    }
   }
 
   void _cancelTesting() {
@@ -154,7 +172,6 @@ class _TestingProgressScreenState extends State<TestingProgressScreen> {
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 20),
-            child: _buildBleButton(),
           ),
         ],
       ),
@@ -370,39 +387,6 @@ class _TestingProgressScreenState extends State<TestingProgressScreen> {
                   color: Color(0xFF888888),
                 ),
               ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildBleButton() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: const Color(0xFFEF9F27).withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFFEF9F27).withValues(alpha: 0.4)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 6,
-            height: 6,
-            decoration: const BoxDecoration(
-              color: Color(0xFF97C459),
-              shape: BoxShape.circle,
-            ),
-          ),
-          const SizedBox(width: 6),
-          const Text(
-            'BLE',
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w500,
-              color: Color(0xFFEF9F27),
             ),
           ),
         ],

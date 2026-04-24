@@ -61,11 +61,11 @@ extension TestTypeExtension on TestType {
   int get durationSeconds {
     switch (this) {
       case TestType.continuity:
-        return 10;
+        return 3;
       case TestType.cmrr:
-        return 10;
+        return 3;
       case TestType.freqResponse:
-        return 10;
+        return 3;
     }
   }
 }
