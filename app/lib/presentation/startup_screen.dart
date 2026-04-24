@@ -445,9 +445,9 @@ class _StartupScreenState extends State<StartupScreen> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
         decoration: BoxDecoration(
-          color: const Color(0xFFEF9F27).withOpacity(0.1),
+          color: const Color(0xFFEF9F27).withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: const Color(0xFFEF9F27).withOpacity(0.4)),
+          border: Border.all(color: const Color(0xFFEF9F27).withValues(alpha: 0.4)),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
