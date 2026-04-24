@@ -2,6 +2,8 @@
 #include <NimBLEDevice.h>
 #include <ArduinoJson.h>
 
+#include "ble_config.h"
+
 static constexpr uint8_t LED_PIN = 2;
 
 void setup() {

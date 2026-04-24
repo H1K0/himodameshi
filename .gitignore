@@ -15,7 +15,9 @@ app/**/*.freezed.dart
 # ─── PlatformIO ────────────────────────────────────────────────────────────────
 # Build artefacts and downloaded libraries (can be hundreds of MB)
 firmware/.pio/
-# Python venv — воссоздаётся через: cd firmware && python -m venv .venv && pip install -r requirements.txt
+# Contains absolute machine-specific paths; regenerate: cd firmware && pio run --target compiledb
+firmware/compile_commands.json
+# Python venv — regenerate: cd firmware && python -m venv .venv && pip install -r requirements.txt
 firmware/.venv/
 
 # ─── KiCad ─────────────────────────────────────────────────────────────────────
