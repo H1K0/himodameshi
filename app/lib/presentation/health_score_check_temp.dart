@@ -25,6 +25,17 @@ class _HealthScoreCheckTempState extends State<HealthScoreCheckTemp> {
     _loadCables();
   }
 
+  /// Проверяет, есть ли в проводниках open или short
+  bool _hasCatastrophicFailure(List<Map<String, dynamic>> conductors) {
+    for (final conductor in conductors) {
+      final status = conductor['s'] as String;
+      if (status == 'open' || status == 'short') {
+        return true;
+      }
+    }
+    return false;
+  }
+
   Future<void> _loadCables() async {
     try {
       final jsonString = await rootBundle.loadString('mock/ble_mock_packets.json');
@@ -36,81 +47,92 @@ class _HealthScoreCheckTempState extends State<HealthScoreCheckTemp> {
 
       final List<Map<String, dynamic>> results = [];
 
-      // Берем только xlr_ok
-      final xlrOkId = 'xlr_ok';
-      if (continuityResults.containsKey(xlrOkId) &&
-          cmrrResults.containsKey(xlrOkId) &&
-          freqResults.containsKey(xlrOkId)) {
+      // Проходим по всем кабелям в continuity
+      for (final entry in continuityResults.entries) {
+        final String cableId = entry.key;
+        final continuityData = entry.value;
 
-        final continuityData = continuityResults[xlrOkId];
-        final cmrrData = cmrrResults[xlrOkId];
-        final freqData = freqResults[xlrOkId];
+        // Определяем тип кабеля
+        final String cableTypeStr = continuityData['cable'] ?? 'unknown';
+        CableType? cableType;
+        switch (cableTypeStr) {
+          case 'xlr':
+            cableType = CableType.xlr;
+            break;
+          case 'jack_trs':
+            cableType = CableType.jackTrs;
+            break;
+          case 'jack_ts':
+            cableType = CableType.jackTs;
+            break;
+          default:
+            continue;
+        }
 
-        // Формируем проводники
+        // Формируем проводники из continuity
         final conductorsMap = continuityData['conductors'] as Map<String, dynamic>;
         final List<Map<String, dynamic>> conductors = [];
-        for (final entry in conductorsMap.entries) {
+        for (final condEntry in conductorsMap.entries) {
           conductors.add({
-            'r': (entry.value['r'] as num).toDouble(),
-            's': entry.value['s'] as String,
+            'r': (condEntry.value['r'] as num).toDouble(),
+            's': condEntry.value['s'] as String,
           });
         }
 
-        final cmrrDb = (cmrrData['cmrr_db'] as num).toDouble();
-        final freqValues = (freqData['v'] as List).map((e) => (e as num).toDouble()).toList();
+        if (conductors.isEmpty) continue;
 
-        final double healthScore = HealthScoreCalculator.calculate(
-          cableType: CableType.xlr,
+        // Проверяем катастрофические условия
+        final bool hasCatastrophic = _hasCatastrophicFailure(conductors);
+
+        // Проверяем наличие CMRR (для балансных обязательно, для TS не нужно)
+        final hasCmrr = cmrrResults.containsKey(cableId);
+        if (cableType.supportsCmrr && !hasCmrr && !hasCatastrophic) continue;
+
+        // Проверяем наличие АЧХ (для катастрофических пропускаем проверку)
+        final hasFreq = freqResults.containsKey(cableId);
+        if (!hasFreq && !hasCatastrophic) continue;
+
+        // Получаем CMRR (если есть)
+        final double? cmrrDb = hasCmrr
+            ? (cmrrResults[cableId]['cmrr_db'] as num).toDouble()
+            : null;
+
+        // Получаем АЧХ (если есть)
+        List<double>? freqValues;
+        String? freqStatus;
+        if (hasFreq) {
+          final freqData = freqResults[cableId];
+          freqValues = (freqData['v'] as List).map((e) => (e as num).toDouble()).toList();
+          freqStatus = freqData['status'];
+        }
+
+        // Рассчитываем Health Score
+        final double healthScore = hasCatastrophic
+            ? 0.0
+            : HealthScoreCalculator.calculate(
+          cableType: cableType,
           continuityConductors: conductors,
           cmrrDb: cmrrDb,
           freqResponseValues: freqValues,
         );
 
         results.add({
-          'name': 'XLR OK',
-          'cableType': 'xlr',
+          'id': cableId,
+          'name': cableId,
+          'cableType': cableTypeStr,
           'healthScore': healthScore,
+          'hasCatastrophic': hasCatastrophic,
+          'continuityStatus': continuityData['status'],
+          'cmrrStatus': hasCmrr ? cmrrResults[cableId]['status'] : null,
+          'freqStatus': freqStatus,
           'cmrrDb': cmrrDb,
+          'hasCmrr': hasCmrr,
+          'hasFreq': hasFreq,
         });
       }
 
-      // Берем jack_trs_ok
-      final jackTrsOkId = 'jack_trs_ok';
-      if (continuityResults.containsKey(jackTrsOkId) &&
-          cmrrResults.containsKey(jackTrsOkId) &&
-          freqResults.containsKey(jackTrsOkId)) {
-
-        final continuityData = continuityResults[jackTrsOkId];
-        final cmrrData = cmrrResults[jackTrsOkId];
-        final freqData = freqResults[jackTrsOkId];
-
-        // Формируем проводники
-        final conductorsMap = continuityData['conductors'] as Map<String, dynamic>;
-        final List<Map<String, dynamic>> conductors = [];
-        for (final entry in conductorsMap.entries) {
-          conductors.add({
-            'r': (entry.value['r'] as num).toDouble(),
-            's': entry.value['s'] as String,
-          });
-        }
-
-        final cmrrDb = (cmrrData['cmrr_db'] as num).toDouble();
-        final freqValues = (freqData['v'] as List).map((e) => (e as num).toDouble()).toList();
-
-        final double healthScore = HealthScoreCalculator.calculate(
-          cableType: CableType.jackTrs,
-          continuityConductors: conductors,
-          cmrrDb: cmrrDb,
-          freqResponseValues: freqValues,
-        );
-
-        results.add({
-          'name': 'Jack TRS OK',
-          'cableType': 'jack_trs',
-          'healthScore': healthScore,
-          'cmrrDb': cmrrDb,
-        });
-      }
+      // Сортируем по Health Score (от лучшего к худшему)
+      results.sort((a, b) => b['healthScore'].compareTo(a['healthScore']));
 
       setState(() {
         _cables = results;
@@ -122,6 +144,11 @@ class _HealthScoreCheckTempState extends State<HealthScoreCheckTemp> {
         _isLoading = false;
       });
     }
+  }
+
+  String _capitalize(String str) {
+    if (str.isEmpty) return str;
+    return str[0].toUpperCase() + str.substring(1);
   }
 
   Color _getScoreColor(double score) {
@@ -165,7 +192,7 @@ class _HealthScoreCheckTempState extends State<HealthScoreCheckTemp> {
           : _cables.isEmpty
           ? const Center(
         child: Text(
-          'Нет кабелей с полным набором тестов',
+          'Нет кабелей',
           style: TextStyle(color: Color(0xFF888888)),
         ),
       )
@@ -174,15 +201,22 @@ class _HealthScoreCheckTempState extends State<HealthScoreCheckTemp> {
         itemCount: _cables.length,
         itemBuilder: (context, index) {
           final cable = _cables[index];
-          final score = cable['healthScore'];
+          final double score = cable['healthScore'];
+          final bool hasCatastrophic = (cable['hasCatastrophic'] ?? false) as bool;
 
           return Container(
             margin: const EdgeInsets.only(bottom: 8),
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: const Color(0xFF111111),
+              color: hasCatastrophic
+                  ? const Color(0xFF1A0A0A)
+                  : const Color(0xFF111111),
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: const Color(0xFF1F1F1F)),
+              border: Border.all(
+                color: hasCatastrophic
+                    ? const Color(0xFFE24B4A).withValues(alpha: 0.3)
+                    : const Color(0xFF1F1F1F),
+              ),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -190,13 +224,37 @@ class _HealthScoreCheckTempState extends State<HealthScoreCheckTemp> {
                 Row(
                   children: [
                     Expanded(
-                      child: Text(
-                        cable['name'],
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w500,
-                          color: Color(0xFFFAFAFA),
-                        ),
+                      child: Row(
+                        children: [
+                          Text(
+                            cable['name'],
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w500,
+                              color: Color(0xFFFAFAFA),
+                            ),
+                          ),
+                          if (hasCatastrophic)
+                            Container(
+                              margin: const EdgeInsets.only(left: 8),
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFE24B4A).withValues(alpha: 0.15),
+                                borderRadius: BorderRadius.circular(4),
+                                border: Border.all(
+                                  color: const Color(0xFFE24B4A).withValues(alpha: 0.3),
+                                ),
+                              ),
+                              child: const Text(
+                                'КАТАСТРОФА',
+                                style: TextStyle(
+                                  fontSize: 8,
+                                  fontWeight: FontWeight.w500,
+                                  color: Color(0xFFE24B4A),
+                                ),
+                              ),
+                            ),
+                        ],
                       ),
                     ),
                     Container(
@@ -209,7 +267,7 @@ class _HealthScoreCheckTempState extends State<HealthScoreCheckTemp> {
                         ),
                       ),
                       child: Text(
-                        '$score',
+                        score.toStringAsFixed(1),
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
@@ -224,6 +282,22 @@ class _HealthScoreCheckTempState extends State<HealthScoreCheckTemp> {
                   'Тип: ${cable['cableType']}',
                   style: const TextStyle(fontSize: 12, color: Color(0xFF888888)),
                 ),
+                const SizedBox(height: 4),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 4,
+                  children: [
+                    _buildStatusChip('Целостность', cable['continuityStatus']),
+                    if (cable['hasCmrr'] == true)
+                      _buildStatusChip('CMRR', cable['cmrrStatus'])
+                    else if (!cable['hasCatastrophic'])
+                      _buildStatusChip('CMRR', 'не измерялся'),
+                    if (cable['hasFreq'] == true)
+                      _buildStatusChip('АЧХ', cable['freqStatus'])
+                    else if (!cable['hasCatastrophic'])
+                      _buildStatusChip('АЧХ', 'нет данных'),
+                  ],
+                ),
                 if (cable['cmrrDb'] != null)
                   Padding(
                     padding: const EdgeInsets.only(top: 8),
@@ -232,10 +306,64 @@ class _HealthScoreCheckTempState extends State<HealthScoreCheckTemp> {
                       style: const TextStyle(fontSize: 11, color: Color(0xFF666666)),
                     ),
                   ),
+                if (hasCatastrophic)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: const Text(
+                      '⚠️ Обрыв или короткое замыкание — кабель неисправен',
+                      style: TextStyle(fontSize: 11, color: Color(0xFFE24B4A)),
+                    ),
+                  ),
               ],
             ),
           );
         },
+      ),
+    );
+  }
+
+  Widget _buildStatusChip(String label, String? status) {
+    if (status == null) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+        decoration: BoxDecoration(
+          color: const Color(0xFF666666).withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(4),
+        ),
+        child: Text(
+          '$label: НЕТ ДАННЫХ',
+          style: const TextStyle(fontSize: 9, color: Color(0xFF666666), fontWeight: FontWeight.w500),
+        ),
+      );
+    }
+
+    Color color;
+    switch (status) {
+      case 'excellent':
+        color = const Color(0xFF97C459);
+        break;
+      case 'ok':
+        color = const Color(0xFFEF9F27);
+        break;
+      case 'warning':
+        color = const Color(0xFFEF9F27);
+        break;
+      case 'fail':
+        color = const Color(0xFFE24B4A);
+        break;
+      default:
+        color = const Color(0xFF666666);
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Text(
+        '$label: ${status.toUpperCase()}',
+        style: TextStyle(fontSize: 9, color: color, fontWeight: FontWeight.w500),
       ),
     );
   }
