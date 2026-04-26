@@ -73,6 +73,11 @@ class BottomNavBar extends StatelessWidget {
               selectedIcon: Icon(Icons.settings),
               label: 'Настройки',
             ),
+            NavigationDestination(
+              icon: Icon(Icons.analytics_outlined),
+              selectedIcon: Icon(Icons.analytics),
+              label: 'HS Check',
+            ),
           ],
         ),
       ),
