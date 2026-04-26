@@ -1,6 +1,20 @@
 import 'dart:math';
 
 import '/data/test_models.dart';
+/// Результат расчёта Health Score
+class HealthScoreResult {
+  final double? score;           // null если ни один тест не завершён
+  final bool isPartial;          // true если расчёт по части тестов
+  final List<String> missingTests; // список незавершённых тестов
+
+  const HealthScoreResult({
+    this.score,
+    this.isPartial = false,
+    this.missingTests = const [],
+  });
+
+  bool get hasScore => score != null;
+}
 
 class HealthScoreCalculator {
   // Константы
@@ -10,8 +24,8 @@ class HealthScoreCalculator {
   static const double cmrrFailThreshold = 40.0;   // дБ
   static const double cmrrOkThreshold = 60.0;     // дБ
 
-  // Веса для разных типов кабелей
-  static const Map<CableType, Map<String, double>> weights = {
+  // Базовые веса для разных типов кабелей
+  static const Map<CableType, Map<String, double>> baseWeights = {
     CableType.xlr: {'continuity': 0.35, 'cmrr': 0.35, 'freq': 0.30},
     CableType.jackTrs: {'continuity': 0.35, 'cmrr': 0.35, 'freq': 0.30},
     CableType.jackTs: {'continuity': 0.60, 'cmrr': 0.00, 'freq': 0.40},
@@ -20,156 +34,194 @@ class HealthScoreCalculator {
   // --------------------------------------------------------------------------
   // Главный метод расчёта Health Score
   // --------------------------------------------------------------------------
-  static double calculate({
-    required CableType cableType,
-    required List<Map<String, dynamic>> continuityConductors,
-    required double? cmrrDb,
-    required List<double>? freqResponseValues,
+  static HealthScoreResult calculate({
+  required CableType cableType,
+  required List<Map<String, dynamic>> continuityConductors,
+  required double? cmrrDb,
+  required List<double>? freqResponseValues,
+  // Флаги, какие тесты были запрошены пользователем
+  required bool continuityRun,
+  required bool cmrrRun,
+  required bool freqRun,
   }) {
-    // 1. Проверка катастрофических условий
-    for (final conductor in continuityConductors) {
-      final status = conductor['s'] as String;
-      if (status == 'open' || status == 'short') {
-        return 0;
-      }
-    }
+  // 1. Проверка катастрофических условий
+  for (final conductor in continuityConductors) {
+  final status = conductor['s'] as String;
+  if (status == 'open' || status == 'short') {
+  return const HealthScoreResult(score: 0.0, isPartial: false, missingTests: []);
+  }
+  }
 
-    // 2. Расчёт суб-скоров
-    final double sc = _calculateContinuityScore(continuityConductors);
-    final double sm = (cableType.supportsCmrr && cmrrDb != null)
-        ? _calculateCmrrScore(cmrrDb)
-        : 0.0;
-    final double sf = (freqResponseValues != null && freqResponseValues.isNotEmpty)
-        ? _calculateFreqResponseScore(freqResponseValues)
-        : 100.0; // Если АЧХ не измерялась, считаем идеальной
+  // 2. Определяем, какие тесты завершены (имеют данные)
+  final bool continuityCompleted = continuityConductors.isNotEmpty;
+  final bool cmrrCompleted = cableType.supportsCmrr && cmrrDb != null;
+  final bool freqCompleted = freqResponseValues != null && freqResponseValues.isNotEmpty;
 
-    // 3. Взвешенная сумма
-    final w = weights[cableType]!;
-    double healthScore = 0.0;
-    healthScore += w['continuity']! * sc;
-    healthScore += w['cmrr']! * sm;
-    healthScore += w['freq']! * sf;
+  // 3. Собираем завершённые тесты
+  final Map<String, bool> completed = {
+  'continuity': continuityCompleted,
+  'cmrr': cmrrCompleted,
+  'freq': freqCompleted,
+  };
 
-    // 4. Округление и ограничение
-    return (healthScore * 10).roundToDouble() / 10;
+  // 4. Проверяем, был ли запущен хотя бы один тест
+  final bool anyRun = continuityRun || cmrrRun || freqRun;
+  if (!anyRun) {
+  // Ни один тест не был запущен
+  return const HealthScoreResult(score: null, isPartial: false, missingTests: []);
+  }
+
+  // 5. Для запущенных тестов проверяем, какие завершены
+  final List<String> missingTests = [];
+  if (continuityRun && !continuityCompleted) missingTests.add('целостность');
+  if (cmrrRun && !cmrrCompleted) missingTests.add('CMRR');
+  if (freqRun && !freqCompleted) missingTests.add('АЧХ');
+
+  // 6. Если нет ни одного завершённого теста среди запущенных
+  final bool hasAnyCompleted = (continuityRun && continuityCompleted) ||
+  (cmrrRun && cmrrCompleted) ||
+  (freqRun && freqCompleted);
+
+  if (!hasAnyCompleted) {
+  return HealthScoreResult(
+  score: null,
+  isPartial: false,
+  missingTests: missingTests,
+  );
+  }
+
+  // 7. Расчёт суб-скоров
+  final double sc = _calculateContinuityScore(continuityConductors);
+  final double sm = (cmrrCompleted && cmrrDb != null)
+  ? _calculateCmrrScore(cmrrDb)
+      : 0.0;
+  final double sf = (freqCompleted && freqResponseValues != null)
+  ? _calculateFreqResponseScore(freqResponseValues)
+      : 0.0;
+
+  // 8. Перераспределение весов только для завершённых тестов
+  final baseW = baseWeights[cableType]!;
+
+  // Собираем веса только для тех тестов, которые были ЗАПУЩЕНЫ И ЗАВЕРШЕНЫ
+  final Map<String, double> activeWeights = {};
+  if (continuityRun && continuityCompleted) activeWeights['continuity'] = baseW['continuity']!;
+  if (cmrrRun && cmrrCompleted) activeWeights['cmrr'] = baseW['cmrr']!;
+  if (freqRun && freqCompleted) activeWeights['freq'] = baseW['freq']!;
+
+  // Сумма базовых весов активных тестов
+  final double totalWeight = activeWeights.values.fold(0.0, (sum, w) => sum + w);
+
+  // Нормированные веса
+  final double wcNorm = (activeWeights['continuity'] ?? 0.0) / totalWeight;
+  final double wmNorm = (activeWeights['cmrr'] ?? 0.0) / totalWeight;
+  final double wfNorm = (activeWeights['freq'] ?? 0.0) / totalWeight;
+
+  // 9. Взвешенная сумма
+  double healthScore = 0.0;
+  healthScore += wcNorm * sc;
+  healthScore += wmNorm * sm;
+  healthScore += wfNorm * sf;
+
+  // 10. Округление и ограничение
+  final double finalScore = (healthScore * 10).roundToDouble() / 10;
+  final bool isPartial = missingTests.isNotEmpty;
+
+  return HealthScoreResult(
+  score: finalScore,
+  isPartial: isPartial,
+  missingTests: missingTests,
+  );
   }
 
   // --------------------------------------------------------------------------
   // Суб-скор целостности (Sc)
   // --------------------------------------------------------------------------
   static double _calculateContinuityScore(List<Map<String, dynamic>> conductors) {
-    if (conductors.isEmpty) return 0.0;
+  if (conductors.isEmpty) return 0.0;
 
-    double sumScores = 0.0;
-    for (final conductor in conductors) {
-      final double r = (conductor['r'] as num).toDouble();
-      sumScores += _singleContinuityScore(r);
-    }
-    return sumScores / conductors.length;
+  double sumScores = 0.0;
+  for (final conductor in conductors) {
+  final double r = (conductor['r'] as num).toDouble();
+  sumScores += _singleContinuityScore(r);
+  }
+  return sumScores / conductors.length;
   }
 
   static double _singleContinuityScore(double r) {
-    // r < 5 Ω (зона ok)
-    if (r < 5.0) {
-      double score = 100.0 - 4.0 * r;
-      return score.clamp(0.0, 100.0);
-    }
-    // r >= 5 Ω (зона warning и выше)
-    else {
-      // s = max(0, 80 - (8/9)*(r - 5))
-      // При r = 5 → 80
-      // При r = 50 → 40
-      // При r = 95 → 0
-      double score = 80.0 - (8.0 / 9.0) * (r - 5.0);
-      return score.clamp(0.0, 100.0);
-    }
+  if (r < 5.0) {
+  double score = 100.0 - 4.0 * r;
+  return score.clamp(0.0, 100.0);
+  } else {
+  double score = 80.0 - (8.0 / 9.0) * (r - 5.0);
+  return score.clamp(0.0, 100.0);
+  }
   }
 
   // --------------------------------------------------------------------------
   // Суб-скор CMRR (Sm)
   // --------------------------------------------------------------------------
   static double _calculateCmrrScore(double cmrrDb) {
-    // d < 20 → 0
-    if (cmrrDb < 20.0) return 0.0;
-
-    // 20 ≤ d < 60 → 2*(d - 20)
-    if (cmrrDb < 60.0) {
-      return 2.0 * (cmrrDb - 20.0);
-    }
-
-    // d ≥ 60 → min(100, 80 + (d - 60))
-    else {
-      final score = 80.0 + (cmrrDb - 60.0);
-      return score.clamp(0.0, 100.0);
-    }
+  if (cmrrDb < 20.0) return 0.0;
+  if (cmrrDb < 60.0) {
+  return 2.0 * (cmrrDb - 20.0);
+  } else {
+  final score = 80.0 + (cmrrDb - 60.0);
+  return score.clamp(0.0, 100.0);
+  }
   }
 
   // --------------------------------------------------------------------------
   // Суб-скор АЧХ (Sf)
   // --------------------------------------------------------------------------
   static double _calculateFreqResponseScore(List<double> v) {
-    // Проверка на сентинел -99.0 (пропадание сигнала)
-    if (v.any((value) => value <= -99.0)) return 0.0;
+  if (v.any((value) => value <= -99.0)) return 0.0;
 
-    // Индексы частот:
-    // v[0-2] — 10-20 Гц (не участвуют в расчёте)
-    // v[3-26] — 20 Гц – 20 кГц (аудиодиапазон)
-    // v[27-29] — выше 20 кГц (сверхзвуковая зона)
+  final audioValues = v.sublist(3, 27);
+  double peak = 0.0;
+  double sumSquares = 0.0;
 
-    // 1. Расчёт для аудиодиапазона (20 Гц – 20 кГц)
-    final audioValues = v.sublist(3, 27); // индексы 3..26
-    double peak = 0.0;
-    double sumSquares = 0.0;
+  for (final val in audioValues) {
+  final absVal = val.abs();
+  if (absVal > peak) peak = absVal;
+  sumSquares += val * val;
+  }
 
-    for (final val in audioValues) {
-      final absVal = val.abs();
-      if (absVal > peak) peak = absVal;
-      sumSquares += val * val;
-    }
+  final double sigma = sqrt((sumSquares / audioValues.length));
+  double sfAudio = 100.0 - 14.0 * peak - 6.0 * sigma;
+  sfAudio = sfAudio.clamp(0.0, 100.0);
 
-    final double sigma = sqrt((sumSquares / audioValues.length));
+  final hfValues = v.sublist(27, 30);
+  double peakHf = 0.0;
+  for (final val in hfValues) {
+  final absVal = val.abs();
+  if (absVal > peakHf) peakHf = absVal;
+  }
 
-    // Sf_audio = max(0, 100 - 14*peak - 6*sigma)
-    double sfAudio = 100.0 - 14.0 * peak - 6.0 * sigma;
-    sfAudio = sfAudio.clamp(0.0, 100.0);
+  double penaltyHf = (peakHf - 3.0) * 4.0;
+  penaltyHf = penaltyHf.clamp(0.0, double.infinity);
 
-    // 2. ВЧ-штраф (20 кГц – 40 кГц)
-    final hfValues = v.sublist(27, 30); // индексы 27..29
-    double peakHf = 0.0;
-    for (final val in hfValues) {
-      final absVal = val.abs();
-      if (absVal > peakHf) peakHf = absVal;
-    }
-
-    // penalty_hf = max(0, (peak_hf - 3) * 4)
-    double penaltyHf = (peakHf - 3.0) * 4.0;
-    penaltyHf = penaltyHf.clamp(0.0, double.infinity);
-
-    // 3. Итоговый суб-скор
-    double sf = sfAudio - penaltyHf;
-    return sf.clamp(0.0, 100.0);
+  double sf = sfAudio - penaltyHf;
+  return sf.clamp(0.0, 100.0);
   }
 
   // --------------------------------------------------------------------------
   // Вспомогательные методы для получения статусов (для UI)
   // --------------------------------------------------------------------------
   static String getContinuityStatus(double r) {
-    if (r < 5.0) return 'ok';
-    if (r < 50.0) return 'warning';
-    return 'fail';
+  if (r < 5.0) return 'ok';
+  if (r < 50.0) return 'warning';
+  return 'fail';
   }
 
   static String getCmrrStatus(double cmrrDb) {
-    if (cmrrDb > 60.0) return 'excellent';
-    if (cmrrDb >= 40.0) return 'ok';
-    return 'fail';
+  if (cmrrDb > 60.0) return 'excellent';
+  if (cmrrDb >= 40.0) return 'ok';
+  return 'fail';
   }
 
   static String getFreqResponseStatus(double peak, double sigma) {
-    // excellent: peak ≤ 1.0 дБ и sigma ≤ 1.0 дБ
-    if (peak <= 1.0 && sigma <= 1.0) return 'excellent';
-    // ok: peak ≤ 3.0 дБ и sigma ≤ 3.0 дБ
-    if (peak <= 3.0 && sigma <= 3.0) return 'ok';
-    return 'fail';
+  if (peak <= 1.0 && sigma <= 1.0) return 'excellent';
+  if (peak <= 3.0 && sigma <= 3.0) return 'ok';
+  return 'fail';
   }
 }
