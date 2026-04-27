@@ -173,7 +173,7 @@ class _StartupScreenState extends State<StartupScreen> {
 
   Widget _buildMainContent() {
     return SingleChildScrollView(
-      padding: const EdgeInsets.only(bottom: 20),
+      padding: EdgeInsets.only(top: MediaQuery.of(context).padding.top,bottom: 20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

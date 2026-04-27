@@ -333,6 +333,95 @@ class _CablePassportScreenState extends State<CablePassportScreen> {
     );
   }
 
+  // Добавляем метод для отображения пинов:
+  Widget _buildPinsCard() {
+    // Определяем количество пинов и их состояния в зависимости от типа кабеля
+    List<Map<String, dynamic>> pins = [];
+
+    if (widget.cableType.toLowerCase() == 'xlr') {
+      pins = [
+        {'name': '1', 'status': 'ok'},   // можно менять на 'warning' или 'fail' для теста
+        {'name': '2', 'status': 'warning'},
+        {'name': '3', 'status': 'ok'},
+      ];
+    } else if (widget.cableType.toLowerCase() == 'jack_trs') {
+      pins = [
+        {'name': 'T', 'status': 'ok'},
+        {'name': 'R', 'status': 'fail'},
+        {'name': 'S', 'status': 'warning'},
+      ];
+    } else {
+      // Jack TS — 2 пина
+      pins = [
+        {'name': 'T', 'status': 'ok'},
+        {'name': 'S', 'status': 'ok'},
+      ];
+    }
+
+    Color getPinColor(String status) {
+      switch (status) {
+        case 'ok':
+          return const Color(0xFF97C459);
+        case 'warning':
+          return const Color(0xFFEF9F27);
+        case 'fail':
+          return const Color(0xFFE24B4A);
+        default:
+          return const Color(0xFF666666);
+      }
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: const Color(0xFF111111),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: const Color(0xFF1F1F1F)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'ПИНЫ',
+            style: TextStyle(
+              fontSize: 8,
+              color: Color(0xFF666666),
+            ),
+          ),
+          const SizedBox(height: 7),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.start,
+            children: pins.map((pin) {
+              return Padding(
+                padding: const EdgeInsets.only(right: 5),
+                child: Column(
+                  children: [
+                    Container(
+                      width: 9,
+                      height: 9,
+                      decoration: BoxDecoration(
+                        color: getPinColor(pin['status']),
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      pin['name'],
+                      style: const TextStyle(
+                        fontSize: 7,
+                        color: Color(0xFF555555),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }).toList(),
+          ),
+        ],
+      ),
+    );
+  }
+
   // Добавляем вспомогательный метод:
   CableType _getCableTypeFromString(String type) {
     switch (type.toLowerCase()) {
@@ -654,12 +743,9 @@ class _CablePassportScreenState extends State<CablePassportScreen> {
                   const SizedBox(height: 8),
                   Row(
                     children: [
+                      // Блок с пинами (состояние жил)
                       Expanded(
-                        child: _buildMetricCard(
-                          title: 'СОПР.',
-                          value: '1.4',
-                          unit: 'Ом',
-                        ),
+                        child: _buildPinsCard(),
                       ),
                       const SizedBox(width: 6),
                       Expanded(
@@ -672,7 +758,7 @@ class _CablePassportScreenState extends State<CablePassportScreen> {
                       const SizedBox(width: 6),
                       Expanded(
                         child: _buildMetricCard(
-                          title: '−3 ДБ',
+                          title: 'АЧХ',
                           value: '22.4',
                           unit: 'кГц',
                         ),
