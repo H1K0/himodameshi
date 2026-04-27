@@ -87,7 +87,6 @@ CREATE TABLE cables (
     id          INTEGER PRIMARY KEY AUTOINCREMENT,
     name        TEXT     NOT NULL,
     color       TEXT     NOT NULL,  -- hex без '#', напр. '639922'
-    photo_path  TEXT,               -- NULL если фото не добавлено
     cable_type  TEXT     NOT NULL,  -- 'jack_ts' | 'jack_trs' | 'xlr'
     created_at  INTEGER  NOT NULL   -- unix timestamp
 );
