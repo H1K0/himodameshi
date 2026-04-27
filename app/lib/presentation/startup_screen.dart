@@ -94,10 +94,14 @@ class _StartupScreenState extends State<StartupScreen> {
       _currentView = 'device';
     });
   }
-
-  void _showCablePassport(String cableId) {
+  String? _selectedCableName;
+  String? _selectedCableType;
+  double? _selectedCableScore;
+  void _showCablePassport(String name, String cableType, double score) {
     setState(() {
-      _selectedCableId = cableId;
+      _selectedCableName = name;
+      _selectedCableType = cableType;
+      _selectedCableScore = score;
       _currentView = 'cable_passport';
     });
   }
@@ -124,14 +128,19 @@ class _StartupScreenState extends State<StartupScreen> {
   @override
   Widget build(BuildContext context) {
     if (_currentView == 'testing') {
-      return TestingScreen(onBack: _showMain);
+      return TestingScreen(
+        onBack: _showMain,
+        preselectedCableType: null, // с главного экрана без предустановки
+      );
     }
     if (_currentView == 'device') {
       return DeviceSettingsScreen(onBack: _showMain);
     }
-    if (_currentView == 'cable_passport' && _selectedCableId != null) {
+    if (_currentView == 'cable_passport' && _selectedCableName != null) {
       return CablePassportScreen(
-        cableId: _selectedCableId!,
+        cableName: _selectedCableName!,
+        cableType: _selectedCableType ?? 'unknown',
+        healthScore: _selectedCableScore ?? 0,
         onBack: _showMain,
       );
     }
@@ -164,7 +173,7 @@ class _StartupScreenState extends State<StartupScreen> {
 
   Widget _buildMainContent() {
     return SingleChildScrollView(
-      padding: const EdgeInsets.only(bottom: 20),
+      padding: EdgeInsets.only(top: MediaQuery.of(context).padding.top,bottom: 20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -429,6 +438,9 @@ class _StartupScreenState extends State<StartupScreen> {
                       title: '${cable['name']} · ${cable['cable']?.toString().toUpperCase() ?? 'UNKNOWN'}',
                       subtitle: 'cmrr ${cable['cmrr_db']} дБ',
                       cableId: cable['id'],
+                      cableName: cable['name'],
+                      cableType: cable['cable'],
+                      healthScore: 97.8
                     ),
                   )),
               ],
@@ -542,10 +554,13 @@ class _StartupScreenState extends State<StartupScreen> {
     required String title,
     required String subtitle,
     required String cableId,
+    required String cableName,
+    required String cableType,
+    required double healthScore,
   }) {
     return GestureDetector(
       onTap: () {
-        _showCablePassport(cableId);
+        _showCablePassport(cableName, cableType, healthScore);
       },
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),

@@ -4,8 +4,13 @@ import 'testing_progress_screen.dart';
 
 class TestingScreen extends StatefulWidget {
   final VoidCallback onBack;
+  final CableType? preselectedCableType;
 
-  const TestingScreen({super.key, required this.onBack});
+  const TestingScreen({
+    super.key,
+    required this.onBack,
+    this.preselectedCableType,
+  });
 
   @override
   State<TestingScreen> createState() => _TestingScreenState();
@@ -14,6 +19,18 @@ class TestingScreen extends StatefulWidget {
 class _TestingScreenState extends State<TestingScreen> {
   CableType _selectedCable = CableType.jackTs;
   final Set<TestType> _selectedTests = {TestType.continuity, TestType.freqResponse};
+
+  @override
+  void initState() {
+    super.initState();
+    // Если передан предустановленный тип кабеля, используем его
+    _selectedCable = widget.preselectedCableType ?? CableType.jackTs;
+
+    // Если выбран Jack TS и CMRR был в выбранных тестах — убираем
+    if (!_selectedCable.supportsCmrr && _selectedTests.contains(TestType.cmrr)) {
+      _selectedTests.remove(TestType.cmrr);
+    }
+  }
 
   // Блокирован ли CMRR
   bool get _isCmrrBlocked => !_selectedCable.supportsCmrr;
