@@ -4,6 +4,7 @@ import 'presentation/collection_screen.dart';
 import 'presentation/app_settings_screen.dart';
 import 'presentation/health_score_check_temp.dart';
 import 'presentation/bottom_nav_bar.dart';
+import 'presentation/database_check_screen_temp.dart';
 
 void main() {
   runApp(const MyApp());
@@ -22,7 +23,6 @@ class MyApp extends StatelessWidget {
         colorScheme: const ColorScheme.dark(
           primary: Color(0xFFEF9F27),
           surface: Color(0xFF0A0A0A),
-          background: Color(0xFF0A0A0A),
         ),
         useMaterial3: true,
       ),
@@ -58,6 +58,7 @@ class _MainScreenState extends State<MainScreen> {
       const CollectionScreen(),
       const AppSettingsScreen(),
       const HealthScoreCheckTemp(), // ВРЕМЕННЫЙ ЭКРАН ДЛЯ ПРОВЕРКИ
+      const DatabaseCheckScreenTemp(), // ВРЕМЕННЫЙ ЭКРАН ДЛЯ ПРОВЕРКИ
     ];
   }
 
