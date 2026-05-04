@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'presentation/startup_screen.dart';
 import 'presentation/collection_screen.dart';
 import 'presentation/app_settings_screen.dart';
-import 'presentation/health_score_check_temp.dart';
 import 'presentation/bottom_nav_bar.dart';
+import 'presentation/ble_check_screen_temp.dart';
 
 void main() {
   runApp(const MyApp());
@@ -57,7 +57,7 @@ class _MainScreenState extends State<MainScreen> {
       ),
       const CollectionScreen(),
       const AppSettingsScreen(),
-      const HealthScoreCheckTemp(), // ВРЕМЕННЫЙ ЭКРАН ДЛЯ ПРОВЕРКИ
+      const BleCheckScreen(), //ВРЕМЕННЫЙ ЭКРАН
     ];
   }
 
