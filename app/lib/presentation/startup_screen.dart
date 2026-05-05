@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'dart:convert';
 import 'testing_screen.dart';
 import 'device_settings_screen.dart';
 import 'cable_passport_screen.dart';
-import '/data/ble_mock_provider.dart';
+import '/data/ble_data_manager.dart';
+import '/data/ble_provider.dart';
+import '/data/ble_real_data_source.dart';
 import 'ble_menu.dart';
 
 class StartupScreen extends StatefulWidget {
@@ -20,53 +24,281 @@ class _StartupScreenState extends State<StartupScreen> {
   List<Map<String, dynamic>> _recentCables = [];
   bool _isLoading = true;
   bool _isBleMenuVisible = false;
-  BleConnectionStatus _bleStatus = bleProvider.currentStatus;
+
+  final BleDataManager _dataManager = BleDataManager();
+  ConnectionStatus _bleStatus = ConnectionStatus.disconnected;
+
+  // Данные из JSON для мок-режима
+  Map<String, dynamic>? _mockData;
+  int _totalCables = 24;
+  int _excellentCount = 18;
+  int _okCount = 4;
+  int _failCount = 2;
+  String? _lastTestTime;
+  bool _isMockMode = true;
 
   @override
   void initState() {
     super.initState();
-    _loadCables();
-    // Подписываемся на изменения статуса BLE
-    bleProvider.statusStream.listen((status) {
+    _updateConnectionStatus();
+
+    // Подписываемся на изменения типа источника
+    _dataManager.typeStream.listen((_) {
       if (mounted) {
-        setState(() {
-          _bleStatus = status;
-        });
-        // Если подключились, перезагружаем данные
-        if (status == BleConnectionStatus.connected) {
-          _loadCables();
-        }
+        _updateConnectionStatus();
+        _loadData();
       }
     });
-    // Автоматически подключаемся при старте
+
+    _loadData();
     _autoConnect();
   }
 
-  void _autoConnect() async {
-    await bleProvider.connect();
+  void _updateConnectionStatus() {
+    final dataSource = _dataManager.currentDataSource;
+    if (dataSource != null) {
+      setState(() {
+        if (dataSource is BleRealDataSource) {
+          _bleStatus = dataSource.bleProvider.connectionStatus;
+          _isMockMode = false;
+        } else {
+          _bleStatus = ConnectionStatus.connected;
+          _isMockMode = true;
+        }
+      });
+    } else {
+      setState(() {
+        _bleStatus = ConnectionStatus.disconnected;
+        _isMockMode = false;
+      });
+    }
   }
 
-  Future<void> _loadCables() async {
+  void _autoConnect() async {
+    final dataSource = _dataManager.currentDataSource;
+    if (dataSource is BleRealDataSource) {
+      await dataSource.bleProvider.connect();
+      if (mounted) {
+        _updateConnectionStatus();
+      }
+    }
+  }
+
+  Future<void> _loadData() async {
     setState(() {
       _isLoading = true;
     });
-    await for (final cables in bleProvider.getCmrrResultsStream()) {
+
+    try {
+      if (_isMockMode || _dataManager.currentDataSource == null) {
+        await _loadMockData();
+      } else {
+        await _loadRealData();
+      }
+    } catch (e) {
+      print('Error loading data: $e');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _loadMockData() async {
+    try {
+      final jsonString = await rootBundle.loadString('mock/ble_mock_packets.json');
+      final Map<String, dynamic> jsonData = jsonDecode(jsonString);
+
       setState(() {
-        _recentCables = cables;
-        _isLoading = false;
+        _mockData = jsonData;
+
+        // Извлекаем CMRR результаты для последних проверок
+        _recentCables = _extractCmrrTests(jsonData);
+
+        // Считаем статистику на основе всех результатов
+        _calculateCollectionStats(jsonData);
+
+        // Время последней проверки берем из самого позднего ts в cmrr
+        _lastTestTime = _getLastTestTime(jsonData);
       });
-      break;
+    } catch (e) {
+      print('Error loading mock data: $e');
+      setState(() {
+        _recentCables = [];
+        _totalCables = 0;
+        _excellentCount = 0;
+        _okCount = 0;
+        _failCount = 0;
+        _lastTestTime = 'нет данных';
+      });
+    }
+  }
+
+  List<Map<String, dynamic>> _extractCmrrTests(Map<String, dynamic> jsonData) {
+    final List<Map<String, dynamic>> tests = [];
+
+    try {
+      final results = jsonData['results'] as Map<String, dynamic>?;
+      if (results != null) {
+        final cmrrResults = results['cmrr'] as Map<String, dynamic>?;
+        if (cmrrResults != null) {
+          // Сортируем записи по времени (ts) в обратном порядке
+          final sortedEntries = cmrrResults.entries.toList()
+            ..sort((a, b) {
+              final tsA = (a.value as Map<String, dynamic>)['ts'] ?? 0;
+              final tsB = (b.value as Map<String, dynamic>)['ts'] ?? 0;
+              return tsB.compareTo(tsA); // от новых к старым
+            });
+
+          // Берем последние 6 записей
+          for (final entry in sortedEntries.take(6)) {
+            final testName = entry.key;
+            final testData = entry.value as Map<String, dynamic>;
+
+            // Пропускаем _note записи
+            if (testName.startsWith('_')) continue;
+
+            tests.add({
+              'id': 'cmrr_$testName',
+              'name': testData['cable']?.toString().toUpperCase() ?? 'Неизвестный кабель',
+              'cable': testData['cable'] ?? 'unknown',
+              'status': testData['status'] ?? 'unknown',
+              'cmrr_db': testData['cmrr_db']?.toString() ?? '--',
+              'ts': testData['ts'] ?? 0,
+              'test_type': 'cmrr',
+              'note': testData['_note'] ?? '',
+            });
+          }
+        }
+      }
+    } catch (e) {
+      print('Error extracting CMRR tests: $e');
+    }
+
+    return tests;
+  }
+
+  void _calculateCollectionStats(Map<String, dynamic> jsonData) {
+    int excellent = 0;
+    int ok = 0;
+    int fail = 0;
+    int total = 0;
+
+    try {
+      final results = jsonData['results'] as Map<String, dynamic>?;
+      if (results != null) {
+        // Считаем все тесты из всех категорий
+        for (final category in results.values) {
+          if (category is Map<String, dynamic>) {
+            for (final entry in category.entries) {
+              if (entry.key.startsWith('_')) continue;
+
+              final testData = entry.value as Map<String, dynamic>;
+              final status = testData['status']?.toString().toLowerCase() ?? '';
+
+              total++;
+
+              if (status == 'excellent') {
+                excellent++;
+              } else if (status == 'ok' || status == 'warning') {
+                ok++;
+              } else if (status == 'fail') {
+                fail++;
+              }
+            }
+          }
+        }
+      }
+    } catch (e) {
+      print('Error calculating stats: $e');
+    }
+
+    setState(() {
+      _totalCables = total;
+      _excellentCount = excellent;
+      _okCount = ok;
+      _failCount = fail;
+    });
+  }
+
+  String _getLastTestTime(Map<String, dynamic> jsonData) {
+    int latestTs = 0;
+
+    try {
+      final results = jsonData['results'] as Map<String, dynamic>?;
+      if (results != null) {
+        final cmrrResults = results['cmrr'] as Map<String, dynamic>?;
+        if (cmrrResults != null) {
+          for (final entry in cmrrResults.entries) {
+            if (entry.key.startsWith('_')) continue;
+            final testData = entry.value as Map<String, dynamic>;
+            final ts = testData['ts'] ?? 0;
+            if (ts > latestTs) {
+              latestTs = ts;
+            }
+          }
+        }
+      }
+    } catch (e) {
+      print('Error getting last test time: $e');
+    }
+
+    if (latestTs > 0) {
+      final dateTime = DateTime.fromMillisecondsSinceEpoch(latestTs * 1000);
+      final now = DateTime.now();
+      final difference = now.difference(dateTime);
+
+      if (difference.inMinutes < 60) {
+        return '${difference.inMinutes} мин назад';
+      } else if (difference.inHours < 24) {
+        return '${difference.inHours} ч назад';
+      } else if (difference.inDays < 7) {
+        return '${difference.inDays} дн назад';
+      } else {
+        return '${dateTime.day}.${dateTime.month}.${dateTime.year}';
+      }
+    }
+
+    return 'нет данных';
+  }
+
+  Future<void> _loadRealData() async {
+    // Здесь будет загрузка реальных данных с устройства
+    setState(() {
+      _recentCables = [];
+      _totalCables = 0;
+      _excellentCount = 0;
+      _okCount = 0;
+      _failCount = 0;
+      _lastTestTime = 'нет данных';
+    });
+  }
+
+  String _getStatusText() {
+    switch (_bleStatus) {
+      case ConnectionStatus.connected:
+        return 'Подключено';
+      case ConnectionStatus.disconnected:
+        return 'Не подключено';
+      case ConnectionStatus.connecting:
+        return 'Подключение...';
+      case ConnectionStatus.error:
+        return 'Ошибка подключения';
     }
   }
 
   Color _getBleDotColor() {
     switch (_bleStatus) {
-      case BleConnectionStatus.connected:
+      case ConnectionStatus.connected:
         return const Color(0xFF97C459);
-      case BleConnectionStatus.disconnected:
+      case ConnectionStatus.disconnected:
         return const Color(0xFFE24B4A);
-      case BleConnectionStatus.connecting:
+      case ConnectionStatus.connecting:
         return const Color(0xFFEF9F27);
+      case ConnectionStatus.error:
+        return const Color(0xFF860E0D);
     }
   }
 
@@ -75,6 +307,7 @@ class _StartupScreenState extends State<StartupScreen> {
       case 'excellent':
         return const Color(0xFF639922);
       case 'ok':
+      case 'warning':
         return const Color(0xFFEF9F27);
       case 'fail':
         return const Color(0xFFE24B4A);
@@ -94,9 +327,11 @@ class _StartupScreenState extends State<StartupScreen> {
       _currentView = 'device';
     });
   }
+
   String? _selectedCableName;
   String? _selectedCableType;
   double? _selectedCableScore;
+
   void _showCablePassport(String name, String cableType, double score) {
     setState(() {
       _selectedCableName = name;
@@ -130,7 +365,7 @@ class _StartupScreenState extends State<StartupScreen> {
     if (_currentView == 'testing') {
       return TestingScreen(
         onBack: _showMain,
-        preselectedCableType: null, // с главного экрана без предустановки
+        preselectedCableType: null,
       );
     }
     if (_currentView == 'device') {
@@ -147,17 +382,13 @@ class _StartupScreenState extends State<StartupScreen> {
     return Stack(
       children: [
         _buildMainContent(),
-        // Затемнение фона при открытом меню (снизу)
         if (_isBleMenuVisible)
           Positioned.fill(
             child: GestureDetector(
               onTap: _closeBleMenu,
-              child: Container(
-                color: Colors.transparent,
-              ),
+              child: Container(color: Colors.transparent),
             ),
           ),
-        // BLE Menu Overlay (СВЕРХУ, чтобы получать касания первым)
         if (_isBleMenuVisible)
           Positioned(
             top: 70,
@@ -173,7 +404,7 @@ class _StartupScreenState extends State<StartupScreen> {
 
   Widget _buildMainContent() {
     return SingleChildScrollView(
-      padding: EdgeInsets.only(top: MediaQuery.of(context).padding.top,bottom: 20),
+      padding: EdgeInsets.only(top: MediaQuery.of(context).padding.top, bottom: 20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -214,10 +445,10 @@ class _StartupScreenState extends State<StartupScreen> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'ПРОВЕРКА КАБЕЛЯ',
+                      _isMockMode ? 'ПРОВЕРКА КАБЕЛЯ (MOCK)' : 'ПРОВЕРКА КАБЕЛЯ',
                       style: TextStyle(
                         fontSize: 10,
-                        color: Colors.grey[600],
+                        color: _isMockMode ? const Color(0xFF6366F1) : Colors.grey[600],
                         letterSpacing: 1.5,
                       ),
                     ),
@@ -257,19 +488,19 @@ class _StartupScreenState extends State<StartupScreen> {
                             ),
                             const SizedBox(height: 4),
                             RichText(
-                              text: const TextSpan(
+                              text: TextSpan(
                                 children: [
                                   TextSpan(
-                                    text: '24 ',
-                                    style: TextStyle(
+                                    text: '$_totalCables ',
+                                    style: const TextStyle(
                                       fontSize: 26,
                                       fontWeight: FontWeight.w500,
                                       color: Color(0xFFFAFAFA),
                                     ),
                                   ),
                                   TextSpan(
-                                    text: 'кабеля',
-                                    style: TextStyle(
+                                    text: _getCableWord(_totalCables),
+                                    style: const TextStyle(
                                       fontSize: 12,
                                       color: Colors.grey,
                                     ),
@@ -293,7 +524,7 @@ class _StartupScreenState extends State<StartupScreen> {
                           ),
                           const SizedBox(height: 6),
                           Text(
-                            '2 часа назад',
+                            _lastTestTime ?? 'нет данных',
                             style: TextStyle(
                               fontSize: 12,
                               color: Colors.grey[400],
@@ -306,19 +537,19 @@ class _StartupScreenState extends State<StartupScreen> {
                   const SizedBox(height: 12),
                   Row(
                     children: [
-                      Expanded(flex: 18, child: Container(height: 4, color: const Color(0xFF639922))),
-                      Expanded(flex: 4, child: Container(height: 4, color: const Color(0xFFEF9F27))),
-                      Expanded(flex: 2, child: Container(height: 4, color: const Color(0xFFE24B4A))),
+                      Expanded(flex: _excellentCount, child: Container(height: 4, color: const Color(0xFF639922))),
+                      Expanded(flex: _okCount, child: Container(height: 4, color: const Color(0xFFEF9F27))),
+                      Expanded(flex: _failCount, child: Container(height: 4, color: const Color(0xFFE24B4A))),
                     ],
                   ),
                   const SizedBox(height: 8),
                   Row(
                     children: [
-                      _buildStatusDot(const Color(0xFF97C459), '18 исправны'),
+                      _buildStatusDot(const Color(0xFF97C459), '$_excellentCount ${_getStatusWord(_excellentCount, "исправен", "исправны", "исправно")}'),
                       const SizedBox(width: 16),
-                      _buildStatusDot(const Color(0xFFEF9F27), '4 внимание'),
+                      _buildStatusDot(const Color(0xFFEF9F27), '$_okCount ${_getStatusWord(_okCount, "внимание", "внимание", "внимание")}'),
                       const SizedBox(width: 16),
-                      _buildStatusDot(const Color(0xFFE24B4A), '2 брак'),
+                      _buildStatusDot(const Color(0xFFE24B4A), '$_failCount ${_getStatusWord(_failCount, "брак", "брак", "брак")}'),
                     ],
                   ),
                 ],
@@ -375,7 +606,7 @@ class _StartupScreenState extends State<StartupScreen> {
                   child: _buildQuickCard(
                     icon: Icons.devices_outlined,
                     title: 'Устройство',
-                    subtitle: '78% · откалибровано',
+                    subtitle: _isMockMode ? 'MOCK-режим' : _getStatusText(),
                     onTap: _showDevice,
                   ),
                 ),
@@ -383,14 +614,14 @@ class _StartupScreenState extends State<StartupScreen> {
             ),
           ),
 
-          // Последние проверки
+          // Последние проверки (CMRR)
           Padding(
             padding: const EdgeInsets.fromLTRB(24, 16, 24, 80),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'ПОСЛЕДНИЕ ПРОВЕРКИ',
+                  'ПОСЛЕДНИЕ ПРОВЕРКИ (CMRR)',
                   style: TextStyle(
                     fontSize: 10,
                     color: Colors.grey[600],
@@ -407,7 +638,7 @@ class _StartupScreenState extends State<StartupScreen> {
                       ),
                     ),
                   )
-                else if (_bleStatus == BleConnectionStatus.disconnected)
+                else if (!_isMockMode && _bleStatus == ConnectionStatus.disconnected)
                   Center(
                     child: Padding(
                       padding: const EdgeInsets.all(32),
@@ -430,19 +661,42 @@ class _StartupScreenState extends State<StartupScreen> {
                       ),
                     ),
                   )
-                else
-                  ..._recentCables.map((cable) => Padding(
-                    padding: const EdgeInsets.only(bottom: 6),
-                    child: _buildHistoryItem(
-                      color: _getStatusColor(cable['status']),
-                      title: '${cable['name']} · ${cable['cable']?.toString().toUpperCase() ?? 'UNKNOWN'}',
-                      subtitle: 'cmrr ${cable['cmrr_db']} дБ',
-                      cableId: cable['id'],
-                      cableName: cable['name'],
-                      cableType: cable['cable'],
-                      healthScore: 97.8
-                    ),
-                  )),
+                else if (_recentCables.isEmpty)
+                    Center(
+                      child: Padding(
+                        padding: const EdgeInsets.all(32),
+                        child: Column(
+                          children: [
+                            const Icon(
+                              Icons.inbox_outlined,
+                              size: 40,
+                              color: Color(0xFF666666),
+                            ),
+                            const SizedBox(height: 12),
+                            Text(
+                              'Нет проверенных кабелей',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey[600],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    )
+                  else
+                    ..._recentCables.map((cable) => Padding(
+                      padding: const EdgeInsets.only(bottom: 6),
+                      child: _buildHistoryItem(
+                        color: _getStatusColor(cable['status'] ?? 'unknown'),
+                        title: _getCableTitle(cable),
+                        subtitle: _getSubtitleForCable(cable),
+                        cableId: cable['id'] ?? '',
+                        cableName: cable['name'] ?? '',
+                        cableType: cable['cable'] ?? 'unknown',
+                        healthScore: _calculateHealthScore(cable),
+                      ),
+                    )),
               ],
             ),
           ),
@@ -451,15 +705,85 @@ class _StartupScreenState extends State<StartupScreen> {
     );
   }
 
+  String _getCableTitle(Map<String, dynamic> cable) {
+    final cableType = (cable['cable'] ?? 'unknown').toString();
+    final name = cable['name']?.toString() ?? '';
+
+    // Преобразуем тип кабеля в читаемый формат
+    String cableTypeName = cableType.toUpperCase();
+    switch (cableType) {
+      case 'jack_ts':
+        cableTypeName = 'JACK TS';
+        break;
+      case 'jack_trs':
+        cableTypeName = 'JACK TRS';
+        break;
+      case 'xlr':
+        cableTypeName = 'XLR';
+        break;
+    }
+
+    return '$cableTypeName · $name';
+  }
+
+  String _getSubtitleForCable(Map<String, dynamic> cable) {
+    final cmrr = cable['cmrr_db'] ?? '--';
+    final status = cable['status'] ?? '';
+
+    if (status == 'excellent') {
+      return 'cmrr $cmrr дБ · Отлично';
+    } else if (status == 'ok' || status == 'warning') {
+      return 'cmrr $cmrr дБ · Удовлетворительно';
+    } else if (status == 'fail') {
+      return 'cmrr $cmrr дБ · Неудовлетворительно';
+    }
+    return 'cmrr $cmrr дБ';
+  }
+
+  double _calculateHealthScore(Map<String, dynamic> cable) {
+    final status = cable['status'] ?? '';
+    final cmrrDb = double.tryParse(cable['cmrr_db']?.toString() ?? '0') ?? 0;
+
+    switch (status) {
+      case 'excellent':
+        return 85.0 + (cmrrDb - 60) * 0.5; // 85-100 в зависимости от CMRR
+      case 'ok':
+      case 'warning':
+        return 50.0 + (cmrrDb - 30) * 0.8; // 50-75
+      case 'fail':
+        return 20.0 + cmrrDb * 0.5; // 20-50
+      default:
+        return 0.0;
+    }
+  }
+
+  String _getCableWord(int count) {
+    if (count == 1) return 'кабель';
+    if (count >= 2 && count <= 4) return 'кабеля';
+    return 'кабелей';
+  }
+
+  String _getStatusWord(int count, String one, String two, String five) {
+    if (count == 1) return one;
+    if (count >= 2 && count <= 4) return two;
+    return five;
+  }
+
   Widget _buildBleButton() {
     return GestureDetector(
       onTap: _toggleBleMenu,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
         decoration: BoxDecoration(
-          color: const Color(0xFFEF9F27).withValues(alpha: 0.1),
+          color: _isMockMode
+              ? const Color(0xFF6366F1).withValues(alpha: 0.1)
+              : const Color(0xFFEF9F27).withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: const Color(0xFFEF9F27).withValues(alpha: 0.4)),
+          border: Border.all(
+            color: _isMockMode
+                ? const Color(0xFF6366F1).withValues(alpha: 0.4)
+                : const Color(0xFFEF9F27).withValues(alpha: 0.4),
+          ),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -468,17 +792,17 @@ class _StartupScreenState extends State<StartupScreen> {
               width: 6,
               height: 6,
               decoration: BoxDecoration(
-                color: _getBleDotColor(),
+                color: _isMockMode ? const Color(0xFF6366F1) : _getBleDotColor(),
                 shape: BoxShape.circle,
               ),
             ),
             const SizedBox(width: 6),
-            const Text(
-              'BLE',
+            Text(
+              _isMockMode ? 'MOCK' : 'BLE',
               style: TextStyle(
                 fontSize: 11,
                 fontWeight: FontWeight.w500,
-                color: Color(0xFFEF9F27),
+                color: _isMockMode ? const Color(0xFF6366F1) : const Color(0xFFEF9F27),
               ),
             ),
           ],

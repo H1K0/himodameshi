@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import '/data/ble_mock_provider.dart';
-import '/presentation/device_settings_screen.dart';
+import '/data/ble_data_manager.dart';
+import '/data/ble_provider.dart';
+import '/data/ble_real_data_source.dart';
 
 class BleMenu extends StatefulWidget {
   final VoidCallback onClose;
@@ -17,52 +18,101 @@ class BleMenu extends StatefulWidget {
 }
 
 class _BleMenuState extends State<BleMenu> {
-  BleConnectionStatus _connectionStatus = bleProvider.currentStatus;
+  final BleDataManager _dataManager = BleDataManager();
+  late ConnectionStatus _connectionStatus = ConnectionStatus.disconnected;
   bool _isReconnecting = false;
 
   @override
   void initState() {
     super.initState();
-    // Подписываемся на изменения статуса
-    bleProvider.statusStream.listen((status) {
+    // Получаем начальный статус
+    _updateConnectionStatus();
+
+    // Подписываемся на изменения типа источника
+    _dataManager.typeStream.listen((_) {
       if (mounted) {
-        setState(() {
-          _connectionStatus = status;
-        });
+        _updateConnectionStatus();
+      }
+    });
+
+    // Подписываемся на изменения статуса провайдера
+    BleDataManager().currentDataSource?.dataStream.listen((_) {
+      // Обновляем статус при изменении данных
+      if (mounted) {
+        _updateConnectionStatus();
       }
     });
   }
 
+  void _updateConnectionStatus() {
+    final dataSource = _dataManager.currentDataSource;
+    if (dataSource != null) {
+      setState(() {
+        if (dataSource is BleRealDataSource) {
+          _connectionStatus = (dataSource as BleRealDataSource).bleProvider.connectionStatus;
+        } else {
+          // В мок-режиме всегда "подключены"
+          _connectionStatus = ConnectionStatus.connected;
+        }
+      });
+    } else {
+      setState(() {
+        _connectionStatus = ConnectionStatus.disconnected;
+      });
+    }
+  }
+
   String _getStatusText() {
     switch (_connectionStatus) {
-      case BleConnectionStatus.connected:
+      case ConnectionStatus.connected:
         return 'Подключено';
-      case BleConnectionStatus.disconnected:
+      case ConnectionStatus.disconnected:
         return 'Не подключено';
-      case BleConnectionStatus.connecting:
+      case ConnectionStatus.connecting:
         return 'Подключение...';
+      case ConnectionStatus.error:
+        return 'Ошибка подключения';
     }
   }
 
   Color _getStatusColor() {
     switch (_connectionStatus) {
-      case BleConnectionStatus.connected:
+      case ConnectionStatus.connected:
         return const Color(0xFF97C459);
-      case BleConnectionStatus.disconnected:
+      case ConnectionStatus.disconnected:
         return const Color(0xFFE24B4A);
-      case BleConnectionStatus.connecting:
+      case ConnectionStatus.connecting:
         return const Color(0xFFEF9F27);
+      case ConnectionStatus.error:
+        return const Color(0xFF860E0D);
     }
   }
 
   Future<void> _handleReconnect() async {
+    if (!mounted) return;
+
     setState(() {
       _isReconnecting = true;
     });
-    await bleProvider.reconnect();
-    setState(() {
-      _isReconnecting = false;
-    });
+
+    try {
+      final dataSource = _dataManager.currentDataSource;
+      if (dataSource is BleRealDataSource) {
+        // Для реального источника - переподключаемся
+        await dataSource.bleProvider.disconnect();
+        await dataSource.bleProvider.connect();
+      } else {
+        // Для мок-режима просто переключаемся на реальный
+        await _dataManager.switchTo(DataSourceType.real);
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isReconnecting = false;
+          _updateConnectionStatus();
+        });
+      }
+    }
   }
 
   @override
