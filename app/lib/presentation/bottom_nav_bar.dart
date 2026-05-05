@@ -78,6 +78,11 @@ class BottomNavBar extends StatelessWidget {
               selectedIcon: Icon(Icons.bluetooth),
               label: 'BLE Test',
             ),
+            NavigationDestination(
+              icon: Icon(Icons.storage_outlined),
+              selectedIcon: Icon(Icons.storage),
+              label: 'DB Check',
+            ),
           ],
         ),
       ),
