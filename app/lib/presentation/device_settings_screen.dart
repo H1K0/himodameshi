@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
-import '../data/ble_mock_provider.dart';
+import '/data/ble_data_manager.dart';
+import '/data/ble_provider.dart';
+import '/data/ble_real_data_source.dart';
 
 class DeviceSettingsScreen extends StatefulWidget {
   final VoidCallback onBack;
@@ -14,74 +16,113 @@ class DeviceSettingsScreen extends StatefulWidget {
 }
 
 class _DeviceSettingsScreenState extends State<DeviceSettingsScreen> {
-  BleConnectionStatus _connectionStatus = bleProvider.currentStatus;
+  final BleDataManager _dataManager = BleDataManager();
+  ConnectionStatus _connectionStatus = ConnectionStatus.disconnected;
   bool _isReconnecting = false;
 
   @override
   void initState() {
     super.initState();
-    // Подписываемся на изменения статуса BLE
-    bleProvider.statusStream.listen((status) {
+    _updateConnectionStatus();
+
+    // Подписываемся на изменения типа источника
+    _dataManager.typeStream.listen((_) {
       if (mounted) {
-        setState(() {
-          _connectionStatus = status;
-        });
+        _updateConnectionStatus();
       }
     });
   }
 
+  void _updateConnectionStatus() {
+    final dataSource = _dataManager.currentDataSource;
+    if (dataSource != null) {
+      setState(() {
+        if (dataSource is BleRealDataSource) {
+          _connectionStatus = dataSource.bleProvider.connectionStatus;
+        } else {
+          _connectionStatus = ConnectionStatus.connected;
+        }
+      });
+    } else {
+      setState(() {
+        _connectionStatus = ConnectionStatus.disconnected;
+      });
+    }
+  }
+
   String _getConnectionText() {
     switch (_connectionStatus) {
-      case BleConnectionStatus.connected:
+      case ConnectionStatus.connected:
         return 'ПОДКЛЮЧЕНО';
-      case BleConnectionStatus.disconnected:
+      case ConnectionStatus.disconnected:
         return 'НЕ ПОДКЛЮЧЕНО';
-      case BleConnectionStatus.connecting:
+      case ConnectionStatus.connecting:
         return 'ПОДКЛЮЧЕНИЕ...';
+      case ConnectionStatus.error:
+        return 'ОШИБКА ПОДКЛЮЧЕНИЯ';
     }
   }
 
   Color _getConnectionColor() {
     switch (_connectionStatus) {
-      case BleConnectionStatus.connected:
+      case ConnectionStatus.connected:
         return const Color(0xFF97C459);
-      case BleConnectionStatus.disconnected:
+      case ConnectionStatus.disconnected:
         return const Color(0xFFE24B4A);
-      case BleConnectionStatus.connecting:
+      case ConnectionStatus.connecting:
         return const Color(0xFFEF9F27);
+      case ConnectionStatus.error:
+        return const Color(0xFF860E0D);
     }
   }
 
   String _getConnectionStatusText() {
     switch (_connectionStatus) {
-      case BleConnectionStatus.connected:
+      case ConnectionStatus.connected:
         return 'в сети 42 мин';
-      case BleConnectionStatus.disconnected:
+      case ConnectionStatus.disconnected:
         return 'нет соединения';
-      case BleConnectionStatus.connecting:
+      case ConnectionStatus.connecting:
         return 'подключение...';
+      case ConnectionStatus.error:
+        return 'Ошибка подключения';
     }
   }
 
   Future<void> _handleReconnect() async {
+    if (!mounted) return;
+
     setState(() {
       _isReconnecting = true;
     });
-    await bleProvider.reconnect();
-    setState(() {
-      _isReconnecting = false;
-    });
+
+    try {
+      final dataSource = _dataManager.currentDataSource;
+      if (dataSource is BleRealDataSource) {
+        await dataSource.bleProvider.disconnect();
+        await dataSource.bleProvider.connect();
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isReconnecting = false;
+          _updateConnectionStatus();
+        });
+      }
+    }
   }
 
   Future<void> _handleForget() async {
-    await bleProvider.disconnect();
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Устройство забыто'),
-        backgroundColor: Color(0xFFE24B4A),
-        duration: Duration(seconds: 2),
-      ),
-    );
+    await _dataManager.currentDataSource?.disconnect();
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Устройство забыто'),
+          backgroundColor: Color(0xFFE24B4A),
+          duration: Duration(seconds: 2),
+        ),
+      );
+    }
   }
 
   @override
@@ -208,6 +249,7 @@ class _DeviceSettingsScreenState extends State<DeviceSettingsScreen> {
               ),
             ),
 
+            // Остальной код без изменений...
             // Батарея
             Padding(
               padding: const EdgeInsets.fromLTRB(24, 12, 24, 6),
@@ -280,9 +322,6 @@ class _DeviceSettingsScreenState extends State<DeviceSettingsScreen> {
                 ),
               ),
             ),
-
-            // Доступно обновление (заглушка, не реализуем)
-            // Пропускаем
 
             // О приборе
             Padding(
@@ -394,7 +433,6 @@ class _DeviceSettingsScreenState extends State<DeviceSettingsScreen> {
                           width: double.infinity,
                           child: OutlinedButton(
                             onPressed: () {
-                              // TODO: реализовать калибровку
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(
                                   content: Text('Калибровка (в разработке)'),
