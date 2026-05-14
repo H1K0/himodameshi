@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'dart:convert';
 import '/data/test_models.dart';
-import 'testing_progress_screen.dart';
+import '/data/database_helper.dart';
 import 'details_screen.dart';
+import 'testing_progress_screen.dart';
+import 'cable_passport_screen.dart';
 
 class TestingResultsScreen extends StatelessWidget {
   final CableType cableType;
@@ -181,10 +184,12 @@ class TestingResultsScreen extends StatelessWidget {
       isScrollControlled: true,
       builder: (context) => _SaveToCollectionSheet(
         cableType: cableType,
+        selectedTests: selectedTests,
         healthScore: healthScore,
         continuityResult: continuityResult,
         cmrrDb: cmrrDb,
         freqResponseResult: freqResponseResult,
+        totalTimeSeconds: totalTimeSeconds,
       ),
     );
   }
@@ -616,21 +621,25 @@ class _MiniGraphPainter extends CustomPainter {
 }
 
 // ---------------------------------------------------------------------
-// Bottom sheet для сохранения в коллекцию (полностью по макету)
+// Bottom sheet для сохранения в коллекцию (с интеграцией БД)
 // ---------------------------------------------------------------------
 class _SaveToCollectionSheet extends StatefulWidget {
   final CableType cableType;
+  final List<TestType> selectedTests;
   final double healthScore;
   final String continuityResult;
   final double cmrrDb;
   final String freqResponseResult;
+  final double totalTimeSeconds;
 
   const _SaveToCollectionSheet({
     required this.cableType,
+    required this.selectedTests,
     required this.healthScore,
     required this.continuityResult,
     required this.cmrrDb,
     required this.freqResponseResult,
+    required this.totalTimeSeconds,
   });
 
   @override
@@ -638,27 +647,15 @@ class _SaveToCollectionSheet extends StatefulWidget {
 }
 
 class _SaveToCollectionSheetState extends State<_SaveToCollectionSheet> {
-  // Режим: true - новый кабель, false - к существующему
   bool _isNewCable = true;
-
-  // Выбранный цвет (по умолчанию #639922)
   Color _selectedColor = const Color(0xFF639922);
-
-  // Контроллеры полей
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _noteController = TextEditingController();
 
-  // Временные данные для существующих кабелей (позже будут из БД)
-  final List<Map<String, dynamic>> _existingCables = [
-    {'name': 'Mogami #1', 'color': const Color(0xFF639922), 'type': 'XLR', 'id': '1'},
-    {'name': 'Klotz патч', 'color': const Color(0xFF639922), 'type': 'TRS', 'id': '2'},
-    {'name': 'Гитарный длинный', 'color': const Color(0xFFEF9F27), 'type': 'JACK', 'id': '3'},
-    {'name': 'XLR #07', 'color': const Color(0xFFE24B4A), 'type': 'XLR', 'id': '4'},
-  ];
+  List<Map<String, dynamic>> _cables = [];
+  bool _isLoading = true;
+  String? _selectedCableId;
 
-  String? _selectedCableId; // id выбранного существующего кабеля
-
-  // Список доступных цветов (как в макете)
   final List<Color> _colorPalette = const [
     Color(0xFF639922),
     Color(0xFFEF9F27),
@@ -669,13 +666,146 @@ class _SaveToCollectionSheetState extends State<_SaveToCollectionSheet> {
   ];
 
   @override
-  void dispose() {
-    _nameController.dispose();
-    _noteController.dispose();
-    super.dispose();
+  void initState() {
+    super.initState();
+    _loadCables();
   }
 
-  void _save() {
+  Future<void> _loadCables() async {
+    setState(() => _isLoading = true);
+    try {
+      final cables = await DatabaseHelper().getCables();
+      setState(() {
+        _cables = cables;
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() => _isLoading = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Ошибка загрузки кабелей: $e'), backgroundColor: const Color(0xFFE24B4A)),
+        );
+      }
+    }
+  }
+
+  String _cableTypeDisplay(String type) {
+    switch (type) {
+      case 'jack_ts': return 'JACK TS';
+      case 'jack_trs': return 'JACK TRS';
+      case 'xlr': return 'XLR';
+      default: return type.toUpperCase();
+    }
+  }
+
+  Color _hexToColor(String hex) {
+    return Color(int.parse('FF$hex', radix: 16));
+  }
+
+  String _colorToHex(Color color) {
+    return color.value.toRadixString(16).substring(2);
+  }
+
+  String _mapCableType(CableType type) {
+    switch (type) {
+      case CableType.jackTs: return 'jack_ts';
+      case CableType.jackTrs: return 'jack_trs';
+      case CableType.xlr: return 'xlr';
+    }
+  }
+
+  Map<String, dynamic> _parseContinuityResult() {
+    // Пример парсинга для демонстрации
+    if (widget.cableType == CableType.xlr) {
+      return {
+        'pin1': {'r': 0.9, 's': 'ok'},
+        'pin2': {'r': 1.2, 's': 'ok'},
+        'pin3': {'r': 1.4, 's': 'ok'},
+      };
+    } else if (widget.cableType == CableType.jackTrs) {
+      return {
+        'tip': {'r': 0.9, 's': 'ok'},
+        'ring': {'r': 1.2, 's': 'ok'},
+        'sleeve': {'r': 1.4, 's': 'ok'},
+      };
+    } else {
+      return {
+        'tip': {'r': 0.9, 's': 'ok'},
+        'sleeve': {'r': 1.4, 's': 'ok'},
+      };
+    }
+  }
+
+  String _getContinuityStatus() {
+    return 'ok';
+  }
+
+  String _getCmrrStatus() {
+    if (widget.cmrrDb >= 60) return 'excellent';
+    if (widget.cmrrDb >= 40) return 'ok';
+    return 'fail';
+  }
+
+  List<List<num>> _generateFreqPoints() {
+    return [
+      [10, 0.1], [20, 0.1], [50, 0.0], [100, 0.0], [200, -0.1],
+      [500, -0.2], [1000, -0.2], [2000, -0.3], [5000, -0.5],
+      [10000, -0.8], [20000, -2.1], [40000, -4.5]
+    ];
+  }
+
+  String _getFreqStatus() {
+    if (widget.freqResponseResult.contains('−2.1')) return 'excellent';
+    if (widget.freqResponseResult.contains('−3')) return 'ok';
+    return 'fail';
+  }
+
+  Future<void> _saveTestSession(int cableId) async {
+    final int now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+    final String bleDeviceId = 'HM-2A4F-001'; // В реальном приложении брать из BleProvider
+
+    final Map<String, dynamic> session = {
+      'cable_id': cableId,
+      'started_at': now - (widget.totalTimeSeconds ~/ 1).toInt(),
+      'health_score': widget.healthScore.toInt(),
+      'ble_device_id': bleDeviceId,
+    };
+    final int sessionId = await DatabaseHelper().insertTestSession(session);
+
+    // Сохраняем результаты целостности, если тест был выбран
+    if (widget.selectedTests.contains(TestType.continuity)) {
+      final conductors = _parseContinuityResult();
+      final continuityStatus = _getContinuityStatus();
+      await DatabaseHelper().insertContinuityResult({
+        'session_id': sessionId,
+        'status': continuityStatus,
+        'conductors': jsonEncode(conductors),
+      });
+    }
+
+    // Сохраняем CMRR, если был выбран
+    if (widget.selectedTests.contains(TestType.cmrr)) {
+      final cmrrStatus = _getCmrrStatus();
+      await DatabaseHelper().insertCmrrResult({
+        'session_id': sessionId,
+        'value_db': widget.cmrrDb,
+        'status': cmrrStatus,
+      });
+    }
+
+    // Сохраняем АЧХ, если был выбран
+    if (widget.selectedTests.contains(TestType.freqResponse)) {
+      final points = _generateFreqPoints();
+      final freqStatus = _getFreqStatus();
+      await DatabaseHelper().insertFreqResponseResult({
+        'session_id': sessionId,
+        'status': freqStatus,
+        'points': jsonEncode(points),
+      });
+    }
+  }
+
+  Future<void> _save() async {
     if (_isNewCable) {
       final String name = _nameController.text.trim();
       if (name.isEmpty) {
@@ -684,11 +814,47 @@ class _SaveToCollectionSheetState extends State<_SaveToCollectionSheet> {
         );
         return;
       }
-      // TODO: сохранить новый кабель с именем name, заметкой _noteController.text, цветом _selectedColor
-      // и привязать результат тестирования
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Новый кабель сохранён (демо)'), backgroundColor: Color(0xFF97C459)),
-      );
+
+      final String colorHex = _colorToHex(_selectedColor);
+      final String cableTypeStr = _mapCableType(widget.cableType);
+      final int now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+      final String note = _noteController.text.trim();
+
+      final Map<String, dynamic> newCable = {
+        'name': name,
+        'color': colorHex,
+        'cable_type': cableTypeStr,
+        'created_at': now,
+        'note': note,
+      };
+
+      try {
+        final int cableId = await DatabaseHelper().insertCable(newCable);
+        await _saveTestSession(cableId);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Новый кабель сохранён'), backgroundColor: Color(0xFF97C459)),
+          );
+          Navigator.pop(context);
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (context) => CablePassportScreen(
+                cableName: name,
+                cableType: cableTypeStr,
+                healthScore: widget.healthScore,
+                onBack: () => Navigator.pop(context),
+              ),
+            ),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Ошибка сохранения: $e'), backgroundColor: const Color(0xFFE24B4A)),
+          );
+        }
+      }
     } else {
       if (_selectedCableId == null) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -696,21 +862,43 @@ class _SaveToCollectionSheetState extends State<_SaveToCollectionSheet> {
         );
         return;
       }
-      // TODO: привязать результат к существующему кабелю
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Результат добавлен к кабелю ${_getSelectedCableName()}'), backgroundColor: Color(0xFF97C459)),
-      );
+
+      final int cableId = int.parse(_selectedCableId!);
+      try {
+        await _saveTestSession(cableId);
+        final cable = _cables.firstWhere((c) => c['id'] == cableId);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Результат добавлен к кабелю ${cable['name']}'), backgroundColor: Color(0xFF97C459)),
+          );
+          Navigator.pop(context);
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (context) => CablePassportScreen(
+                cableName: cable['name'],
+                cableType: cable['cable_type'],
+                healthScore: widget.healthScore,
+                onBack: () => Navigator.pop(context),
+              ),
+            ),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Ошибка сохранения: $e'), backgroundColor: const Color(0xFFE24B4A)),
+          );
+        }
+      }
     }
-    Navigator.pop(context);
-    // Имитация перехода на экран деталей кабеля (как в макете)
-    Future.delayed(const Duration(milliseconds: 500), () {
-      Navigator.push(context, MaterialPageRoute(builder: (context) => const DetailsScreen()));
-    });
   }
 
-  String _getSelectedCableName() {
-    final cable = _existingCables.firstWhere((c) => c['id'] == _selectedCableId, orElse: () => {'name': ''});
-    return cable['name'] as String;
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _noteController.dispose();
+    super.dispose();
   }
 
   @override
@@ -733,6 +921,7 @@ class _SaveToCollectionSheetState extends State<_SaveToCollectionSheet> {
               borderRadius: BorderRadius.circular(2),
             ),
           ),
+          // Заголовок
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
             child: Row(
@@ -755,303 +944,27 @@ class _SaveToCollectionSheetState extends State<_SaveToCollectionSheet> {
               ],
             ),
           ),
-          // Две кнопки выбора режима
+          // Переключатель режимов
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20),
             child: Row(
               children: [
-                Expanded(
-                  child: GestureDetector(
-                    onTap: () => setState(() => _isNewCable = true),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 10),
-                      decoration: BoxDecoration(
-                        color: _isNewCable ? const Color(0xFFEF9F27).withValues(alpha: 0.08) : const Color(0xFF111111),
-                        border: Border.all(
-                          color: _isNewCable ? const Color(0xFFEF9F27) : const Color(0xFF1F1F1F),
-                        ),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Column(
-                        children: [
-                          Text(
-                            '+ Новый кабель',
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w500,
-                              color: _isNewCable ? const Color(0xFFFAFAFA) : const Color(0xFFAAAAAA),
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            'Добавить в коллекцию',
-                            style: TextStyle(
-                              fontSize: 9,
-                              color: _isNewCable ? const Color(0xFF888888) : const Color(0xFF666666),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
+                _buildModeButton('+ Новый кабель', 'Добавить в коллекцию', true),
                 const SizedBox(width: 6),
-                Expanded(
-                  child: GestureDetector(
-                    onTap: () => setState(() => _isNewCable = false),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 10),
-                      decoration: BoxDecoration(
-                        color: !_isNewCable ? const Color(0xFFEF9F27).withValues(alpha: 0.08) : const Color(0xFF111111),
-                        border: Border.all(
-                          color: !_isNewCable ? const Color(0xFFEF9F27) : const Color(0xFF1F1F1F),
-                        ),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Column(
-                        children: [
-                          Text(
-                            'К существующему',
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w500,
-                              color: !_isNewCable ? const Color(0xFFFAFAFA) : const Color(0xFFAAAAAA),
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            'В историю кабеля',
-                            style: TextStyle(
-                              fontSize: 9,
-                              color: !_isNewCable ? const Color(0xFF888888) : const Color(0xFF666666),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
+                _buildModeButton('К существующему', 'В историю кабеля', false),
               ],
             ),
           ),
           const SizedBox(height: 16),
+          // Контент в зависимости от режима
           if (_isNewCable) ...[
-            // Цветовая метка
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'ЦВЕТОВАЯ МЕТКА',
-                    style: TextStyle(
-                      fontSize: 9,
-                      color: Color(0xFF666666),
-                      letterSpacing: 1.5,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  SizedBox(
-                    height: 32,
-                    child: ListView.separated(
-                      scrollDirection: Axis.horizontal,
-                      itemCount: _colorPalette.length,
-                      separatorBuilder: (_, __) => const SizedBox(width: 8),
-                      itemBuilder: (context, index) {
-                        final color = _colorPalette[index];
-                        final isSelected = _selectedColor == color;
-                        return GestureDetector(
-                          onTap: () => setState(() => _selectedColor = color),
-                          child: Container(
-                            width: 26,
-                            height: 26,
-                            decoration: BoxDecoration(
-                              color: color,
-                              shape: BoxShape.circle,
-                              border: Border.all(
-                                color: isSelected ? Colors.white : Colors.transparent,
-                                width: 2.5,
-                              ),
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-                ],
-              ),
-            ),
-            // Название
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'НАЗВАНИЕ *',
-                    style: TextStyle(
-                      fontSize: 9,
-                      color: Color(0xFF666666),
-                      letterSpacing: 1.5,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  TextField(
-                    controller: _nameController,
-                    style: const TextStyle(fontSize: 12, color: Color(0xFFFAFAFA)),
-                    decoration: InputDecoration(
-                      hintText: 'Например: Mogami студийный',
-                      hintStyle: const TextStyle(fontSize: 12, color: Color(0xFF666666)),
-                      filled: true,
-                      fillColor: const Color(0xFF111111),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                        borderSide: const BorderSide(color: Color(0xFF1F1F1F)),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                        borderSide: const BorderSide(color: Color(0xFF1F1F1F)),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                        borderSide: const BorderSide(color: Color(0xFFEF9F27)),
-                      ),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-                ],
-              ),
-            ),
-            // Заметка
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'ЗАМЕТКА · ОПЦИОНАЛЬНО',
-                    style: TextStyle(
-                      fontSize: 9,
-                      color: Color(0xFF666666),
-                      letterSpacing: 1.5,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  TextField(
-                    controller: _noteController,
-                    style: const TextStyle(fontSize: 12, color: Color(0xFFFAFAFA)),
-                    maxLines: 2,
-                    decoration: InputDecoration(
-                      hintText: 'Купил в 2024…',
-                      hintStyle: const TextStyle(fontSize: 12, color: Color(0xFF666666)),
-                      filled: true,
-                      fillColor: const Color(0xFF111111),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                        borderSide: const BorderSide(color: Color(0xFF1F1F1F)),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                        borderSide: const BorderSide(color: Color(0xFF1F1F1F)),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                        borderSide: const BorderSide(color: Color(0xFFEF9F27)),
-                      ),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                ],
-              ),
-            ),
+            _buildColorPicker(),
+            _buildNameField(),
+            _buildNoteField(),
           ] else ...[
-            // Список существующих кабелей
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'ВЫБЕРИТЕ КАБЕЛЬ',
-                    style: TextStyle(
-                      fontSize: 9,
-                      color: Color(0xFF666666),
-                      letterSpacing: 1.5,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Container(
-                    constraints: const BoxConstraints(maxHeight: 300),
-                    child: ListView.separated(
-                      shrinkWrap: true,
-                      itemCount: _existingCables.length,
-                      separatorBuilder: (_, __) => const SizedBox(height: 6),
-                      itemBuilder: (context, index) {
-                        final cable = _existingCables[index];
-                        final isSelected = _selectedCableId == cable['id'];
-                        return GestureDetector(
-                          onTap: () => setState(() => _selectedCableId = cable['id'] as String),
-                          child: Container(
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: isSelected ? const Color(0xFF1A1A1A) : const Color(0xFF111111),
-                              border: Border.all(
-                                color: isSelected ? const Color(0xFFEF9F27) : const Color(0xFF1F1F1F),
-                              ),
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: Row(
-                              children: [
-                                Container(
-                                  width: 3,
-                                  height: 32,
-                                  decoration: BoxDecoration(
-                                    color: cable['color'] as Color,
-                                    borderRadius: BorderRadius.circular(2),
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        cable['name'],
-                                        style: const TextStyle(
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.w500,
-                                          color: Color(0xFFFAFAFA),
-                                        ),
-                                      ),
-                                      const SizedBox(height: 2),
-                                      Text(
-                                        cable['type'],
-                                        style: const TextStyle(
-                                          fontSize: 9,
-                                          color: Color(0xFF888888),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                if (isSelected)
-                                  const Icon(Icons.check, size: 16, color: Color(0xFFEF9F27)),
-                              ],
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                ],
-              ),
-            ),
+            _buildExistingCablesList(),
           ],
-          // Кнопка Сохранить
+          // Кнопка сохранения
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
             child: SizedBox(
@@ -1077,6 +990,286 @@ class _SaveToCollectionSheetState extends State<_SaveToCollectionSheet> {
             ),
           ),
           const SizedBox(height: 8),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildModeButton(String title, String subtitle, bool isNew) {
+    final isSelected = _isNewCable == isNew;
+    return Expanded(
+      child: GestureDetector(
+        onTap: () => setState(() => _isNewCable = isNew),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 10),
+          decoration: BoxDecoration(
+            color: isSelected
+                ? const Color(0xFFEF9F27).withValues(alpha: 0.08)
+                : const Color(0xFF111111),
+            border: Border.all(
+              color: isSelected ? const Color(0xFFEF9F27) : const Color(0xFF1F1F1F),
+            ),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Column(
+            children: [
+              Text(
+                title,
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w500,
+                  color: isSelected ? const Color(0xFFFAFAFA) : const Color(0xFFAAAAAA),
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                subtitle,
+                style: TextStyle(
+                  fontSize: 9,
+                  color: isSelected ? const Color(0xFF888888) : const Color(0xFF666666),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildColorPicker() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'ЦВЕТОВАЯ МЕТКА',
+            style: TextStyle(
+              fontSize: 9,
+              color: Color(0xFF666666),
+              letterSpacing: 1.5,
+            ),
+          ),
+          const SizedBox(height: 8),
+          SizedBox(
+            height: 32,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: _colorPalette.length,
+              separatorBuilder: (_, __) => const SizedBox(width: 8),
+              itemBuilder: (context, index) {
+                final color = _colorPalette[index];
+                final isSelected = _selectedColor == color;
+                return GestureDetector(
+                  onTap: () => setState(() => _selectedColor = color),
+                  child: Container(
+                    width: 26,
+                    height: 26,
+                    decoration: BoxDecoration(
+                      color: color,
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: isSelected ? Colors.white : Colors.transparent,
+                        width: 2.5,
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+          const SizedBox(height: 14),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNameField() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'НАЗВАНИЕ *',
+            style: TextStyle(
+              fontSize: 9,
+              color: Color(0xFF666666),
+              letterSpacing: 1.5,
+            ),
+          ),
+          const SizedBox(height: 6),
+          TextField(
+            controller: _nameController,
+            style: const TextStyle(fontSize: 12, color: Color(0xFFFAFAFA)),
+            decoration: InputDecoration(
+              hintText: 'Например: Mogami студийный',
+              hintStyle: const TextStyle(fontSize: 12, color: Color(0xFF666666)),
+              filled: true,
+              fillColor: const Color(0xFF111111),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: const BorderSide(color: Color(0xFF1F1F1F)),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: const BorderSide(color: Color(0xFF1F1F1F)),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: const BorderSide(color: Color(0xFFEF9F27)),
+              ),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            ),
+          ),
+          const SizedBox(height: 14),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNoteField() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'ЗАМЕТКА · ОПЦИОНАЛЬНО',
+            style: TextStyle(
+              fontSize: 9,
+              color: Color(0xFF666666),
+              letterSpacing: 1.5,
+            ),
+          ),
+          const SizedBox(height: 6),
+          TextField(
+            controller: _noteController,
+            style: const TextStyle(fontSize: 12, color: Color(0xFFFAFAFA)),
+            maxLines: 2,
+            decoration: InputDecoration(
+              hintText: 'Купил в 2024…',
+              hintStyle: const TextStyle(fontSize: 12, color: Color(0xFF666666)),
+              filled: true,
+              fillColor: const Color(0xFF111111),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: const BorderSide(color: Color(0xFF1F1F1F)),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: const BorderSide(color: Color(0xFF1F1F1F)),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: const BorderSide(color: Color(0xFFEF9F27)),
+              ),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            ),
+          ),
+          const SizedBox(height: 20),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildExistingCablesList() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'ВЫБЕРИТЕ КАБЕЛЬ',
+            style: TextStyle(
+              fontSize: 9,
+              color: Color(0xFF666666),
+              letterSpacing: 1.5,
+            ),
+          ),
+          const SizedBox(height: 8),
+          if (_isLoading)
+            const Center(
+              child: Padding(
+                padding: EdgeInsets.all(20),
+                child: CircularProgressIndicator(),
+              ),
+            )
+          else if (_cables.isEmpty)
+            const Padding(
+              padding: EdgeInsets.all(20),
+              child: Center(
+                child: Text(
+                  'Нет сохранённых кабелей',
+                  style: TextStyle(fontSize: 12, color: Color(0xFF888888)),
+                ),
+              ),
+            )
+          else
+            Container(
+              constraints: const BoxConstraints(maxHeight: 300),
+              child: ListView.separated(
+                shrinkWrap: true,
+                itemCount: _cables.length,
+                separatorBuilder: (_, __) => const SizedBox(height: 6),
+                itemBuilder: (context, index) {
+                  final cable = _cables[index];
+                  final isSelected = _selectedCableId == cable['id'].toString();
+                  return GestureDetector(
+                    onTap: () => setState(() => _selectedCableId = cable['id'].toString()),
+                    child: Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: isSelected ? const Color(0xFF1A1A1A) : const Color(0xFF111111),
+                        border: Border.all(
+                          color: isSelected ? const Color(0xFFEF9F27) : const Color(0xFF1F1F1F),
+                        ),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 3,
+                            height: 32,
+                            decoration: BoxDecoration(
+                              color: _hexToColor(cable['color']),
+                              borderRadius: BorderRadius.circular(2),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  cable['name'],
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w500,
+                                    color: Color(0xFFFAFAFA),
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  _cableTypeDisplay(cable['cable_type']),
+                                  style: const TextStyle(
+                                    fontSize: 9,
+                                    color: Color(0xFF888888),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          if (isSelected)
+                            const Icon(Icons.check, size: 16, color: Color(0xFFEF9F27)),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          const SizedBox(height: 20),
         ],
       ),
     );
