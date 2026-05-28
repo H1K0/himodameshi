@@ -16,4 +16,13 @@ abstract class BleDataSource {
 
   /// Освобождение ресурсов
   void dispose();
+
+  /// Получить список всех кабелей
+  Future<List<Map<String, dynamic>>> getAllCables();
+
+  /// Получить статистику коллекции
+  Future<Map<String, dynamic>> getCollectionStatistics();
+
+  /// Получить последние тесты
+  Future<List<Map<String, dynamic>>> getRecentTests({int limit});
 }

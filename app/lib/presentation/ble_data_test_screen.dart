@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../data/ble_data_manager.dart';
 import '../data/ble_real_data_source.dart';
+import '../data/database_helper.dart';
 
 class BleDataTestScreen extends StatefulWidget {
   const BleDataTestScreen({super.key});
@@ -11,43 +12,76 @@ class BleDataTestScreen extends StatefulWidget {
 
 class _BleDataTestScreenState extends State<BleDataTestScreen> {
   final BleDataManager _manager = BleDataManager();
+  final DatabaseHelper _dbHelper = DatabaseHelper();
+
   List<Map<String, dynamic>> _receivedPackets = [];
   DataSourceType _currentType = DataSourceType.mock;
   bool _isReceiving = false;
+  bool _isSwitching = false;
+  bool _isMounted = false;
 
   @override
   void initState() {
     super.initState();
+    _isMounted = true;
+
+    // Синхронизируем текущий тип из менеджера при загрузке экрана
+    _currentType = _manager.currentType;
+
     _manager.typeStream.listen((type) {
-      setState(() {
-        _currentType = type;
-      });
+      if (_isMounted) {
+        setState(() {
+          _currentType = type;
+        });
+      }
     });
   }
 
   @override
   void dispose() {
+    _isMounted = false;
     _manager.dispose();
     super.dispose();
   }
 
   void _switchToMock() async {
+    if (_isSwitching || !_isMounted) return;
+    setState(() {
+      _isSwitching = true;
+      _currentType = DataSourceType.mock; // мгновенное визуальное обновление
+    });
     await _manager.switchTo(DataSourceType.mock);
-    _subscribeToData();
+    if (_isMounted) {
+      setState(() {
+        _isSwitching = false;
+      });
+      _subscribeToData();
+    }
   }
 
   void _switchToReal() async {
+    if (_isSwitching || !_isMounted) return;
+    setState(() {
+      _isSwitching = true;
+      _currentType = DataSourceType.real; // мгновенное визуальное обновление
+    });
     await _manager.switchTo(DataSourceType.real);
-    _subscribeToData();
+    if (_isMounted) {
+      setState(() {
+        _isSwitching = false;
+      });
+      _subscribeToData();
+    }
   }
 
   void _subscribeToData() {
+    if (!_isMounted) return;
     setState(() {
       _receivedPackets.clear();
       _isReceiving = true;
     });
-
     _manager.currentDataSource?.dataStream.listen((packet) {
+      if (!_isMounted) return;
       setState(() {
         _receivedPackets.insert(0, packet);
         if (_receivedPackets.length > 50) {
@@ -55,6 +89,7 @@ class _BleDataTestScreenState extends State<BleDataTestScreen> {
         }
       });
     }, onError: (error) {
+      if (!_isMounted) return;
       setState(() {
         _receivedPackets.insert(0, {'type': 'error', 'message': error.toString()});
       });
@@ -100,44 +135,48 @@ class _BleDataTestScreenState extends State<BleDataTestScreen> {
           // Переключатель источника
           Container(
             padding: const EdgeInsets.all(16),
-            child: Row(
+            child: Column(
               children: [
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: _switchToMock,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: _currentType == DataSourceType.mock
-                          ? const Color(0xFFEF9F27)
-                          : const Color(0xFF2A2A2A),
-                      foregroundColor: _currentType == DataSourceType.mock
-                          ? const Color(0xFF2A1A00)
-                          : const Color(0xFF888888),
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
+                Row(
+                  children: [
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: _isSwitching ? null : _switchToMock,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: _currentType == DataSourceType.mock
+                              ? const Color(0xFFEF9F27)
+                              : const Color(0xFF2A2A2A),
+                          foregroundColor: _currentType == DataSourceType.mock
+                              ? const Color(0xFF2A1A00)
+                              : const Color(0xFF888888),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
+                        child: const Text('MOCK'),
                       ),
                     ),
-                    child: const Text('MOCK'),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: _switchToReal,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: _currentType == DataSourceType.real
-                          ? const Color(0xFFEF9F27)
-                          : const Color(0xFF2A2A2A),
-                      foregroundColor: _currentType == DataSourceType.real
-                          ? const Color(0xFF2A1A00)
-                          : const Color(0xFF888888),
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: _isSwitching ? null : _switchToReal,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: _currentType == DataSourceType.real
+                              ? const Color(0xFFEF9F27)
+                              : const Color(0xFF2A2A2A),
+                          foregroundColor: _currentType == DataSourceType.real
+                              ? const Color(0xFF2A1A00)
+                              : const Color(0xFF888888),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
+                        child: const Text('REAL'),
                       ),
                     ),
-                    child: const Text('REAL'),
-                  ),
+                  ],
                 ),
               ],
             ),

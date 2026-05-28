@@ -269,6 +269,8 @@ class BleProvider {
 
   /// Отключение от устройства
   Future<void> disconnect() async {
+    _connectionSubscription?.cancel();
+    _connectionSubscription = null;
     if (_connectedDevice != null) {
       try {
         await _connectedDevice!.disconnect();
@@ -278,10 +280,10 @@ class BleProvider {
       _connectedDevice = null;
     }
 
-    _connectionSubscription?.cancel();
-    _connectionSubscription = null;
     _currentMtu = 0;
-    _setStatus(ConnectionStatus.disconnected);
+    if (!_statusController.isClosed) {
+      _setStatus(ConnectionStatus.disconnected);
+    }
   }
 
   // --------------------------------------------------------------------------
@@ -324,7 +326,11 @@ class BleProvider {
   void dispose() {
     stopScan();
     disconnect();
-    _statusController.close();
-    _mtuController.close();
+    if (!_statusController.isClosed) {
+      _statusController.close();
+    }
+    if (!_mtuController.isClosed) {
+      _mtuController.close();
+    }
   }
 }

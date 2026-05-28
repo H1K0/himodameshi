@@ -4,8 +4,14 @@ import 'presentation/collection_screen.dart';
 import 'presentation/app_settings_screen.dart';
 import 'presentation/bottom_nav_bar.dart';
 import 'presentation/ble_data_test_screen.dart';
+import 'data/database_helper.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();  // ← обеспечиваем работу асинхронных операций
+  // Инициализируем БД и добавляем мок-данные при первом запуске
+  final dbHelper = DatabaseHelper();
+  await dbHelper.checkFirstLaunchAndInsertMockData();
+
   runApp(const MyApp());
 }
 

@@ -6,7 +6,7 @@ import 'testing_screen.dart';
 class CablePassportScreen extends StatefulWidget {
   final String cableName;
   final String cableType;
-  final double healthScore;
+  final int healthScore;
   final VoidCallback onBack;
 
   const CablePassportScreen({
@@ -28,7 +28,7 @@ class _CablePassportScreenState extends State<CablePassportScreen> {
   // Статичные данные для демонстрации
   final String _addedDate = '12 фев';
   final int _checksCount = 5;
-  final List<double> _healthScoreHistory = [98, 98, 98, 96, 94];
+  final List<int> _healthScoreHistory = [98, 98, 98, 96, 94];
   final List<Map<String, dynamic>> _history = [
     {'date': 'Сегодня · 14:32', 'cmrr': 68, 'freq': -2.1, 'score': 94},
     {'date': '2 апреля', 'cmrr': 67, 'freq': -2.3, 'score': 96},
@@ -944,7 +944,7 @@ class _CablePassportScreenState extends State<CablePassportScreen> {
 
 // График динамики Health Score
 class _HealthScoreGraphPainter extends CustomPainter {
-  final List<double> history;
+  final List<int> history;
 
   _HealthScoreGraphPainter({required this.history});
 

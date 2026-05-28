@@ -3,12 +3,13 @@ import 'dart:convert';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'ble_data_source.dart';
 import 'ble_provider.dart';
+import 'database_helper.dart';
 
 /// Реальный BLE-источник данных
 class BleRealDataSource implements BleDataSource {
   final BleProvider bleProvider = BleProvider();
   BluetoothCharacteristic? _dataCharacteristic;
-  BluetoothCharacteristic? _commandCharacteristic; // <-- Исправление 2
+  BluetoothCharacteristic? _commandCharacteristic;
   StreamSubscription<List<int>>? _notificationSubscription;
   StreamController<Map<String, dynamic>>? _controller;
 
@@ -148,7 +149,48 @@ class BleRealDataSource implements BleDataSource {
   @override
   void dispose() {
     _notificationSubscription?.cancel();
-    _controller?.close();
+    if (_controller != null && !_controller!.isClosed) {
+      _controller?.close();}
     bleProvider.dispose();
+  }
+
+  @override
+  Future<List<Map<String, dynamic>>> getAllCables() async {
+    final db = DatabaseHelper();
+    final cables = await db.getCables();
+
+    // Для каждого кабеля нужно подгрузить последний health score
+    final List<Map<String, dynamic>> result = [];
+    for (final cable in cables) {
+      final lastSession = await db.getLastTestSession(cable['id']);
+      result.add({
+        ...cable,
+        'healthScore': lastSession?['health_score'] ?? 0,
+        'lastCheck': lastSession?['started_at'] ?? 0,
+      });
+    }
+    return result;
+  }
+
+  @override
+  Future<Map<String, dynamic>> getCollectionStatistics() async {
+    final db = DatabaseHelper();
+    final total = await db.getCablesCount();
+    final excellent = await db.getCablesCountByHealthStatus('excellent');
+    final ok = await db.getCablesCountByHealthStatus('ok');
+    final fail = await db.getCablesCountByHealthStatus('fail');
+
+    return {
+      'total': total,
+      'excellent': excellent,
+      'ok': ok,
+      'fail': fail,
+    };
+  }
+
+  @override
+  Future<List<Map<String, dynamic>>> getRecentTests({int limit = 6}) async {
+    final db = DatabaseHelper();
+    return await db.getRecentTestSessions(limit:limit);
   }
 }

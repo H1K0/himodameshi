@@ -12,7 +12,7 @@ class TestingResultsScreen extends StatelessWidget {
   final double totalTimeSeconds;
 
   // Статичные данные для демонстрации (позже заменятся на реальные)
-  final double healthScore = 92;
+  final int healthScore = 92;
   final String continuityResult = '0.9–1.4 Ом';
   final double cmrrDb = 68;
   final String freqResponseResult = 'Спад −2.1 дБ на 20 кГц';
@@ -626,7 +626,7 @@ class _MiniGraphPainter extends CustomPainter {
 class _SaveToCollectionSheet extends StatefulWidget {
   final CableType cableType;
   final List<TestType> selectedTests;
-  final double healthScore;
+  final int healthScore;
   final String continuityResult;
   final double cmrrDb;
   final String freqResponseResult;

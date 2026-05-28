@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'dart:convert';
 import 'testing_screen.dart';
 import 'device_settings_screen.dart';
 import 'cable_passport_screen.dart';
@@ -28,12 +26,10 @@ class _StartupScreenState extends State<StartupScreen> {
   final BleDataManager _dataManager = BleDataManager();
   ConnectionStatus _bleStatus = ConnectionStatus.disconnected;
 
-  // Данные из JSON для мок-режима
-  Map<String, dynamic>? _mockData;
-  int _totalCables = 24;
-  int _excellentCount = 18;
-  int _okCount = 4;
-  int _failCount = 2;
+  int _totalCables = 0;
+  int _excellentCount = 0;
+  int _okCount = 0;
+  int _failCount = 0;
   String? _lastTestTime;
   bool _isMockMode = true;
 
@@ -42,16 +38,94 @@ class _StartupScreenState extends State<StartupScreen> {
     super.initState();
     _updateConnectionStatus();
 
-    // Подписываемся на изменения типа источника
     _dataManager.typeStream.listen((_) {
       if (mounted) {
         _updateConnectionStatus();
-        _loadData();
+        _loadData();  // перезагружаем при смене источника
       }
     });
 
     _loadData();
     _autoConnect();
+  }
+
+  Future<void> _loadData() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      if (_isMockMode || _dataManager.currentDataSource == null) {
+        // Загружаем через менеджер (он сам возьмёт из mock)
+        final stats = await _dataManager.getCollectionStatistics();
+        final recentTests = await _dataManager.getRecentTests(limit: 6);
+
+        setState(() {
+          _totalCables = stats['total'];
+          _excellentCount = stats['excellent'];
+          _okCount = stats['ok'];
+          _failCount = stats['fail'];
+          _recentCables = recentTests;
+          _lastTestTime = _getLastTestTimeFromList(recentTests);
+        });
+      } else {
+        // Загружаем из реального источника
+        final stats = await _dataManager.getCollectionStatistics();
+        final recentTests = await _dataManager.getRecentTests(limit: 6);
+
+        setState(() {
+          _totalCables = stats['total'];
+          _excellentCount = stats['excellent'];
+          _okCount = stats['ok'];
+          _failCount = stats['fail'];
+          _recentCables = recentTests;
+          _lastTestTime = _getLastTestTimeFromList(recentTests);
+        });
+      }
+    } catch (e) {
+      print('Error loading data: $e');
+      setState(() {
+        _recentCables = [];
+        _totalCables = 0;
+        _excellentCount = 0;
+        _okCount = 0;
+        _failCount = 0;
+        _lastTestTime = 'нет данных';
+      });
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  // Вспомогательный метод для получения времени последнего теста
+  String _getLastTestTimeFromList(List<Map<String, dynamic>> tests) {
+    if (tests.isEmpty) return 'нет данных';
+
+    int latestTs = 0;
+    for (final test in tests) {
+      final ts = test['ts'] ?? 0;
+      if (ts > latestTs) latestTs = ts;
+    }
+
+    if (latestTs == 0) return 'нет данных';
+
+    final dateTime = DateTime.fromMillisecondsSinceEpoch(latestTs * 1000);
+    final now = DateTime.now();
+    final difference = now.difference(dateTime);
+
+    if (difference.inMinutes < 60) {
+      return '${difference.inMinutes} мин назад';
+    } else if (difference.inHours < 24) {
+      return '${difference.inHours} ч назад';
+    } else if (difference.inDays < 7) {
+      return '${difference.inDays} дн назад';
+    } else {
+      return '${dateTime.day}.${dateTime.month}.${dateTime.year}';
+    }
   }
 
   void _updateConnectionStatus() {
@@ -82,198 +156,6 @@ class _StartupScreenState extends State<StartupScreen> {
         _updateConnectionStatus();
       }
     }
-  }
-
-  Future<void> _loadData() async {
-    setState(() {
-      _isLoading = true;
-    });
-
-    try {
-      if (_isMockMode || _dataManager.currentDataSource == null) {
-        await _loadMockData();
-      } else {
-        await _loadRealData();
-      }
-    } catch (e) {
-      print('Error loading data: $e');
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
-    }
-  }
-
-  Future<void> _loadMockData() async {
-    try {
-      final jsonString = await rootBundle.loadString('mock/ble_mock_packets.json');
-      final Map<String, dynamic> jsonData = jsonDecode(jsonString);
-
-      setState(() {
-        _mockData = jsonData;
-
-        // Извлекаем CMRR результаты для последних проверок
-        _recentCables = _extractCmrrTests(jsonData);
-
-        // Считаем статистику на основе всех результатов
-        _calculateCollectionStats(jsonData);
-
-        // Время последней проверки берем из самого позднего ts в cmrr
-        _lastTestTime = _getLastTestTime(jsonData);
-      });
-    } catch (e) {
-      print('Error loading mock data: $e');
-      setState(() {
-        _recentCables = [];
-        _totalCables = 0;
-        _excellentCount = 0;
-        _okCount = 0;
-        _failCount = 0;
-        _lastTestTime = 'нет данных';
-      });
-    }
-  }
-
-  List<Map<String, dynamic>> _extractCmrrTests(Map<String, dynamic> jsonData) {
-    final List<Map<String, dynamic>> tests = [];
-
-    try {
-      final results = jsonData['results'] as Map<String, dynamic>?;
-      if (results != null) {
-        final cmrrResults = results['cmrr'] as Map<String, dynamic>?;
-        if (cmrrResults != null) {
-          // Сортируем записи по времени (ts) в обратном порядке
-          final sortedEntries = cmrrResults.entries.toList()
-            ..sort((a, b) {
-              final tsA = (a.value as Map<String, dynamic>)['ts'] ?? 0;
-              final tsB = (b.value as Map<String, dynamic>)['ts'] ?? 0;
-              return tsB.compareTo(tsA); // от новых к старым
-            });
-
-          // Берем последние 6 записей
-          for (final entry in sortedEntries.take(6)) {
-            final testName = entry.key;
-            final testData = entry.value as Map<String, dynamic>;
-
-            // Пропускаем _note записи
-            if (testName.startsWith('_')) continue;
-
-            tests.add({
-              'id': 'cmrr_$testName',
-              'name': testData['cable']?.toString().toUpperCase() ?? 'Неизвестный кабель',
-              'cable': testData['cable'] ?? 'unknown',
-              'status': testData['status'] ?? 'unknown',
-              'cmrr_db': testData['cmrr_db']?.toString() ?? '--',
-              'ts': testData['ts'] ?? 0,
-              'test_type': 'cmrr',
-              'note': testData['_note'] ?? '',
-            });
-          }
-        }
-      }
-    } catch (e) {
-      print('Error extracting CMRR tests: $e');
-    }
-
-    return tests;
-  }
-
-  void _calculateCollectionStats(Map<String, dynamic> jsonData) {
-    int excellent = 0;
-    int ok = 0;
-    int fail = 0;
-    int total = 0;
-
-    try {
-      final results = jsonData['results'] as Map<String, dynamic>?;
-      if (results != null) {
-        // Считаем все тесты из всех категорий
-        for (final category in results.values) {
-          if (category is Map<String, dynamic>) {
-            for (final entry in category.entries) {
-              if (entry.key.startsWith('_')) continue;
-
-              final testData = entry.value as Map<String, dynamic>;
-              final status = testData['status']?.toString().toLowerCase() ?? '';
-
-              total++;
-
-              if (status == 'excellent') {
-                excellent++;
-              } else if (status == 'ok' || status == 'warning') {
-                ok++;
-              } else if (status == 'fail') {
-                fail++;
-              }
-            }
-          }
-        }
-      }
-    } catch (e) {
-      print('Error calculating stats: $e');
-    }
-
-    setState(() {
-      _totalCables = total;
-      _excellentCount = excellent;
-      _okCount = ok;
-      _failCount = fail;
-    });
-  }
-
-  String _getLastTestTime(Map<String, dynamic> jsonData) {
-    int latestTs = 0;
-
-    try {
-      final results = jsonData['results'] as Map<String, dynamic>?;
-      if (results != null) {
-        final cmrrResults = results['cmrr'] as Map<String, dynamic>?;
-        if (cmrrResults != null) {
-          for (final entry in cmrrResults.entries) {
-            if (entry.key.startsWith('_')) continue;
-            final testData = entry.value as Map<String, dynamic>;
-            final ts = testData['ts'] ?? 0;
-            if (ts > latestTs) {
-              latestTs = ts;
-            }
-          }
-        }
-      }
-    } catch (e) {
-      print('Error getting last test time: $e');
-    }
-
-    if (latestTs > 0) {
-      final dateTime = DateTime.fromMillisecondsSinceEpoch(latestTs * 1000);
-      final now = DateTime.now();
-      final difference = now.difference(dateTime);
-
-      if (difference.inMinutes < 60) {
-        return '${difference.inMinutes} мин назад';
-      } else if (difference.inHours < 24) {
-        return '${difference.inHours} ч назад';
-      } else if (difference.inDays < 7) {
-        return '${difference.inDays} дн назад';
-      } else {
-        return '${dateTime.day}.${dateTime.month}.${dateTime.year}';
-      }
-    }
-
-    return 'нет данных';
-  }
-
-  Future<void> _loadRealData() async {
-    // Здесь будет загрузка реальных данных с устройства
-    setState(() {
-      _recentCables = [];
-      _totalCables = 0;
-      _excellentCount = 0;
-      _okCount = 0;
-      _failCount = 0;
-      _lastTestTime = 'нет данных';
-    });
   }
 
   String _getStatusText() {
@@ -330,9 +212,9 @@ class _StartupScreenState extends State<StartupScreen> {
 
   String? _selectedCableName;
   String? _selectedCableType;
-  double? _selectedCableScore;
+  int? _selectedCableScore;
 
-  void _showCablePassport(String name, String cableType, double score) {
+  void _showCablePassport(String name, String cableType, int score) {
     setState(() {
       _selectedCableName = name;
       _selectedCableType = cableType;
@@ -740,20 +622,20 @@ class _StartupScreenState extends State<StartupScreen> {
     return 'cmrr $cmrr дБ';
   }
 
-  double _calculateHealthScore(Map<String, dynamic> cable) {
+  int _calculateHealthScore(Map<String, dynamic> cable) {
     final status = cable['status'] ?? '';
     final cmrrDb = double.tryParse(cable['cmrr_db']?.toString() ?? '0') ?? 0;
 
     switch (status) {
       case 'excellent':
-        return 85.0 + (cmrrDb - 60) * 0.5; // 85-100 в зависимости от CMRR
+        return (85.0 + (cmrrDb - 60) * 0.5).toInt(); // 85-100 в зависимости от CMRR
       case 'ok':
       case 'warning':
-        return 50.0 + (cmrrDb - 30) * 0.8; // 50-75
+        return (50.0 + (cmrrDb - 30) * 0.8).toInt(); // 50-75
       case 'fail':
-        return 20.0 + cmrrDb * 0.5; // 20-50
+        return (20.0 + cmrrDb * 0.5).toInt(); // 20-50
       default:
-        return 0.0;
+        return 0;
     }
   }
 
@@ -880,7 +762,7 @@ class _StartupScreenState extends State<StartupScreen> {
     required String cableId,
     required String cableName,
     required String cableType,
-    required double healthScore,
+    required int healthScore,
   }) {
     return GestureDetector(
       onTap: () {

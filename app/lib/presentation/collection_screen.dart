@@ -1,11 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart' show rootBundle;
-import 'dart:convert';
-import '/domain/health_score_calculator.dart';
-import '/data/test_models.dart';
+import '/data/ble_data_manager.dart';
 import 'cable_passport_screen.dart';
-import 'dart:math';
-import 'package:intl/intl.dart';
 
 /// Статус фильтрации по цвету
 enum ColorFilter {
@@ -44,6 +39,8 @@ class CollectionScreen extends StatefulWidget {
 }
 
 class _CollectionScreenState extends State<CollectionScreen> {
+  final BleDataManager _dataManager = BleDataManager();
+
   List<Map<String, dynamic>> _allCables = [];
   List<Map<String, dynamic>> _filteredCables = [];
   bool _isLoading = true;
@@ -63,6 +60,11 @@ class _CollectionScreenState extends State<CollectionScreen> {
   void initState() {
     super.initState();
     _loadCables();
+
+    // Подписываемся на смену источника данных (mock/real)
+    _dataManager.typeStream.listen((_) {
+      _loadCables(); // перезагружаем при переключении
+    });
   }
 
   @override
@@ -71,122 +73,18 @@ class _CollectionScreenState extends State<CollectionScreen> {
     super.dispose();
   }
 
-  /// Проверяет, есть ли в проводниках open или short
-  bool _hasCatastrophicFailure(List<Map<String, dynamic>> conductors) {
-    for (final conductor in conductors) {
-      final status = conductor['s'] as String;
-      if (status == 'open' || status == 'short') {
-        return true;
-      }
-    }
-    return false;
-  }
-
   Future<void> _loadCables() async {
+    setState(() {
+      _isLoading = true;
+      _error = '';
+    });
+
     try {
-      final jsonString = await rootBundle.loadString('mock/ble_mock_packets.json');
-      final Map<String, dynamic> jsonData = jsonDecode(jsonString);
-
-      final continuityResults = jsonData['results']['continuity'] as Map<String, dynamic>;
-      final cmrrResults = jsonData['results']['cmrr'] as Map<String, dynamic>;
-      final freqResults = jsonData['results']['freq_response'] as Map<String, dynamic>;
-
-      final List<Map<String, dynamic>> results = [];
-
-      for (final entry in continuityResults.entries) {
-        final String cableId = entry.key;
-        final continuityData = entry.value;
-
-        final String cableTypeStr = continuityData['cable'] ?? 'unknown';
-        CableType? cableType;
-        switch (cableTypeStr) {
-          case 'xlr':
-            cableType = CableType.xlr;
-            break;
-          case 'jack_trs':
-            cableType = CableType.jackTrs;
-            break;
-          case 'jack_ts':
-            cableType = CableType.jackTs;
-            break;
-          default:
-            continue;
-        }
-
-        // Формируем проводники
-        final conductorsMap = continuityData['conductors'] as Map<String, dynamic>;
-        final List<Map<String, dynamic>> conductors = [];
-        for (final condEntry in conductorsMap.entries) {
-          conductors.add({
-            'r': (condEntry.value['r'] as num).toDouble(),
-            's': condEntry.value['s'] as String,
-          });
-        }
-
-        // Проверяем наличие CMRR
-        final hasCmrr = cmrrResults.containsKey(cableId);
-        final double? cmrrDb = hasCmrr
-            ? (cmrrResults[cableId]['cmrr_db'] as num).toDouble()
-            : null;
-
-        // Проверяем наличие АЧХ
-        final hasFreq = freqResults.containsKey(cableId);
-        List<double>? freqValues;
-        if (hasFreq) {
-          final freqData = freqResults[cableId];
-          freqValues = (freqData['v'] as List).map((e) => (e as num).toDouble()).toList();
-        }
-
-        final bool hasCatastrophic = _hasCatastrophicFailure(conductors);
-        final bool cmrrRun = cableType.supportsCmrr;
-
-        final HealthScoreResult result = HealthScoreCalculator.calculate(
-          cableType: cableType,
-          continuityConductors: conductors,
-          cmrrDb: cmrrDb,
-          freqResponseValues: freqValues,
-          continuityRun: true,
-          cmrrRun: cmrrRun,
-          freqRun: hasFreq,
-        );
-
-        final double? healthScore = result.score;
-
-        // Определяем цвет для фильтрации (по health score или для катастрофических)
-        String colorCategory = 'green';
-        if (hasCatastrophic) {
-          colorCategory = 'red';
-        } else if (healthScore != null) {
-          if (healthScore >= 80) colorCategory = 'green';
-          else if (healthScore >= 50) colorCategory = 'yellow';
-          else colorCategory = 'red';
-        }
-
-        // Форматируем имя
-        String displayName = _formatName(cableId);
-        if (cableTypeStr == 'jack_ts') {
-          displayName = 'Jack TS ${_capitalize(continuityData['status'] ?? '')}';
-        } else if (cableTypeStr == 'jack_trs') {
-          displayName = 'Jack TRS ${_capitalize(cmrrResults[cableId]?['status'] ?? '')}';
-        } else if (cableTypeStr == 'xlr') {
-          displayName = 'XLR ${_capitalize(cmrrResults[cableId]?['status'] ?? '')}';
-        }
-
-        results.add({
-          'id': cableId,
-          'name': displayName,
-          'cableType': cableTypeStr,
-          'healthScore': healthScore,
-          'hasCatastrophic': hasCatastrophic,
-          'continuityStatus': continuityData['status'],
-          'colorCategory': colorCategory,
-          'checksCount': _getChecksCount(continuityData),
-          'lastCheck': _getLastCheckDate(cableId),
-        });
-      }
+      // Получаем данные через менеджер (он сам решит, из mock или real)
+      final cables = await _dataManager.getAllCables();
 
       setState(() {
-        _allCables = results;
+        _allCables = cables;
         _applyFilters();
         _isLoading = false;
       });
@@ -196,31 +94,6 @@ class _CollectionScreenState extends State<CollectionScreen> {
         _isLoading = false;
       });
     }
-  }
-
-  String _formatName(String key) {
-    final parts = key.split('_');
-    if (parts.length >= 2) {
-      final type = parts[0].toUpperCase();
-      final status = parts[1];
-      return '$type ${status[0].toUpperCase()}${status.substring(1)}';
-    }
-    return key;
-  }
-
-  String _capitalize(String str) {
-    if (str.isEmpty) return str;
-    return str[0].toUpperCase() + str.substring(1);
-  }
-
-  int _getChecksCount(Map<String, dynamic> continuityData) {
-    // Заглушка — позже заменим на реальные данные
-    return Random().nextInt(6);
-  }
-
-  String _getLastCheckDate(String cableId) {
-    // Заглушка — позже заменим на реальные данные
-    return DateFormat('dd/MM/yyyy').format(DateTime.utc(2026, 4, Random().nextInt(25)+1));
   }
 
   void _applyFilters() {
@@ -233,7 +106,7 @@ class _CollectionScreenState extends State<CollectionScreen> {
       }).toList();
     }
 
-    // Фильтр по цвету (Health Score) — применяется ТОЛЬКО если выбран цветовой фильтр
+    // Фильтр по цвету (Health Score)
     if (_colorFilter != ColorFilter.all && _typeFilter == TypeFilter.all) {
       filtered = filtered.where((cable) {
         switch (_colorFilter) {
@@ -248,7 +121,7 @@ class _CollectionScreenState extends State<CollectionScreen> {
         }
       }).toList();
     }
-    // Фильтр по типу кабеля — применяется ТОЛЬКО если выбран типовой фильтр
+    // Фильтр по типу кабеля
     else if (_typeFilter != TypeFilter.all && _colorFilter == ColorFilter.all) {
       filtered = filtered.where((cable) {
         switch (_typeFilter) {
@@ -269,7 +142,9 @@ class _CollectionScreenState extends State<CollectionScreen> {
       int comparison = 0;
       switch (_sortField) {
         case SortField.date:
-          comparison = a['lastCheck'].compareTo(b['lastCheck']);
+          final dateA = a['lastCheck'] ?? 0;
+          final dateB = b['lastCheck'] ?? 0;
+          comparison = dateA.compareTo(dateB);
           break;
         case SortField.healthScore:
           final scoreA = a['healthScore'] ?? -1.0;
@@ -296,7 +171,7 @@ class _CollectionScreenState extends State<CollectionScreen> {
   void _setColorFilter(ColorFilter filter) {
     setState(() {
       _colorFilter = filter;
-      _typeFilter = TypeFilter.all; // При выборе цвета — сбрасываем тип
+      _typeFilter = TypeFilter.all;
     });
     _applyFilters();
   }
@@ -304,7 +179,7 @@ class _CollectionScreenState extends State<CollectionScreen> {
   void _setTypeFilter(TypeFilter filter) {
     setState(() {
       _typeFilter = filter;
-      _colorFilter = ColorFilter.all; // При выборе типа — сбрасываем цвет
+      _colorFilter = ColorFilter.all;
     });
     _applyFilters();
   }
@@ -319,7 +194,6 @@ class _CollectionScreenState extends State<CollectionScreen> {
 
   void _setSortField(SortField field) {
     if (_sortField == field) {
-      // Если то же поле — меняем направление
       setState(() {
         _sortDirection = _sortDirection == SortDirection.ascending
             ? SortDirection.descending
@@ -344,26 +218,26 @@ class _CollectionScreenState extends State<CollectionScreen> {
     _applyFilters();
   }
 
-  Color _getScoreColor(double? score) {
+  Color _getScoreColor(int? score) {
     if (score == null) return const Color(0xFF666666);
     if (score >= 80) return const Color(0xFF97C459);
     if (score >= 50) return const Color(0xFFEF9F27);
     return const Color(0xFFE24B4A);
   }
 
-  String _getScoreText(double? score) {
+  String _getScoreText(int? score) {
     if (score == null) return '—';
     return '${score.toInt()}';
   }
 
   void _navigateToCableDetail(Map<String, dynamic> cable) {
-    final double healthScore = cable['healthScore'] ?? 0.0;
+    final int healthScore = cable['healthScore'] ?? 0;
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => CablePassportScreen(
           cableName: cable['name'],
-          cableType: cable['cableType'],
+          cableType: cable['cable_type'],
           healthScore: healthScore,
           onBack: () {
             Navigator.pop(context);
@@ -373,17 +247,21 @@ class _CollectionScreenState extends State<CollectionScreen> {
     );
   }
 
-  String _getTypeLabel(TypeFilter filter) {
-    switch (filter) {
-      case TypeFilter.all:
-        return 'Все';
-      case TypeFilter.xlr:
+  String _getTypeLabelFromString(String type) {
+    switch (type) {
+      case 'xlr':
         return 'XLR';
-      case TypeFilter.jackTrs:
-        return 'Jack TRS';
-      case TypeFilter.jackTs:
-        return 'Jack TS';
+      case 'jack_trs':
+        return 'TRS';
+      case 'jack_ts':
+        return 'TS';
+      default:
+        return type;
     }
+  }
+
+  int _getCountByColor(String color) {
+    return _allCables.where((c) => c['colorCategory'] == color).length;
   }
 
   @override
@@ -398,7 +276,6 @@ class _CollectionScreenState extends State<CollectionScreen> {
         backgroundColor: const Color(0xFF0A0A0A),
         elevation: 0,
         actions: [
-          // Кнопка сортировки (пирамидка)
           IconButton(
             icon: Icon(
               _sortDirection == SortDirection.ascending
@@ -409,7 +286,6 @@ class _CollectionScreenState extends State<CollectionScreen> {
             ),
             onPressed: _toggleSortDirection,
           ),
-          // Кнопка меню сортировки
           PopupMenuButton<SortField>(
             icon: const Icon(Icons.sort, color: Color(0xFFAAAAAA)),
             color: const Color(0xFF141414),
@@ -451,6 +327,11 @@ class _CollectionScreenState extends State<CollectionScreen> {
               style: const TextStyle(color: Color(0xFF888888)),
               textAlign: TextAlign.center,
             ),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: _loadCables,
+              child: const Text('Повторить'),
+            ),
           ],
         ),
       )
@@ -491,12 +372,10 @@ class _CollectionScreenState extends State<CollectionScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 24),
             child: Row(
               children: [
-                // Цветовые фильтры
-                _buildFilterChip('Все · ${_allCables.length}', ColorFilter.all, _colorFilter == ColorFilter.all && _typeFilter == TypeFilter.all),
+                _buildFilterChip('Все · ${_allCables.length}', null, _colorFilter == ColorFilter.all && _typeFilter == TypeFilter.all),
                 _buildColorFilterChip('${_getCountByColor('green')}', ColorFilter.green, Colors.green),
                 _buildColorFilterChip('${_getCountByColor('yellow')}', ColorFilter.yellow, Colors.orange),
                 _buildColorFilterChip('${_getCountByColor('red')}', ColorFilter.red, Colors.red),
-                // Типовые фильтры
                 _buildTypeFilterChip('XLR', TypeFilter.xlr),
                 _buildTypeFilterChip('Jack TS', TypeFilter.jackTs),
                 _buildTypeFilterChip('Jack TRS', TypeFilter.jackTrs),
@@ -518,7 +397,7 @@ class _CollectionScreenState extends State<CollectionScreen> {
               itemCount: _filteredCables.length,
               itemBuilder: (context, index) {
                 final cable = _filteredCables[index];
-                final double? score = cable['healthScore'];
+                final int? score = cable['healthScore'];
                 final bool hasCatastrophic = cable['hasCatastrophic'] ?? false;
 
                 Color stripColor = _getScoreColor(score);
@@ -567,7 +446,7 @@ class _CollectionScreenState extends State<CollectionScreen> {
                                       borderRadius: BorderRadius.circular(3),
                                     ),
                                     child: Text(
-                                      _getTypeLabelFromString(cable['cableType']),
+                                      _getTypeLabelFromString(cable['cable_type']),
                                       style: const TextStyle(
                                         fontSize: 8,
                                         color: Color(0xFF666666),
@@ -578,7 +457,7 @@ class _CollectionScreenState extends State<CollectionScreen> {
                               ),
                               const SizedBox(height: 2),
                               Text(
-                                '${cable['checksCount']} проверок · ${cable['lastCheck']}',
+                                '${cable['checksCount'] ?? 0} проверок · ${cable['lastCheck'] ?? 'нет данных'}',
                                 style: const TextStyle(
                                   fontSize: 10,
                                   color: Color(0xFF888888),
@@ -620,23 +499,6 @@ class _CollectionScreenState extends State<CollectionScreen> {
         ],
       ),
     );
-  }
-
-  int _getCountByColor(String color) {
-    return _allCables.where((c) => c['colorCategory'] == color).length;
-  }
-
-  String _getTypeLabelFromString(String type) {
-    switch (type) {
-      case 'xlr':
-        return 'XLR';
-      case 'jack_trs':
-        return 'TRS';
-      case 'jack_ts':
-        return 'TS';
-      default:
-        return type;
-    }
   }
 
   Widget _buildFilterChip(String label, ColorFilter? filter, bool isSelected) {
