@@ -126,11 +126,11 @@ class _CollectionScreenState extends State<CollectionScreen> {
       filtered = filtered.where((cable) {
         switch (_typeFilter) {
           case TypeFilter.xlr:
-            return cable['cableType'] == 'xlr';
+            return cable['cable_type'] == 'xlr';
           case TypeFilter.jackTrs:
-            return cable['cableType'] == 'jack_trs';
+            return cable['cable_type'] == 'jack_trs';
           case TypeFilter.jackTs:
-            return cable['cableType'] == 'jack_ts';
+            return cable['cable_type'] == 'jack_ts';
           default:
             return true;
         }
