@@ -1,0 +1,18 @@
+# Code owners are requested for review automatically when a PR touches their files.
+# Gitea syntax: patterns are Go regular expressions, not globs (unlike GitHub).
+# Patterns must not overlap, so each path has exactly one owner.
+
+# Mobile app
+^app/.*                 @CosmoGhost87
+
+# Frozen components (device implementation is postponed)
+^firmware/.*            @H1K0
+^hardware/.*            @yakshnkoooo
+
+# Documentation, ADR
+^docs/.*                @H1K0
+
+# Repository infrastructure: Gitea templates, shared editor settings, root files
+^\.gitea/.*             @H1K0
+^\.vscode/.*            @H1K0
+^[^/]+$                 @H1K0

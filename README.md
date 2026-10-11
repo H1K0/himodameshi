@@ -13,30 +13,31 @@
 
 ```
 himodameshi/
-├── app/          # Flutter-приложение (iOS + Android)
-├── firmware/     # Прошивка ESP32-S3
-├── hardware/     # Схемы, BOM, даташиты компонентов
-├── docs/         # Документация, ФТТ, ADR
-├── scripts/      # Вспомогательные скрипты
-├── GIT_CONVENTIONS.md
+├── .gitea/                    # Шаблон PR, CODEOWNERS
+├── app/                       # Flutter-приложение (iOS + Android)
+├── firmware/                  # Прошивка ESP32-S3 — заморожено
+├── hardware/                  # Схемы, BOM, даташиты компонентов — заморожено
+├── docs/                      # Документация, ФТТ, ADR
+├── .pre-commit-config.yaml    # Проверки перед коммитом
+├── CONTRIBUTING.md
 └── README.md
 ```
 
 ## Документация
 
-| Документ                                                                             | Описание                                                                 |
-| ------------------------------------------------------------------------------------ | ------------------------------------------------------------------------ |
-| [GIT_CONVENTIONS.md](./GIT_CONVENTIONS.md)                                           | Структура репозитория, соглашения по коммитам и веткам                   |
-| [docs/spec/requirements.md](./docs/spec/requirements.md)                             | Функционально-технические требования (ФТТ)                               |
-| [docs/spec/architecture.md](./docs/spec/architecture.md)                             | Техническая архитектура: стек, протокол, компоненты                      |
-| [docs/spec/ble-protocol.md](./docs/spec/ble-protocol.md)                             | BLE-протокол v1.0 — контракт между прошивкой и приложением               |
-| [docs/spec/roadmap.md](./docs/spec/roadmap.md)                                       | Дорожная карта MVP: фазы, задачи по участникам, точки синхронизации      |
-| [docs/spec/scope-triggers.md](./docs/spec/scope-triggers.md)                         | Триггеры сокращения и расширения объёма (Б-минус и Б-плюс)               |
-| [docs/spec/cmrr-requirements.md](./docs/spec/cmrr-requirements.md)                   | Требования к схеме CMRR: методика, калибровка, критерии готовности       |
-| [docs/spec/continuity-requirements.md](./docs/spec/continuity-requirements.md)       | Требования к тесту целостности: схема, алгоритм КЗ, калибровка, критерии |
-| [docs/spec/freq-response-requirements.md](./docs/spec/freq-response-requirements.md) | Требования к тесту АЧХ: пиковый детектор, алгоритм свипа, калибровка     |
-| [docs/spec/glossary.md](./docs/spec/glossary.md)                                     | Глоссарий терминов, сокращений и компонентов                             |
-| [docs/adr/](./docs/adr/)                                                             | Architecture Decision Records — почему принято то или иное решение       |
+| Документ                                                                             | Описание                                                                             |
+| ------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------ |
+| [CONTRIBUTING.md](./CONTRIBUTING.md)                                                 | Правила работы с репозиторием: ветки, коммиты, PR, ревью, проверки, тесты            |
+| [docs/spec/requirements.md](./docs/spec/requirements.md)                             | Функционально-технические требования (ФТТ)                                           |
+| [docs/spec/architecture.md](./docs/spec/architecture.md)                             | Техническая архитектура: стек, протокол, компоненты                                  |
+| [docs/spec/ble-protocol.md](./docs/spec/ble-protocol.md)                             | BLE-протокол v1.0 — контракт между прошивкой и приложением                           |
+| [docs/spec/roadmap.md](./docs/spec/roadmap.md)                                       | Дорожная карта MVP: фазы, задачи по участникам, точки синхронизации                  |
+| [docs/spec/scope-triggers.md](./docs/spec/scope-triggers.md)                         | Триггеры сокращения и расширения объёма (Б-минус и Б-плюс)                           |
+| [docs/spec/cmrr-requirements.md](./docs/spec/cmrr-requirements.md)                   | Требования к схеме CMRR: методика, калибровка, критерии готовности                   |
+| [docs/spec/continuity-requirements.md](./docs/spec/continuity-requirements.md)       | Требования к тесту целостности: схема, алгоритм КЗ, калибровка, критерии             |
+| [docs/spec/freq-response-requirements.md](./docs/spec/freq-response-requirements.md) | Требования к тесту АЧХ: пиковый детектор, алгоритм свипа, калибровка                 |
+| [docs/spec/glossary.md](./docs/spec/glossary.md)                                     | Глоссарий терминов, сокращений и компонентов                                         |
+| [docs/adr/](./docs/adr/README.md)                                                    | Architecture Decision Records — почему принято то или иное решение; правила и индекс |
 
 ---
 
@@ -83,6 +84,21 @@ cd firmware
 # Выбрать окружение: esp32-s3-devkitc
 pio run --target upload
 ```
+
+---
+
+## Участники
+
+Команда «Деловые колбаски».
+
+| Участник | Роль                                            |
+| -------- | ----------------------------------------------- |
+| Влад     | PM; бэкенд и БД Himo Hub; CI/CD; инфраструктура |
+| Валера   | Мобильное приложение                            |
+| Ваня     | UX/UI сайта Himo Hub                            |
+| Даня     | Скрам-мастер                                    |
+
+Логины в Gitea и правила участия в разработке — в [CONTRIBUTING.md](./CONTRIBUTING.md).
 
 ---
 
