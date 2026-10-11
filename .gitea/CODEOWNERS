@@ -5,6 +5,14 @@
 # Mobile app
 ^app/.*                 @CosmoGhost87
 
+# Himo Hub: server, web, API contracts, deployment (ADR-014, ADR-015, ADR-017).
+# Directories appear together with the code; the rules are set in advance so that
+# the very first PR creating them already requires the owner's review.
+^hub/.*                 @H1K0
+^web/.*                 @yakshnkoooo
+^contracts/.*           @H1K0
+^deploy/.*              @H1K0
+
 # Frozen components (device implementation is postponed)
 ^firmware/.*            @H1K0
 ^hardware/.*            @yakshnkoooo
