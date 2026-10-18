@@ -2,27 +2,53 @@ import 'package:flutter/material.dart';
 import 'dart:convert';
 import '/data/test_models.dart';
 import '/data/database_helper.dart';
+import '/domain/health_score_calculator.dart';
 import 'details_screen.dart';
 import 'testing_progress_screen.dart';
 import 'cable_passport_screen.dart';
+import '/domain/freq_response_stats.dart';
 
 class TestingResultsScreen extends StatelessWidget {
   final CableType cableType;
   final List<TestType> selectedTests;
   final double totalTimeSeconds;
 
-  // Статичные данные для демонстрации (позже заменятся на реальные)
-  final int healthScore = 92;
-  final String continuityResult = '0.9–1.4 Ом';
-  final double cmrrDb = 68;
-  final String freqResponseResult = 'Спад −2.1 дБ на 20 кГц';
+  // Сгенерированные (mock) или реальные результаты
+  final Map<String, dynamic>? continuityResult;
+  final double? cmrrDb;
+  final List<double>? freqValues;
 
   const TestingResultsScreen({
     super.key,
     required this.cableType,
     required this.selectedTests,
     required this.totalTimeSeconds,
+    this.continuityResult,
+    this.cmrrDb,
+    this.freqValues,
   });
+
+  // -------------------------------------------------------------------------
+  // Расчёт Health Score по сгенерированным данным
+  // -------------------------------------------------------------------------
+
+  HealthScoreResult get _healthResult {
+    final conductors = (continuityResult?['conductors'] as List?)
+        ?.cast<Map<String, dynamic>>() ??
+        [];
+
+    return HealthScoreCalculator.calculate(
+      cableType: cableType,
+      continuityConductors: conductors,
+      cmrrDb: cmrrDb,
+      freqResponseValues: freqValues,
+      continuityRun: selectedTests.contains(TestType.continuity),
+      cmrrRun: selectedTests.contains(TestType.cmrr),
+      freqRun: selectedTests.contains(TestType.freqResponse),
+    );
+  }
+
+  int get _healthScore => (_healthResult.score ?? 0).round();
 
   String get _formattedTime {
     if (totalTimeSeconds < 60) {
@@ -46,15 +72,79 @@ class TestingResultsScreen extends StatelessWidget {
   }
 
   String get _statusText {
-    if (healthScore >= 80) return 'ИСПРАВЕН';
-    if (healthScore >= 50) return 'ВНИМАНИЕ';
+    final score = _healthScore;
+    if (_healthResult.score == null) return 'НЕПОЛНЫЙ';
+    if (score >= 80) return 'ИСПРАВЕН';
+    if (score >= 50) return 'ВНИМАНИЕ';
     return 'БРАК';
   }
 
   Color get _statusColor {
-    if (healthScore >= 80) return const Color(0xFF97C459);
-    if (healthScore >= 50) return const Color(0xFFEF9F27);
+    if (_healthResult.score == null) return const Color(0xFF888888);
+    final score = _healthScore;
+    if (score >= 80) return const Color(0xFF97C459);
+    if (score >= 50) return const Color(0xFFEF9F27);
     return const Color(0xFFE24B4A);
+  }
+
+  /// Строка результата целостности: диапазон сопротивлений + худший статус
+  String get _continuityResultText {
+    if (continuityResult == null) return '—';
+    final conductors =
+    (continuityResult!['conductors'] as List).cast<Map<String, dynamic>>();
+    if (conductors.isEmpty) return '—';
+
+    final rs = conductors.map((c) => c['r'] as double).toList();
+    final minR = rs.reduce((a, b) => a < b ? a : b);
+    final maxR = rs.reduce((a, b) => a > b ? a : b);
+
+    // Если есть open/short — показываем это явно
+    final hasOpen = conductors.any((c) => c['s'] == 'open');
+    final hasShort = conductors.any((c) => c['s'] == 'short');
+    if (hasOpen) return 'обрыв';
+    if (hasShort) return 'КЗ';
+
+    return '${minR.toStringAsFixed(2)}–${maxR.toStringAsFixed(2)} Ом';
+  }
+
+  /// Статус целостности для иконки: ok / warning / fail
+  String get _continuityStatus {
+    if (continuityResult == null) return 'fail';
+    final conductors =
+    (continuityResult!['conductors'] as List).cast<Map<String, dynamic>>();
+    if (conductors.any((c) => c['s'] == 'open' || c['s'] == 'short')) {
+      return 'fail';
+    }
+    if (conductors.any((c) => c['s'] == 'warning')) return 'warning';
+    return 'ok';
+  }
+
+  /// Строка результата CMRR
+  String get _cmrrResultText {
+    if (cmrrDb == null) return '—';
+    return '${cmrrDb!.toStringAsFixed(1)} дБ';
+  }
+
+  /// Статус CMRR для иконки
+  String get _cmrrStatus {
+    if (cmrrDb == null) return 'fail';
+    if (cmrrDb! >= 60) return 'ok';
+    if (cmrrDb! >= 40) return 'warning';
+    return 'fail';
+  }
+
+  /// Строка результата АЧХ: пик завала в аудиодиапазоне
+  String get _freqResultText {
+    if (freqValues == null || freqValues!.isEmpty) return '—';
+    if (freqValues!.any((v) => v <= -99.0)) return 'нет сигнала';
+
+    // Пик в аудиодиапазоне: индексы 3..26 (20 Гц – 17 кГц)
+    final audio = freqValues!.sublist(3, 27);
+    double peak = 0.0;
+    for (final v in audio) {
+      if (v.abs() > peak) peak = v.abs();
+    }
+    return 'спад −${peak.toStringAsFixed(1)} дБ';
   }
 
   void _showRepeatDialog(BuildContext context) {
@@ -97,10 +187,10 @@ class TestingResultsScreen extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 6),
-                const Text(
-                  'Текущий результат (Health Score 92) будет отброшен.',
+                Text(
+                  'Текущий результат (Health Score $_healthScore) будет отброшен.',
                   textAlign: TextAlign.center,
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontSize: 11,
                     color: Color(0xFF888888),
                   ),
@@ -185,10 +275,10 @@ class TestingResultsScreen extends StatelessWidget {
       builder: (context) => _SaveToCollectionSheet(
         cableType: cableType,
         selectedTests: selectedTests,
-        healthScore: healthScore,
-        continuityResult: continuityResult,
-        cmrrDb: cmrrDb,
-        freqResponseResult: freqResponseResult,
+        healthScore: _healthScore.toInt(),
+        continuityResult: _continuityResultText,
+        cmrrDb: cmrrDb ?? 0.0,
+        freqResponseResult: _freqResultText,
         totalTimeSeconds: totalTimeSeconds,
       ),
     );
@@ -276,7 +366,7 @@ class TestingResultsScreen extends StatelessWidget {
                         text: TextSpan(
                           children: [
                             TextSpan(
-                              text: '${healthScore.toInt()}',
+                              text: '$_healthScore',
                               style: const TextStyle(
                                 fontSize: 46,
                                 fontWeight: FontWeight.w500,
@@ -325,16 +415,16 @@ class TestingResultsScreen extends StatelessWidget {
                   // Целостность
                   _buildMeasurementItem(
                     title: 'Целостность',
-                    value: continuityResult,
-                    status: 'ok',
+                    value: _continuityResultText,
+                    status: _continuityStatus,
                   ),
                   const SizedBox(height: 6),
                   // CMRR (показываем только если был выбран)
                   if (selectedTests.contains(TestType.cmrr))
                     _buildMeasurementItem(
                       title: 'CMRR',
-                      value: '$cmrrDb дБ',
-                      status: cmrrDb >= 50 ? 'ok' : (cmrrDb >= 30 ? 'warning' : 'fail'),
+                      value: _cmrrResultText,
+                      status: _cmrrStatus,
                     ),
                   const SizedBox(height: 6),
                   // АЧХ (показываем только если был выбран)
@@ -533,7 +623,7 @@ class TestingResultsScreen extends StatelessWidget {
                       ),
                     ),
                     Text(
-                      freqResponseResult,
+                      _freqResultText,
                       style: const TextStyle(
                         fontSize: 10,
                         color: Color(0xFF666666),
@@ -544,9 +634,53 @@ class TestingResultsScreen extends StatelessWidget {
               ),
               TextButton(
                 onPressed: () {
+                  // Считаем peak/sigma в аудио-диапазоне для передачи в DetailsScreen
+                  final freqValues = this.freqValues;
+                  double? peak;
+                  double? sigma;
+                  bool hasNoSignal = false;
+
+                  if (freqValues != null && freqValues.isNotEmpty) {
+                    if (freqValues.length < FreqResponseStats.audioEndIndex) {
+                      hasNoSignal = true;
+                    } else {
+                      final stats = FreqResponseStats.fromValues(freqValues);
+                      if (stats.noSignal) {
+                        hasNoSignal = true;
+                      } else {
+                        peak = stats.peak;
+                        sigma = stats.sigma;
+                      }
+                    }
+                  }
+
+                  // Считаем диапазон сопротивлений из continuityResult
+                  double? contMin;
+                  double? contMax;
+                  if (continuityResult != null) {
+                    final conductors = (continuityResult!['conductors'] as List)
+                        .cast<Map<String, dynamic>>();
+                    if (conductors.isNotEmpty) {
+                      final rs = conductors.map((c) => c['r'] as double).toList();
+                      contMin = rs.reduce((a, b) => a < b ? a : b);
+                      contMax = rs.reduce((a, b) => a > b ? a : b);
+                    }
+                  }
+
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (context) => const DetailsScreen()),
+                    MaterialPageRoute(
+                      builder: (context) => DetailsScreen(
+                        cableType: cableType,
+                        healthScore: _healthScore,
+                        continuityMin: contMin,
+                        continuityMax: contMax,
+                        cmrrDb: cmrrDb,
+                        freqPeak: peak,
+                        freqSigma: sigma,
+                        freqHasNoSignal: hasNoSignal,
+                      ),
+                    ),
                   );
                 },
                 style: TextButton.styleFrom(
@@ -767,7 +901,7 @@ class _SaveToCollectionSheetState extends State<_SaveToCollectionSheet> {
     final Map<String, dynamic> session = {
       'cable_id': cableId,
       'started_at': now - (widget.totalTimeSeconds ~/ 1).toInt(),
-      'health_score': widget.healthScore.toInt(),
+      'health_score': widget.healthScore,
       'ble_device_id': bleDeviceId,
     };
     final int sessionId = await DatabaseHelper().insertTestSession(session);

@@ -1,5 +1,4 @@
-import 'dart:math';
-
+import 'freq_response_stats.dart';
 import '/data/test_models.dart';
 /// Результат расчёта Health Score
 class HealthScoreResult {
@@ -174,34 +173,24 @@ class HealthScoreCalculator {
   // Суб-скор АЧХ (Sf)
   // --------------------------------------------------------------------------
   static double _calculateFreqResponseScore(List<double> v) {
-  if (v.any((value) => value <= -99.0)) return 0.0;
+    final stats = FreqResponseStats.fromValues(v);
+    if (stats.noSignal) return 0.0;
 
-  final audioValues = v.sublist(3, 27);
-  double peak = 0.0;
-  double sumSquares = 0.0;
+    double sfAudio = 100.0 - 14.0 * stats.peak - 6.0 * stats.sigma;
+    sfAudio = sfAudio.clamp(0.0, 100.0);
 
-  for (final val in audioValues) {
-  final absVal = val.abs();
-  if (absVal > peak) peak = absVal;
-  sumSquares += val * val;
-  }
+    final hfValues = v.sublist(27, 30);
+    double peakHf = 0.0;
+    for (final val in hfValues) {
+      final absVal = val.abs();
+      if (absVal > peakHf) peakHf = absVal;
+    }
 
-  final double sigma = sqrt((sumSquares / audioValues.length));
-  double sfAudio = 100.0 - 14.0 * peak - 6.0 * sigma;
-  sfAudio = sfAudio.clamp(0.0, 100.0);
+    double penaltyHf = (peakHf - 3.0) * 4.0;
+    penaltyHf = penaltyHf.clamp(0.0, double.infinity);
 
-  final hfValues = v.sublist(27, 30);
-  double peakHf = 0.0;
-  for (final val in hfValues) {
-  final absVal = val.abs();
-  if (absVal > peakHf) peakHf = absVal;
-  }
-
-  double penaltyHf = (peakHf - 3.0) * 4.0;
-  penaltyHf = penaltyHf.clamp(0.0, double.infinity);
-
-  double sf = sfAudio - penaltyHf;
-  return sf.clamp(0.0, 100.0);
+    double sf = sfAudio - penaltyHf;
+    return sf.clamp(0.0, 100.0);
   }
 
   // --------------------------------------------------------------------------

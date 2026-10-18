@@ -1,8 +1,99 @@
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
+import '/data/test_models.dart';
+import '/data/insight_generator_provider.dart';
+import '/data/insight_input.dart';
+import '/domain/insight_exceptions.dart';
 
-class DetailsScreen extends StatelessWidget {
-  const DetailsScreen({super.key});
+class DetailsScreen extends StatefulWidget {
+  final CableType cableType;
+  final int? healthScore;
+  final double? continuityMin;
+  final double? continuityMax;
+  final double? cmrrDb;
+  final double? freqPeak;
+  final double? freqSigma;
+  final bool freqHasNoSignal;
+
+  const DetailsScreen({
+    super.key,
+    required this.cableType,
+    this.healthScore,
+    this.continuityMin,
+    this.continuityMax,
+    this.cmrrDb,
+    this.freqPeak,
+    this.freqSigma,
+    this.freqHasNoSignal = false,
+  });
+
+  @override
+  State<DetailsScreen> createState() => _DetailsScreenState();
+}
+
+class _DetailsScreenState extends State<DetailsScreen> {
+  String? _insight;
+  bool _isLoading = true;
+  InsightException? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadInsight();
+  }
+
+  Future<void> _loadInsight() async {
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+
+    final input = InsightInput(
+      cableType: widget.cableType,
+      healthScore: widget.healthScore,
+      continuity: (widget.continuityMin != null && widget.continuityMax != null)
+          ? ContinuityInsight(
+        min: widget.continuityMin!,
+        max: widget.continuityMax!,
+      )
+          : null,
+      cmrr: widget.cmrrDb != null
+          ? CmrrInsight(valueDb: widget.cmrrDb!)
+          : null,
+      freq: widget.freqHasNoSignal
+          ? const FreqInsight(noSignal: true)
+          : (widget.freqPeak != null && widget.freqSigma != null)
+          ? FreqInsight(
+        peak: widget.freqPeak,
+        sigma: widget.freqSigma,
+      )
+          : null,
+    );
+
+    try {
+      final result = await InsightGeneratorProvider.instance.generate(input);
+
+      if (!mounted) return;
+      setState(() {
+        _insight = result;
+        _isLoading = false;
+      });
+    } on InsightException catch (e) {
+      debugPrint('InsightGenerator error: $e');
+      if (!mounted) return;
+      setState(() {
+        _error = e;
+        _isLoading = false;
+      });
+    } catch (e) {
+      debugPrint('InsightGenerator unexpected error: $e');
+      if (!mounted) return;
+      setState(() {
+        _error = InsightUnknownException('$e');
+        _isLoading = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -77,7 +168,7 @@ class DetailsScreen extends StatelessWidget {
             ),
             const SizedBox(height: 14),
 
-            // Пояснение
+            // Пояснение от LLM
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
@@ -85,10 +176,10 @@ class DetailsScreen extends StatelessWidget {
                 borderRadius: BorderRadius.circular(10),
                 border: Border.all(color: const Color(0xFF1F1F1F)),
               ),
-              child: const Column(
+              child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
+                  const Text(
                     'ЧТО ЭТО ЗНАЧИТ',
                     style: TextStyle(
                       fontSize: 9,
@@ -96,15 +187,8 @@ class DetailsScreen extends StatelessWidget {
                       letterSpacing: 1.2,
                     ),
                   ),
-                  SizedBox(height: 6),
-                  Text(
-                    'Кабель ровно передаёт всю слышимую полосу до 20 кГц с минимальными потерями. Для гитары, вокала и большинства инструментов — отличный результат.',
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: Color(0xFFCCCCCC),
-                      height: 1.55,
-                    ),
-                  ),
+                  const SizedBox(height: 6),
+                  _buildInsightContent(),
                 ],
               ),
             ),
@@ -162,6 +246,112 @@ class DetailsScreen extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  Widget _buildInsightContent() {
+    // Загрузка
+    if (_isLoading) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 8),
+        child: Row(
+          children: [
+            SizedBox(
+              width: 12,
+              height: 12,
+              child: CircularProgressIndicator(
+                strokeWidth: 1.5,
+                color: Color(0xFFEF9F27),
+              ),
+            ),
+            SizedBox(width: 10),
+            Text(
+              'Анализ результатов...',
+              style: TextStyle(
+                fontSize: 11,
+                color: Color(0xFF888888),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    // Ошибка
+    if (_error != null) {
+      return _buildErrorContent(_error!);
+    }
+
+    // Успех
+    return Text(
+      _insight ?? '',
+      style: const TextStyle(
+        fontSize: 11,
+        color: Color(0xFFCCCCCC),
+        height: 1.55,
+      ),
+    );
+  }
+
+  Widget _buildErrorContent(InsightException error) {
+    final isAuth = error is InsightAuthException;
+    final text = _errorText(error);
+    final color = isAuth ? const Color(0xFF888888) : const Color(0xFFEF9F27);
+
+    final content = Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(
+          isAuth ? Icons.lock_outline : Icons.refresh,
+          size: 14,
+          color: color,
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            text,
+            style: TextStyle(
+              fontSize: 11,
+              color: isAuth ? const Color(0xFF888888) : const Color(0xFFCCCCCC),
+              height: 1.55,
+            ),
+          ),
+        ),
+      ],
+    );
+
+    // Для auth — не кликабельно
+    if (isAuth) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: content,
+      );
+    }
+
+    // Остальные — кликабельны
+    return InkWell(
+      onTap: _isLoading ? null : _loadInsight,
+      borderRadius: BorderRadius.circular(6),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: content,
+      ),
+    );
+  }
+
+  String _errorText(InsightException error) {
+    if (error is InsightNetworkException) {
+      return 'Нет соединения. Нажмите, чтобы повторить';
+    }
+    if (error is InsightRateLimitException) {
+      return 'Слишком много запросов. Подождите минуту и нажмите, чтобы повторить';
+    }
+    if (error is InsightServerException) {
+      return 'Сервис недоступен. Нажмите, чтобы повторить';
+    }
+    if (error is InsightAuthException) {
+      return 'Ошибка доступа к сервису. Проверьте ключ API';
+    }
+    return 'Не удалось получить комментарий. Нажмите, чтобы повторить';
   }
 }
 

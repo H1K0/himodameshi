@@ -1,6 +1,9 @@
+// testing_progress_screen.dart
+
 import 'dart:async';
 import 'package:flutter/material.dart';
 import '/data/test_models.dart';
+import '/data/mock_test_data_generator.dart';   // ← новый импорт
 import 'testing_results_screen.dart';
 
 class TestingProgressScreen extends StatefulWidget {
@@ -27,11 +30,14 @@ class _TestingProgressScreenState extends State<TestingProgressScreen> {
   Timer? _totalTimer;
   DateTime? _testStartTime;
 
-  // Длительность каждого теста в секундах
+  // Накопленные результаты (mock-генерация)
+  Map<String, dynamic>? _continuityResult;
+  double? _cmrrDb;
+  List<double>? _freqValues;
+
   static const int _testDurationSeconds = 3;
 
   List<TestType> get _tests => widget.selectedTests;
-
   TestType get _currentTest => _tests[_currentTestIndex];
 
   String get _cableDisplayName {
@@ -52,6 +58,13 @@ class _TestingProgressScreenState extends State<TestingProgressScreen> {
     _startTotalTimer();
   }
 
+  @override
+  void dispose() {
+    _timer?.cancel();
+    _totalTimer?.cancel();
+    super.dispose();
+  }
+
   void _startTotalTimer() {
     _totalTimer = Timer.periodic(const Duration(milliseconds: 100), (timer) {
       if (!mounted) {
@@ -64,16 +77,25 @@ class _TestingProgressScreenState extends State<TestingProgressScreen> {
     });
   }
 
-  // В dispose останавливаем
-  @override
-  void dispose() {
-    _timer?.cancel();
-    _totalTimer?.cancel();
-    super.dispose();
+  /// Генерирует результат для текущего теста и сохраняет в накопленный набор
+  void _generateResultForCurrentTest() {
+    switch (_currentTest) {
+      case TestType.continuity:
+        _continuityResult = MockTestDataGenerator.generateContinuity(widget.cableType);
+        break;
+      case TestType.cmrr:
+        _cmrrDb = MockTestDataGenerator.generateCmrr();
+        break;
+      case TestType.freqResponse:
+        _freqValues = MockTestDataGenerator.generateFreqResponse();
+        break;
+    }
   }
 
-  // При завершении всех тестов передаём реальное время
   void _onTestComplete() {
+    // Генерируем результат завершённого теста
+    _generateResultForCurrentTest();
+
     if (_currentTestIndex + 1 < _tests.length) {
       setState(() {
         _currentTestIndex++;
@@ -87,7 +109,10 @@ class _TestingProgressScreenState extends State<TestingProgressScreen> {
           builder: (context) => TestingResultsScreen(
             cableType: widget.cableType,
             selectedTests: _tests,
-            totalTimeSeconds: _totalElapsedSeconds, // передаём реальное время
+            totalTimeSeconds: _totalElapsedSeconds,
+            continuityResult: _continuityResult,
+            cmrrDb: _cmrrDb,
+            freqValues: _freqValues,
           ),
         ),
       );
