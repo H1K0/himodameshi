@@ -53,7 +53,6 @@ class _CollectionScreenState extends State<CollectionScreen> {
   SortDirection _sortDirection = SortDirection.descending;
   String _searchQuery = '';
 
-  bool _isSortMenuVisible = false;
   final TextEditingController _searchController = TextEditingController();
 
   @override
@@ -109,13 +108,25 @@ class _CollectionScreenState extends State<CollectionScreen> {
     // Фильтр по цвету (Health Score)
     if (_colorFilter != ColorFilter.all && _typeFilter == TypeFilter.all) {
       filtered = filtered.where((cable) {
+        // Берем healthScore и вычисляем цвет на лету
+        final int? score = cable['healthScore'];
+
+        String category = 'green';
+        if (cable['hasCatastrophic'] == true) {
+          category = 'red';
+        } else if (score != null) {
+          if (score >= 80) category = 'green';
+          else if (score >= 50) category = 'yellow';
+          else category = 'red';
+        }
+
         switch (_colorFilter) {
           case ColorFilter.green:
-            return cable['colorCategory'] == 'green';
+            return category == 'green';
           case ColorFilter.yellow:
-            return cable['colorCategory'] == 'yellow';
+            return category == 'yellow';
           case ColorFilter.red:
-            return cable['colorCategory'] == 'red';
+            return category == 'red';
           default:
             return true;
         }
@@ -205,7 +216,6 @@ class _CollectionScreenState extends State<CollectionScreen> {
         _sortDirection = SortDirection.descending;
       });
     }
-    _isSortMenuVisible = false;
     _applyFilters();
   }
 
@@ -231,14 +241,13 @@ class _CollectionScreenState extends State<CollectionScreen> {
   }
 
   void _navigateToCableDetail(Map<String, dynamic> cable) {
-    final int healthScore = cable['healthScore'] ?? 0;
+    final int cableId = cable['id']; // <-- берем id из списка
+
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => CablePassportScreen(
-          cableName: cable['name'],
-          cableType: cable['cable_type'],
-          healthScore: healthScore,
+          cableId: cableId, // <-- передаем только id
           onBack: () {
             Navigator.pop(context);
           },
@@ -261,7 +270,14 @@ class _CollectionScreenState extends State<CollectionScreen> {
   }
 
   int _getCountByColor(String color) {
-    return _allCables.where((c) => c['colorCategory'] == color).length;
+    return _allCables.where((c) {
+      final int? score = c['healthScore'];
+      if (c['hasCatastrophic'] == true) return color == 'red';
+      if (score == null) return false;
+      if (score >= 80) return color == 'green';
+      if (score >= 50) return color == 'yellow';
+      return color == 'red';
+    }).length;
   }
 
   @override

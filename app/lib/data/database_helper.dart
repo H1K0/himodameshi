@@ -279,6 +279,7 @@ class DatabaseHelper {
     return result.map((row) {
       return {
         'id': 'session_${row['session_id']}',
+        'cable_id': row['cable_id'],
         'name': row['cable_name'],
         'cable': row['cable_type'],
         'status': row['cmrr_status'] ?? 'unknown',

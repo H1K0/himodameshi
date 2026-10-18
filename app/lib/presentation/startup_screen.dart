@@ -18,7 +18,7 @@ class StartupScreen extends StatefulWidget {
 
 class _StartupScreenState extends State<StartupScreen> {
   String _currentView = 'main';
-  String? _selectedCableId;
+  int? _selectedCableId;
   List<Map<String, dynamic>> _recentCables = [];
   bool _isLoading = true;
   bool _isBleMenuVisible = false;
@@ -210,15 +210,9 @@ class _StartupScreenState extends State<StartupScreen> {
     });
   }
 
-  String? _selectedCableName;
-  String? _selectedCableType;
-  int? _selectedCableScore;
-
-  void _showCablePassport(String name, String cableType, int score) {
+  void _showCablePassport(int cableId) { // <-- принимает int
     setState(() {
-      _selectedCableName = name;
-      _selectedCableType = cableType;
-      _selectedCableScore = score;
+      _selectedCableId = cableId; // сохраняем id
       _currentView = 'cable_passport';
     });
   }
@@ -253,11 +247,9 @@ class _StartupScreenState extends State<StartupScreen> {
     if (_currentView == 'device') {
       return DeviceSettingsScreen(onBack: _showMain);
     }
-    if (_currentView == 'cable_passport' && _selectedCableName != null) {
+    if (_currentView == 'cable_passport' && _selectedCableId != null) {
       return CablePassportScreen(
-        cableName: _selectedCableName!,
-        cableType: _selectedCableType ?? 'unknown',
-        healthScore: _selectedCableScore ?? 0,
+        cableId: _selectedCableId!, // <-- передаем id
         onBack: _showMain,
       );
     }
@@ -573,7 +565,7 @@ class _StartupScreenState extends State<StartupScreen> {
                         color: _getStatusColor(cable['status'] ?? 'unknown'),
                         title: _getCableTitle(cable),
                         subtitle: _getSubtitleForCable(cable),
-                        cableId: cable['id'] ?? '',
+                        cableId: cable['cable_id'],
                         cableName: cable['name'] ?? '',
                         cableType: cable['cable'] ?? 'unknown',
                         healthScore: _calculateHealthScore(cable),
@@ -759,14 +751,17 @@ class _StartupScreenState extends State<StartupScreen> {
     required Color color,
     required String title,
     required String subtitle,
-    required String cableId,
+    required int? cableId,
     required String cableName,
     required String cableType,
     required int healthScore,
   }) {
     return GestureDetector(
       onTap: () {
-        _showCablePassport(cableName, cableType, healthScore);
+        // Передаем реальный ID, если он есть, иначе 0
+        if (cableId != null) {
+          _showCablePassport(cableId);
+        }
       },
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),

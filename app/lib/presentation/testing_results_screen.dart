@@ -974,9 +974,7 @@ class _SaveToCollectionSheetState extends State<_SaveToCollectionSheet> {
             context,
             MaterialPageRoute(
               builder: (context) => CablePassportScreen(
-                cableName: name,
-                cableType: cableTypeStr,
-                healthScore: widget.healthScore,
+                cableId: cableId, // <-- ИЗМЕНЕНО: передаем только ID
                 onBack: () => Navigator.pop(context),
               ),
             ),
@@ -1000,7 +998,10 @@ class _SaveToCollectionSheetState extends State<_SaveToCollectionSheet> {
       final int cableId = int.parse(_selectedCableId!);
       try {
         await _saveTestSession(cableId);
+
+        // Получаем имя кабеля для снекбара (из уже загруженного списка _cables)
         final cable = _cables.firstWhere((c) => c['id'] == cableId);
+
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text('Результат добавлен к кабелю ${cable['name']}'), backgroundColor: Color(0xFF97C459)),
@@ -1010,9 +1011,7 @@ class _SaveToCollectionSheetState extends State<_SaveToCollectionSheet> {
             context,
             MaterialPageRoute(
               builder: (context) => CablePassportScreen(
-                cableName: cable['name'],
-                cableType: cable['cable_type'],
-                healthScore: widget.healthScore,
+                cableId: cableId, // <-- ИЗМЕНЕНО: передаем только ID
                 onBack: () => Navigator.pop(context),
               ),
             ),
