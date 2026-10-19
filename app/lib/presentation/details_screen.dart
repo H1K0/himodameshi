@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import '/data/test_models.dart';
@@ -13,6 +14,7 @@ class DetailsScreen extends StatefulWidget {
   final double? cmrrDb;
   final double? freqPeak;
   final double? freqSigma;
+  final List<double>? freqValues;
   final bool freqHasNoSignal;
 
   const DetailsScreen({
@@ -24,6 +26,7 @@ class DetailsScreen extends StatefulWidget {
     this.cmrrDb,
     this.freqPeak,
     this.freqSigma,
+    this.freqValues,
     this.freqHasNoSignal = false,
   });
 
@@ -158,9 +161,9 @@ class _DetailsScreenState extends State<DetailsScreen> {
                 children: [
                   SizedBox(
                     width: double.infinity,
-                    height: 230,
+                    height: 260,
                     child: CustomPaint(
-                      painter: _FrGraphPainter(),
+                      painter: _FrGraphPainter(values: widget.freqValues),
                     ),
                   ),
                 ],
@@ -357,76 +360,123 @@ class _DetailsScreenState extends State<DetailsScreen> {
 
 // Кастомный painter для графика АЧХ
 class _FrGraphPainter extends CustomPainter {
+  final List<double>? values;
+
+  _FrGraphPainter({this.values});
+
   @override
   void paint(Canvas canvas, Size size) {
     final width = size.width;
-    final height = size.height;
+
+    // Частотная таблица
+    final List<double> freqTable = [
+      10.0, 13.0, 18.0, 24.0, 31.0, 42.0, 56.0, 74.0, 99.0, 131.0,
+      175.0, 232.0, 309.0, 412.0, 548.0, 730.0, 1000.0, 1293.0, 1721.0,
+      2291.0, 3050.0, 4060.0, 5404.0, 7192.0, 9574.0, 12742.0, 16959.0,
+      22573.0, 30043.0, 40000.0,
+    ];
+
+    final double minLog = math.log(freqTable[0]);
+    final double maxLog = math.log(freqTable[29]);
+
+    double getX(int index) {
+      return ((math.log(freqTable[index]) - minLog) / (maxLog - minLog)) * (width - 30) + 15;
+    }
+
+    // Новая Y-формула. Теперь 0 дБ находится по центру между 30 и 230 (это 130).
+    // Шаг (200 пикселей / 6 дБ) = 33.33 пикселя на 1 дБ.
+    double getY(double db) {
+      return 130 - (db * (220 / 6));
+    }
 
     // Сетка
     final gridPaint = Paint()
-      ..color = const Color(0xFF1A1A1A)
+      ..color = const Color(0xFF454545)
       ..strokeWidth = 0.5
       ..style = PaintingStyle.stroke;
 
-    // Горизонтальные линии
-    canvas.drawLine(Offset(0, 20), Offset(width, 20), gridPaint);
-    canvas.drawLine(Offset(0, 100), Offset(width, 100), gridPaint);
-    canvas.drawLine(Offset(0, 220), Offset(width, 220), gridPaint);
+    // Горизонтальные линии (от 30 до 230)
+    for (int db = 3; db >= -3; db--) {
+      canvas.drawLine(Offset(15, getY(db.toDouble())), Offset(width, getY(db.toDouble())), gridPaint);
+    }
 
-    // Вертикальные линии
-    canvas.drawLine(Offset(30, 14), Offset(30, 228), gridPaint);
-    canvas.drawLine(Offset(190, 14), Offset(190, 228), gridPaint);
-    canvas.drawLine(Offset(width - 2, 14), Offset(width - 2, 228), gridPaint);
+    // Вертикальные линии (от 0 до 250)
+    canvas.drawLine(Offset(getX(3), 0), Offset(getX(3), 250), gridPaint);   // 20 Гц
+    canvas.drawLine(Offset(getX(8), 0), Offset(getX(8), 250), gridPaint);   // 100 Гц
+    canvas.drawLine(Offset(getX(16), 0), Offset(getX(16), 250), gridPaint); // 1 кГц
+    canvas.drawLine(Offset(getX(24), 0), Offset(getX(24), 250), gridPaint); // 10 кГц
+    canvas.drawLine(Offset(getX(29), 0), Offset(getX(29), 250), gridPaint); // 40 кГц
 
-    // Основная линия графика
+    // Подписи осей Y (сдвинуты вправо на x=45)
+    for (int db = 3; db >= -3; db--) {
+      String label = db > 0 ? '+$db' : (db == 0 ? '0' : '−${db.abs()}');
+      _drawText(canvas, label, 45, getY(db.toDouble()), alignRight: true);
+    }
+
+    // Подписи осей X (опущены вниз до y=255)
+    _drawText(canvas, '20 Гц', getX(3), 255);
+    _drawText(canvas, '100 Гц', getX(8), 255);
+    _drawText(canvas, '1 кГц', getX(16), 255);
+    _drawText(canvas, '10 кГц', getX(24), 255);
+    _drawText(canvas, '40 кГц', getX(29), 255);
+
+    // Если данных нет — прямая линия
+    if (values == null || values!.isEmpty || values!.length < 30) {
+      final graphPaint = Paint()..color = const Color(0xFFEF9F27)..strokeWidth = 2..style = PaintingStyle.stroke;
+      canvas.drawLine(Offset(0, getY(0)), Offset(width, getY(0)), graphPaint);
+      return;
+    }
+
+    // Проверяем, есть ли сильный провал (ниже -3 дБ)
+    final bool hasDrop = values!.any((v) => v < -3.0);
+
+    // Рисуем график по точкам
     final graphPaint = Paint()
-      ..color = const Color(0xFFEF9F27)
+      ..color = hasDrop ? const Color(0xFFE24B4A) : const Color(0xFFEF9F27) // Красный при провале
       ..strokeWidth = 2
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round;
 
     final path = Path();
-    path.moveTo(0, 112);
-    path.lineTo(30, 106);
-    path.lineTo(60, 102);
-    path.lineTo(90, 100);
-    path.lineTo(150, 100);
-    path.lineTo(210, 100);
-    path.lineTo(250, 106);
-    path.lineTo(280, 138);
-    path.lineTo(width, 194);
+    bool first = true;
+    for (int i = 0; i < 30; i++) {
+      final double x = getX(i);
+      final double y = getY(values![i]);
 
+      if (first) {
+        path.moveTo(x, y.clamp(30.0, 240.0));
+        first = false;
+      } else {
+        path.lineTo(x, y.clamp(30.0, 240.0));
+      }
+    }
     canvas.drawPath(path, graphPaint);
 
     // Точка на 20 кГц
-    final pointPaint = Paint()
-      ..color = const Color(0xFF0A0A0A)
-      ..style = PaintingStyle.fill;
+    final double x20k = getX(27);
+    final double v20k = values![27];
+    final double y20k = getY(v20k);
 
-    final pointStrokePaint = Paint()
-      ..color = const Color(0xFFEF9F27)
-      ..strokeWidth = 1.5
-      ..style = PaintingStyle.stroke;
+    final bool isBad20k = v20k < -3.0;
+    final Color pointColor = isBad20k ? const Color(0xFFE24B4A) : const Color(0xFFEF9F27);
 
-    canvas.drawCircle(Offset(width - 20, 138), 4, pointPaint);
-    canvas.drawCircle(Offset(width - 20, 138), 4, pointStrokePaint);
+    final pointPaint = Paint()..color = const Color(0xFF0A0A0A)..style = PaintingStyle.fill;
+    final pointStrokePaint = Paint()..color = pointColor..strokeWidth = 1.5..style = PaintingStyle.stroke;
 
-    // Рисуем тексты
-    _drawText(canvas, '10 Гц', 30, 250);
-    _drawText(canvas, '1 кГц', 190, 250);
-    _drawText(canvas, '40 кГц', width - 2, 250, alignRight: true);
-    _drawText(canvas, '+2', 24, 24, alignRight: true);
-    _drawText(canvas, '0', 24, 104, alignRight: true);
-    _drawText(canvas, '−3', 24, 224, alignRight: true);
-    _drawText(canvas, '20 кГц', width - 20, 270);
+    // Рисуем точку (прижимая её к нижней границе, если она ушла за -3)
+    final double displayY = y20k.clamp(30.0, 240.0);
+    canvas.drawCircle(Offset(x20k, displayY), 4, pointPaint);
+    canvas.drawCircle(Offset(x20k, displayY), 4, pointStrokePaint);
+
+    // Рисуем подпись со значением: НАД точкой, если это провал, и ПОД точкой в норме
+    final String labelText = isBad20k ? '${v20k.toStringAsFixed(1)} дБ' : '20 кГц';
+    final double labelY = isBad20k ? displayY - 12 : displayY + 18;
+
+    _drawText(canvas, labelText, x20k, labelY);
   }
 
-  void _drawText(Canvas canvas, String text, double x, double y,
-      {bool alignRight = false}) {
-    final paragraphBuilder = ui.ParagraphBuilder(ui.ParagraphStyle(
-      fontSize: 9,
-      textAlign: TextAlign.center,
-    ));
+  void _drawText(Canvas canvas, String text, double x, double y, {bool alignRight = false}) {
+    final paragraphBuilder = ui.ParagraphBuilder(ui.ParagraphStyle(fontSize: 9, textAlign: TextAlign.center));
     paragraphBuilder.addText(text);
     final paragraph = paragraphBuilder.build();
     paragraph.layout(const ui.ParagraphConstraints(width: 100));
@@ -438,9 +488,13 @@ class _FrGraphPainter extends CustomPainter {
       dx = x - paragraph.width / 2;
     }
 
-    canvas.drawParagraph(paragraph, Offset(dx, y - 9));
+    // Вычитаем половину высоты текста (примерно 4.5 пикселя), чтобы центр текста
+    // совпал с координатой y.
+    canvas.drawParagraph(paragraph, Offset(dx, y-4.5));
   }
 
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+  bool shouldRepaint(covariant _FrGraphPainter oldDelegate) {
+    return oldDelegate.values != values; // Перерисовываем при изменении данных
+  }
 }

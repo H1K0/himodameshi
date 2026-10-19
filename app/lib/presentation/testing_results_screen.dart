@@ -678,6 +678,7 @@ class TestingResultsScreen extends StatelessWidget {
                         cmrrDb: cmrrDb,
                         freqPeak: peak,
                         freqSigma: sigma,
+                        freqValues: freqValues,
                         freqHasNoSignal: hasNoSignal,
                       ),
                     ),
@@ -706,7 +707,7 @@ class TestingResultsScreen extends StatelessWidget {
             width: double.infinity,
             height: 46,
             child: CustomPaint(
-              painter: _MiniGraphPainter(),
+              painter: _MiniGraphPainter(values: freqValues),
             ),
           ),
         ],
@@ -717,10 +718,15 @@ class TestingResultsScreen extends StatelessWidget {
 
 // Мини-график для АЧХ в результатах
 class _MiniGraphPainter extends CustomPainter {
+  final List<double>? values;
+
+  _MiniGraphPainter({this.values});
+
   @override
   void paint(Canvas canvas, Size size) {
     final width = size.width;
 
+    // Сетка (3 горизонтальные линии)
     final gridPaint = Paint()
       ..color = const Color(0xFF1F1F1F)
       ..strokeWidth = 0.5
@@ -730,28 +736,48 @@ class _MiniGraphPainter extends CustomPainter {
     canvas.drawLine(Offset(0, 25), Offset(width, 25), gridPaint);
     canvas.drawLine(Offset(0, 36), Offset(width, 36), gridPaint);
 
+    // Если данных нет — рисуем прямую линию по центру
+    if (values == null || values!.isEmpty || values!.length < 30) {
+      final graphPaint = Paint()..color = const Color(0xFFEF9F27)..strokeWidth = 1.6..style = PaintingStyle.stroke;
+      canvas.drawLine(Offset(0, 25), Offset(width, 25), graphPaint);
+      return;
+    }
+
+    // Проверяем, есть ли сильный провал (ниже -3 дБ)
+    final bool hasDrop = values!.any((v) => v < -3.0);
+
     final graphPaint = Paint()
-      ..color = const Color(0xFFEF9F27)
+      ..color = hasDrop ? const Color(0xFFE24B4A) : const Color(0xFFEF9F27) // Красный при провале
       ..strokeWidth = 1.6
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round;
 
     final path = Path();
-    path.moveTo(0, 27);
-    path.lineTo(width * 0.1, 26);
-    path.lineTo(width * 0.2, 25);
-    path.lineTo(width * 0.3, 25);
-    path.lineTo(width * 0.5, 25);
-    path.lineTo(width * 0.7, 26);
-    path.lineTo(width * 0.85, 28);
-    path.lineTo(width * 0.95, 33);
-    path.lineTo(width, 40);
+
+    bool first = true;
+    for (int i = 0; i < 30; i++) {
+      // X: растягиваем на всю ширину мини-графика
+      final double x = (i / 29) * width;
+
+      // Y: отображаем диапазон от +3 до -3 дБ в высоту от 5 до 45 пикселей.
+      // Центр (0 дБ) — это y = 25. Шаг — 6.6 пикселя на 1 дБ.
+      final double y = 25 - (values![i] * 6.6);
+
+      if (first) {
+        path.moveTo(x, y.clamp(5, 45));
+        first = false;
+      } else {
+        path.lineTo(x, y.clamp(5, 45));
+      }
+    }
 
     canvas.drawPath(path, graphPaint);
   }
 
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+  bool shouldRepaint(covariant _MiniGraphPainter oldDelegate) {
+    return oldDelegate.values != values;
+  }
 }
 
 // ---------------------------------------------------------------------
