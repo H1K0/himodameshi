@@ -157,19 +157,7 @@ class BleRealDataSource implements BleDataSource {
   @override
   Future<List<Map<String, dynamic>>> getAllCables() async {
     final db = DatabaseHelper();
-    final cables = await db.getCables();
-
-    // Для каждого кабеля нужно подгрузить последний health score
-    final List<Map<String, dynamic>> result = [];
-    for (final cable in cables) {
-      final lastSession = await db.getLastTestSession(cable['id']);
-      result.add({
-        ...cable,
-        'healthScore': lastSession?['health_score'] ?? 0,
-        'lastCheck': lastSession?['started_at'] ?? 0,
-      });
-    }
-    return result;
+    return await db.getAllCablesWithHealthScore();
   }
 
   @override

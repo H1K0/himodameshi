@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'data/ble_data_manager.dart';
 import 'presentation/startup_screen.dart';
 import 'presentation/collection_screen.dart';
 import 'presentation/app_settings_screen.dart';
@@ -22,7 +23,8 @@ void main() async {
   HttpOverrides.global = _DevHttpOverrides();
   // Инициализируем БД и добавляем мок-данные при первом запуске
   final dbHelper = DatabaseHelper();
-  await dbHelper.checkFirstLaunchAndInsertMockData();
+  await dbHelper.importMockDataIfEmpty();
+  await BleDataManager().switchTo(DataSourceType.mock);
 
   runApp(const MyApp());
 }

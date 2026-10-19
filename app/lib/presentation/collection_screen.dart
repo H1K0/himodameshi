@@ -79,8 +79,12 @@ class _CollectionScreenState extends State<CollectionScreen> {
     });
 
     try {
-      // Получаем данные через менеджер (он сам решит, из mock или real)
       final cables = await _dataManager.getAllCables();
+
+      // ОТЛАДКА: смотрим, что пришло
+      if (cables.isNotEmpty) {
+        print('🔴 [Collection] Первый кабель: ${cables.first}');
+      }
 
       setState(() {
         _allCables = cables;
@@ -254,6 +258,12 @@ class _CollectionScreenState extends State<CollectionScreen> {
         ),
       ),
     );
+  }
+
+  String _getChecksWord(int count) {
+    if (count % 10 == 1 && count % 100 != 11) return 'проверка';
+    if (count % 10 >= 2 && count % 10 <= 4 && (count % 100 < 10 || count % 100 >= 20)) return 'проверки';
+    return 'проверок';
   }
 
   String _getTypeLabelFromString(String type) {
@@ -473,7 +483,7 @@ class _CollectionScreenState extends State<CollectionScreen> {
                               ),
                               const SizedBox(height: 2),
                               Text(
-                                '${cable['checksCount'] ?? 0} проверок · ${cable['lastCheck'] ?? 'нет данных'}',
+                                '${cable['checksCount'] ?? 0} ${_getChecksWord(cable['checksCount'] ?? 0)} · ${cable['lastCheck'] ?? 'нет данных'}',
                                 style: const TextStyle(
                                   fontSize: 10,
                                   color: Color(0xFF888888),

@@ -46,7 +46,8 @@ class BleDataManager {
 
     // Создаём новый источник
     if (type == DataSourceType.mock) {
-      _currentDataSource = BleMockDataSource(sequenceName: sequenceName);
+      // Всегда используем реальный источник, так как данные (и моки, и реал) теперь в БД
+      _currentDataSource = BleRealDataSource();
       _currentType = type;
       if (!_typeController.isClosed) {
         _typeController.add(type);

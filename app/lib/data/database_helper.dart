@@ -1,6 +1,11 @@
+import 'package:app/data/test_models.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart';
+import 'dart:convert';
+import 'package:flutter/services.dart';
+
+import '../domain/health_score_calculator.dart';
 
 class DatabaseHelper {
   static final DatabaseHelper _instance = DatabaseHelper._internal();
@@ -8,7 +13,6 @@ class DatabaseHelper {
   DatabaseHelper._internal();
 
   static Database? _database;
-  static bool _isFirstLaunchChecked = false;
 
   Future<Database> get database async {
     if (_database != null) return _database!;
@@ -131,58 +135,123 @@ class DatabaseHelper {
   }
 
   // ---------- Вспомогательные методы ----------
-  Future<void> checkFirstLaunchAndInsertMockData() async {
-    if (_isFirstLaunchChecked) return;
-    final db = await database;
-    final count = Sqflite.firstIntValue(
-        await db.rawQuery('SELECT COUNT(*) FROM cables')
-    );
-    if (count == 0) {
-      await _insertMockData(db);
+  Future<void> importMockDataIfEmpty() async {
+    try {
+      final db = await database;
+      final count = Sqflite.firstIntValue(await db.rawQuery('SELECT COUNT(*) FROM cables'));
+
+      if (count != null && count > 0) {
+        print('🟢 [DB Import] База не пуста ($count кабелей), импорт пропущен.');
+        return;
+      }
+
+      final jsonString = await rootBundle.loadString('mock/ble_mock_packets.json');
+      final Map<String, dynamic> jsonData = jsonDecode(jsonString);
+      final continuityResults = jsonData['results']['continuity'] as Map<String, dynamic>;
+      final cmrrResults = jsonData['results']['cmrr'] as Map<String, dynamic>;
+      final freqResults = jsonData['results']['freq_response'] as Map<String, dynamic>;
+
+      final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+
+      for (final entry in continuityResults.entries) {
+        final cableIdStr = entry.key;
+        if (cableIdStr.startsWith('_')) continue;
+
+        try {
+          final continuityData = entry.value;
+          final cableTypeStr = continuityData['cable'] ?? 'unknown';
+
+          String displayName = cableIdStr.split('_').map((word) => word.isNotEmpty ? word[0].toUpperCase() + word.substring(1) : '').join(' ');
+
+          final int cableId = await db.insert('cables', {
+            'name': displayName,
+            'color': '639922',
+            'cable_type': cableTypeStr,
+            'created_at': now,
+            'note': 'Импортирован из mock-данных',
+          });
+          print('🟢 [DB Import] Создан кабель: $displayName (ID: $cableId)');
+
+          final conductorsMap = continuityData['conductors'] as Map<String, dynamic>;
+          final List<Map<String, dynamic>> conductors = [];
+          for (final condEntry in conductorsMap.entries) {
+            conductors.add({
+              'name': condEntry.key,
+              'r': (condEntry.value['r'] as num).toDouble(),
+              's': condEntry.value['s'] as String,
+            });
+          }
+
+          final double? cmrrDb = cmrrResults.containsKey(cableIdStr)
+              ? (cmrrResults[cableIdStr]['cmrr_db'] as num).toDouble()
+              : null;
+
+          List<double>? freqValues;
+          if (freqResults.containsKey(cableIdStr)) {
+            freqValues = (freqResults[cableIdStr]['v'] as List).map((e) => (e as num).toDouble()).toList();
+          }
+
+          CableType? cableType;
+          switch (cableTypeStr) {
+            case 'xlr': cableType = CableType.xlr; break;
+            case 'jack_trs': cableType = CableType.jackTrs; break;
+            case 'jack_ts': cableType = CableType.jackTs; break;
+          }
+
+          int healthScore = 0;
+          if (cableType != null) {
+            final healthResult = HealthScoreCalculator.calculate(
+              cableType: cableType,
+              continuityConductors: conductors,
+              cmrrDb: cmrrDb,
+              freqResponseValues: freqValues,
+              continuityRun: true,
+              cmrrRun: cableType.supportsCmrr,
+              freqRun: freqValues != null,
+            );
+            healthScore = (healthResult.score ?? 0).toInt();
+          }
+
+          final int sessionId = await db.insert('test_sessions', {
+            'cable_id': cableId,
+            'started_at': now,
+            'health_score': healthScore,
+            'ble_device_id': 'MOCK-DEVICE',
+          });
+          print('🟢 [DB Import] Создана сессия (ID: $sessionId), Score: $healthScore');
+
+          await db.insert('continuity_results', {
+            'session_id': sessionId,
+            'status': continuityData['status'],
+            'conductors': jsonEncode(conductors),
+          });
+          print('🟢 [DB Import] Сохранена целостность для сессии $sessionId');
+
+          if (cmrrDb != null) {
+            await db.insert('cmrr_results', {
+              'session_id': sessionId,
+              'value_db': cmrrDb,
+              'status': cmrrResults[cableIdStr]['status'],
+            });
+            print('🟢 [DB Import] Сохранен CMRR для сессии $sessionId');
+          }
+
+          if (freqValues != null) {
+            await db.insert('freq_response_results', {
+              'session_id': sessionId,
+              'status': freqResults[cableIdStr]['status'],
+              'points': jsonEncode(freqValues),
+            });
+            print('🟢 [DB Import] Сохранена АЧХ для сессии $sessionId');
+          }
+        } catch (e) {
+          print('🔴 [DB Import] ОШИБКА при импорте теста $cableIdStr: $e');
+        }
+      }
+      print('🟢 [DB Import] Импорт завершен.');
+    } catch (e) {
+      print('🔴 [DB Import] КРИТИЧЕСКАЯ ОШИБКА: $e');
     }
-    _isFirstLaunchChecked = true;
-  }
-
-  Future<void> _insertMockData(Database db) async {
-    // ... (как в исходном файле, плюс добавить поле note)
-    final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
-    await db.insert('cables', {
-      'name': 'Mogami #1',
-      'color': '639922',
-      'cable_type': 'xlr',
-      'created_at': now - 30 * 24 * 60 * 60,
-      'note': 'Купил в 2024, для вокала',
-    });
-    await db.insert('cables', {
-      'name': 'Гитарный длинный',
-      'color': 'EF9F27',
-      'cable_type': 'jack_ts',
-      'created_at': now - 14 * 24 * 60 * 60,
-      'note': '',
-    });
-    await db.insert('cables', {
-      'name': 'XLR Neutrik',
-      'color': '639922',
-      'cable_type': 'xlr',
-      'created_at': now - 60 * 24 * 60 * 60,
-      'note': 'Профессиональный',
-    });
-
-    await db.insert('cables', {
-      'name': 'Jack TRS Proel',
-      'color': 'EF9F27',
-      'cable_type': 'jack_trs',
-      'created_at': now - 45 * 24 * 60 * 60,
-      'note': '',
-    });
-
-    await db.insert('cables', {
-      'name': 'Jack TS Klotz',
-      'color': 'E24B4A',
-      'cable_type': 'jack_ts',
-      'created_at': now - 90 * 24 * 60 * 60,
-      'note': 'Требует ремонта',
-    });
   }
 
   Future<void> close() async {
@@ -255,7 +324,7 @@ class DatabaseHelper {
   Future<List<Map<String, dynamic>>> getRecentTestSessions({int limit = 6}) async {
     final db = await database;
 
-    // Получаем последние сессии с информацией о кабеле и CMRR
+    // Убрали WHERE, чтобы показывать ВСЕ сессии, а не только с CMRR
     final result = await db.rawQuery('''
       SELECT 
         ts.id as session_id,
@@ -270,7 +339,6 @@ class DatabaseHelper {
       FROM test_sessions ts
       JOIN cables c ON ts.cable_id = c.id
       LEFT JOIN cmrr_results cr ON ts.id = cr.session_id
-      WHERE cr.value_db IS NOT NULL
       ORDER BY ts.started_at DESC
       LIMIT ?
     ''', [limit]);
@@ -282,11 +350,11 @@ class DatabaseHelper {
         'cable_id': row['cable_id'],
         'name': row['cable_name'],
         'cable': row['cable_type'],
-        'status': row['cmrr_status'] ?? 'unknown',
+        'status': row['cmrr_status'] ?? 'unknown', // Если нет CMRR, будет unknown
         'cmrr_db': row['cmrr_db']?.toString() ?? '--',
         'ts': row['started_at'],
         'health_score': row['health_score'],
-        'test_type': 'cmrr',
+        'test_type': row['cmrr_db'] != null ? 'cmrr' : 'other', // Помечаем тип теста
       };
     }).toList();
   }
@@ -299,7 +367,8 @@ class DatabaseHelper {
       SELECT 
         c.*,
         ts.health_score as last_health_score,
-        ts.started_at as last_check_date
+        ts.started_at as last_check_date,
+        (SELECT COUNT(*) FROM test_sessions WHERE cable_id = c.id) as checks_count
       FROM cables c
       LEFT JOIN test_sessions ts ON c.id = ts.cable_id
       WHERE ts.id IN (
@@ -307,10 +376,10 @@ class DatabaseHelper {
         FROM test_sessions 
         GROUP BY cable_id
       )
+      OR ts.id IS NULL
       ORDER BY c.name ASC
     ''');
 
-    // Для кабелей без тестов health_score будет null
     return result.map((row) {
       return {
         'id': row['id'],
@@ -321,6 +390,7 @@ class DatabaseHelper {
         'note': row['note'] ?? '',
         'healthScore': row['last_health_score'],
         'lastCheck': row['last_check_date'],
+        'checksCount': row['checks_count'] ?? 0, // <-- ДОБАВИЛИ СЧЕТЧИК
       };
     }).toList();
   }

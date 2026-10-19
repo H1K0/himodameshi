@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../data/database_helper.dart';
 import 'testing_screen.dart';
 import 'device_settings_screen.dart';
 import 'cable_passport_screen.dart';
@@ -55,33 +56,18 @@ class _StartupScreenState extends State<StartupScreen> {
     });
 
     try {
-      if (_isMockMode || _dataManager.currentDataSource == null) {
-        // Загружаем через менеджер (он сам возьмёт из mock)
-        final stats = await _dataManager.getCollectionStatistics();
-        final recentTests = await _dataManager.getRecentTests(limit: 6);
+      // Теперь менеджер сам поймет, что надо брать данные из БД
+      final stats = await _dataManager.getCollectionStatistics();
+      final recentTests = await _dataManager.getRecentTests(limit: 6);
 
-        setState(() {
-          _totalCables = stats['total'];
-          _excellentCount = stats['excellent'];
-          _okCount = stats['ok'];
-          _failCount = stats['fail'];
-          _recentCables = recentTests;
-          _lastTestTime = _getLastTestTimeFromList(recentTests);
-        });
-      } else {
-        // Загружаем из реального источника
-        final stats = await _dataManager.getCollectionStatistics();
-        final recentTests = await _dataManager.getRecentTests(limit: 6);
-
-        setState(() {
-          _totalCables = stats['total'];
-          _excellentCount = stats['excellent'];
-          _okCount = stats['ok'];
-          _failCount = stats['fail'];
-          _recentCables = recentTests;
-          _lastTestTime = _getLastTestTimeFromList(recentTests);
-        });
-      }
+      setState(() {
+        _totalCables = stats['total'] ?? 0;
+        _excellentCount = stats['excellent'] ?? 0;
+        _okCount = stats['ok'] ?? 0;
+        _failCount = stats['fail'] ?? 0;
+        _recentCables = recentTests;
+        _lastTestTime = _getLastTestTimeFromList(recentTests);
+      });
     } catch (e) {
       print('Error loading data: $e');
       setState(() {
@@ -132,18 +118,14 @@ class _StartupScreenState extends State<StartupScreen> {
     final dataSource = _dataManager.currentDataSource;
     if (dataSource != null) {
       setState(() {
+        // Так как мы всегда используем BleRealDataSource для чтения из БД,
+        // проверяем его статус подключения к BLE
         if (dataSource is BleRealDataSource) {
           _bleStatus = dataSource.bleProvider.connectionStatus;
-          _isMockMode = false;
-        } else {
-          _bleStatus = ConnectionStatus.connected;
-          _isMockMode = true;
         }
-      });
-    } else {
-      setState(() {
-        _bleStatus = ConnectionStatus.disconnected;
-        _isMockMode = false;
+
+        // Режим определяем по менеджеру
+        _isMockMode = _dataManager.isMockMode;
       });
     }
   }
@@ -512,29 +494,6 @@ class _StartupScreenState extends State<StartupScreen> {
                       ),
                     ),
                   )
-                else if (!_isMockMode && _bleStatus == ConnectionStatus.disconnected)
-                  Center(
-                    child: Padding(
-                      padding: const EdgeInsets.all(32),
-                      child: Column(
-                        children: [
-                          const Icon(
-                            Icons.bluetooth_disabled,
-                            size: 40,
-                            color: Color(0xFF666666),
-                          ),
-                          const SizedBox(height: 12),
-                          Text(
-                            'Нет подключения к устройству',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.grey[600],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  )
                 else if (_recentCables.isEmpty)
                     Center(
                       child: Padding(
@@ -603,15 +562,18 @@ class _StartupScreenState extends State<StartupScreen> {
   String _getSubtitleForCable(Map<String, dynamic> cable) {
     final cmrr = cable['cmrr_db'] ?? '--';
     final status = cable['status'] ?? '';
+    final score = cable['health_score'] ?? 0;
 
     if (status == 'excellent') {
-      return 'cmrr $cmrr дБ · Отлично';
+      return 'CMRR $cmrr дБ · Отлично';
     } else if (status == 'ok' || status == 'warning') {
-      return 'cmrr $cmrr дБ · Удовлетворительно';
+      return 'CMRR $cmrr дБ · Удовлетворительно';
     } else if (status == 'fail') {
-      return 'cmrr $cmrr дБ · Неудовлетворительно';
+      return 'CMRR $cmrr дБ · Неудовлетворительно';
     }
-    return 'cmrr $cmrr дБ';
+
+    // Для тестов без CMRR (например, Jack TS)
+    return 'HS $score/100 · Без CMRR';
   }
 
   int _calculateHealthScore(Map<String, dynamic> cable) {
