@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
+import '../domain/freq_response_stats.dart';
 import '/data/test_models.dart';
 import '/data/insight_generator_provider.dart';
 import '/data/insight_input.dart';
@@ -100,6 +101,7 @@ class _DetailsScreenState extends State<DetailsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final metrics = FreqMetrics.fromValues(widget.freqValues);
     return Scaffold(
       backgroundColor: const Color(0xFF0A0A0A),
       appBar: AppBar(
@@ -124,7 +126,7 @@ class _DetailsScreenState extends State<DetailsScreen> {
                 Expanded(
                   child: _buildMetricCard(
                     title: 'Полоса −3 дБ',
-                    value: '22.4',
+                    value: metrics.bandwidth3db,
                     unit: 'кГц',
                   ),
                 ),
@@ -132,16 +134,18 @@ class _DetailsScreenState extends State<DetailsScreen> {
                 Expanded(
                   child: _buildMetricCard(
                     title: 'На 20 кГц',
-                    value: '−2.1',
+                    value: metrics.valueAt20khz,
                     unit: 'дБ',
-                    valueColor: const Color(0xFF97C459),
+                    valueColor: double.tryParse(metrics.valueAt20khz) != null && double.parse(metrics.valueAt20khz) < -3.0
+                        ? const Color(0xFFE24B4A) // Красный, если провал
+                        : const Color(0xFF97C459), // Зеленый, если норма
                   ),
                 ),
                 const SizedBox(width: 6),
                 Expanded(
                   child: _buildMetricCard(
                     title: 'Неравн.',
-                    value: '±0.4',
+                    value: metrics.unevenness,
                     unit: 'дБ',
                   ),
                 ),
