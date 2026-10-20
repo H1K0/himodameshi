@@ -323,6 +323,22 @@ class _CablePassportScreenState extends State<CablePassportScreen> {
     }
   }
 
+  // Получаем историю в хронологическом порядке (от старых к новым)
+  List<int> get _healthScoreHistory {
+    final history = _cableData?['history'] as List?;
+    if (history == null || history.isEmpty) return [];
+
+    // Берем только завершенные сессии с health_score и переворачиваем
+    final scores = history
+        .where((s) => s['health_score'] != null)
+        .map((s) => s['health_score'] as int)
+        .toList()
+        .reversed
+        .toList();
+
+    return scores;
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
@@ -454,6 +470,41 @@ class _CablePassportScreenState extends State<CablePassportScreen> {
                 ],
               ),
             ),
+            // Динамика Health Score
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 16, 24, 6),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'ДИНАМИКА HEALTH SCORE',
+                    style: TextStyle(
+                      fontSize: 10,
+                      color: Color(0xFF666666),
+                      letterSpacing: 1.5,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF111111),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: const Color(0xFF1F1F1F)),
+                    ),
+                    child: SizedBox(
+                      width: double.infinity,
+                      height: 90,
+                      child: CustomPaint(
+                        painter: _HealthScoreGraphPainter(
+                          history: _healthScoreHistory,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
 
             // Показатели
             Padding(
@@ -548,9 +599,106 @@ class _CablePassportScreenState extends State<CablePassportScreen> {
     );
   }
 
+
+
   Color _getScoreColor(int score) {
     if (score >= 80) return const Color(0xFF97C459);
     if (score >= 50) return const Color(0xFFEF9F27);
     return const Color(0xFFE24B4A);
   }
+}
+// График динамики Health Score
+class _HealthScoreGraphPainter extends CustomPainter {
+  final List<int> history;
+
+  _HealthScoreGraphPainter({required this.history});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final width = size.width;
+
+    // Сетка
+    final gridPaint = Paint()
+      ..color = const Color(0xFF1A1A1A)
+      ..strokeWidth = 0.5
+      ..style = PaintingStyle.stroke;
+
+    // Горизонтальные линии (100, 80, 60)
+    canvas.drawLine(Offset(0, 20), Offset(width, 20), gridPaint);
+    canvas.drawLine(Offset(0, 50), Offset(width, 50), gridPaint);
+    canvas.drawLine(Offset(0, 80), Offset(width, 80), gridPaint);
+
+    // Тексты меток
+    final paragraphBuilder100 = ParagraphBuilder(ParagraphStyle(textAlign: TextAlign.end));
+    paragraphBuilder100.addText('100');
+    final paragraph100 = paragraphBuilder100.build()..layout(const ParagraphConstraints(width: 30));
+    canvas.drawParagraph(paragraph100, Offset(22 - 30, 20 - 6));
+
+    final paragraphBuilder80 = ParagraphBuilder(ParagraphStyle(textAlign: TextAlign.end));
+    paragraphBuilder80.addText('80');
+    final paragraph80 = paragraphBuilder80.build()..layout(const ParagraphConstraints(width: 30));
+    canvas.drawParagraph(paragraph80, Offset(22 - 30, 50 - 6));
+
+    final paragraphBuilder60 = ParagraphBuilder(ParagraphStyle(textAlign: TextAlign.end));
+    paragraphBuilder60.addText('60');
+    final paragraph60 = paragraphBuilder60.build()..layout(const ParagraphConstraints(width: 30));
+    canvas.drawParagraph(paragraph60, Offset(22 - 30, 80 - 6));
+
+    // Рисуем график
+    if (history.isEmpty) return;
+
+    final graphPaint = Paint()
+      ..color = const Color(0xFFEF9F27)
+      ..strokeWidth = 1.8
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round;
+
+    final pointPaint = Paint()
+      ..color = const Color(0xFF0A0A0A)
+      ..style = PaintingStyle.fill;
+
+    final pointStrokePaint = Paint()
+      ..color = const Color(0xFF97C459)
+      ..strokeWidth = 1.6
+      ..style = PaintingStyle.stroke;
+
+    // Если точка всего одна, ставим ее по центру
+    final int count = history.length;
+    final double stepX = count > 1 ? (width - 50) / (count - 1) : 0;
+    final List<Offset> points = [];
+
+    for (int i = 0; i < count; i++) {
+      final double x = count > 1 ? 50 + i * stepX : width / 2;
+      // Значения от 100 до 0 (но на графике ограничиваем диапазоном 20-80px)
+      final double y = 20 + (100 - history[i]) / 100 * 60;
+      points.add(Offset(x, y.clamp(20, 80)));
+    }
+
+    // Рисуем линию (только если точек больше 1)
+    if (points.length > 1) {
+      final path = Path();
+      path.moveTo(points[0].dx, points[0].dy);
+      for (int i = 1; i < points.length; i++) {
+        path.lineTo(points[i].dx, points[i].dy);
+      }
+      canvas.drawPath(path, graphPaint);
+    }
+
+    // Рисуем точки
+    for (int i = 0; i < points.length; i++) {
+      final isLast = i == points.length - 1;
+      canvas.drawCircle(points[i], 4, pointPaint);
+      canvas.drawCircle(
+        points[i],
+        4,
+        Paint()
+          ..color = isLast ? const Color(0xFF97C459) : const Color(0xFFEF9F27)
+          ..strokeWidth = 1.6
+          ..style = PaintingStyle.stroke,
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _HealthScoreGraphPainter oldDelegate) => oldDelegate.history != history;
 }
