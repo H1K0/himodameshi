@@ -1,0 +1,2098 @@
+openapi: 3.0.3
+
+info:
+  title: Himo Hub API
+  version: 0.1.0
+  description: |
+    API веб-сервиса совместного ведения истории тестирования аудиокабелей.
+    Клиенты — веб-интерфейс Hub и мобильное приложение Himo.
+
+    Требования — `docs/spec/hub/requirements.md`, модель данных — `docs/spec/hub/data-model.md`,
+    протокол синхронизации — `docs/spec/hub/sync.md`, соглашения API — ADR-023, аутентификация — ADR-022.
+
+    ## Аутентификация
+
+    Сеанс — непрозрачный токен. Приложение передаёт его в заголовке `Authorization: Bearer <токен>`,
+    веб получает его в cookie `__Host-himo_session` и в теле ответа не видит. Изменяющие запросы
+    с cookie должны нести заголовок `Origin`, равный адресу сервиса.
+
+    ## Версия приложения
+
+    Приложение отправляет заголовок `X-App-Version` (например, `0.7.0`) с каждым запросом.
+    Если версия ниже минимальной, любой запрос получает `426` с `code: app_outdated`
+    и полем `min_app_version`. Запросы без заголовка (веб) не проверяются.
+
+    ## Ошибки
+
+    Ошибки — по RFC 9457 (`application/problem+json`). Поле `code` — машиночитаемый код,
+    по нему клиент выбирает текст сообщения.
+
+    | HTTP | `code`                  | Когда                                                                 |
+    | ---- | ----------------------- | --------------------------------------------------------------------- |
+    | 400  | `validation_error`      | Тело или параметры не прошли проверку; подробности в `errors`         |
+    | 400  | `wrong_password`        | Неверный текущий пароль при его смене                                 |
+    | 401  | `unauthorized`          | Нет сеанса, сеанс истёк или завершён                                  |
+    | 401  | `invalid_credentials`   | Неверный ник или пароль                                               |
+    | 401  | `telegram_auth_invalid` | Неверная подпись или устаревшие данные Telegram Login Widget          |
+    | 401  | `telegram_not_linked`   | Telegram не привязан ни к одной учётной записи                        |
+    | 403  | `origin_mismatch`       | Изменяющий запрос с cookie без правильного `Origin`                   |
+    | 403  | `no_team_access`        | Пользователь не состоит в команде                                     |
+    | 403  | `owner_only`            | Действие доступно только владельцу команды                            |
+    | 404  | `not_found`             | Объекта нет или он принадлежит чужой команде                          |
+    | 404  | `invitation_invalid`    | Приглашение не существует, истекло, отозвано или уже использовано     |
+    | 409  | `nickname_taken`        | Ник занят                                                             |
+    | 409  | `telegram_taken`        | Этот Telegram привязан к другой учётной записи                        |
+    | 409  | `version_conflict`      | Кабель изменён после версии из запроса; актуальный кабель — в `cable` |
+    | 409  | `cable_archived`        | Кабель в архиве и не принимает изменений                              |
+    | 409  | `cable_type_locked`     | Тип кабеля нельзя менять: у кабеля есть тесты                         |
+    | 409  | `not_a_member`          | Указанный пользователь не состоит в команде                           |
+    | 409  | `personal_team`         | Действие недоступно для личного пространства                          |
+    | 409  | `owner_cannot_leave`    | Владелец не может выйти или исключить себя, не передав владение       |
+    | 409  | `owner_with_members`    | Нельзя удалить учётную запись владельца команды с другими участниками |
+    | 409  | `already_member`        | Пользователь уже состоит в команде                                    |
+    | 409  | `member_limit_reached`  | В команде исчерпан лимит участников по тарифу                         |
+    | 426  | `app_outdated`          | Версия приложения ниже минимальной; минимальная — в `min_app_version` |
+    | 429  | `rate_limited`          | Слишком много запросов                                                |
+    | 503  | `insights_unavailable`  | ИИ-комментарии временно недоступны (исчерпан дневной лимит, сбой модели) |
+
+    В результатах `POST /api/v1/sync/push` по отдельным объектам используются те же коды,
+    а также `cable_not_found` (кабеля нет в Hub) и `id_conflict` (объект с таким ID уже есть
+    с другим содержимым или в другой команде).
+
+    ## Общие правила
+
+    - Имена полей и перечисления — `snake_case`, как в BLE-протоколе.
+    - Время — RFC 3339; сервер отдаёт UTC с `Z`, на входе допускается любое смещение.
+    - ID — UUIDv7. Кабели и тесты получают ID в приложении.
+    - Отсутствующее значение — `null`, поле присутствует.
+    - Списки — `limit` (1–100, по умолчанию 50) и `offset`, ответ `{items, total}`.
+
+servers:
+  - url: /
+
+security:
+  - bearerAuth: []
+  - cookieAuth: []
+
+tags:
+  - name: auth
+    description: Регистрация, вход и сеансы (HUB-1, ADR-022)
+  - name: profile
+    description: Профиль пользователя (HUB-1)
+  - name: teams
+    description: Команды и участники (HUB-2, HUB-3)
+  - name: invitations
+    description: Приглашения в команду (HUB-2)
+  - name: cables
+    description: Кабели (HUB-4)
+  - name: tests
+    description: Тесты (HUB-5, HUB-6)
+  - name: sync
+    description: Синхронизация с приложением (HUB-7, `docs/spec/hub/sync.md`)
+  - name: events
+    description: Журнал действий команды (HUB-9)
+  - name: insights
+    description: ИИ-комментарии (HUB-10, ADR-018)
+  - name: service
+    description: Служебные эндпоинты
+
+paths:
+  # ─── Вход ────────────────────────────────────────────────────────────────────
+  /api/v1/auth/register:
+    post:
+      tags: [auth]
+      operationId: register
+      summary: Регистрация
+      description: |
+        Создаёт учётную запись и личное пространство и сразу открывает сеанс.
+        Для `client: web` токен приходит в cookie, для `client: app` — в теле ответа.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RegisterRequest' }
+      responses:
+        '201':
+          description: Учётная запись создана, сеанс открыт
+          headers:
+            Set-Cookie:
+              $ref: '#/components/headers/SessionCookie'
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Session' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+
+  /api/v1/auth/login:
+    post:
+      tags: [auth]
+      operationId: login
+      summary: Вход по нику и паролю
+      description: |
+        Для `client: web` токен приходит в cookie, для `client: app` — в теле ответа.
+        Для несуществующего ника и неверного пароля ответ одинаковый.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/LoginRequest' }
+      responses:
+        '200':
+          description: Сеанс открыт
+          headers:
+            Set-Cookie:
+              $ref: '#/components/headers/SessionCookie'
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Session' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '426': { $ref: '#/components/responses/AppOutdated' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+
+  /api/v1/auth/telegram:
+    post:
+      tags: [auth]
+      operationId: loginTelegram
+      summary: Вход через Telegram Login Widget
+      description: |
+        Только веб. SPA передаёт объект, полученный от виджета, без изменений.
+        Сервер проверяет подпись и свежесть `auth_date` (не старше суток) и открывает веб-сеанс.
+        Регистрации через Telegram нет: если Telegram не привязан, ответ `telegram_not_linked`.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/TelegramAuthData' }
+      responses:
+        '200':
+          description: Сеанс открыт
+          headers:
+            Set-Cookie:
+              $ref: '#/components/headers/SessionCookie'
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Session' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+
+  /api/v1/auth/logout:
+    post:
+      tags: [auth]
+      operationId: logout
+      summary: Завершить текущий сеанс
+      responses:
+        '204':
+          description: Сеанс завершён; веб-cookie удаляется
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /api/v1/auth/logout-all:
+    post:
+      tags: [auth]
+      operationId: logoutAll
+      summary: Завершить все сеансы
+      description: Завершает все сеансы пользователя, включая текущий, — например, при утере телефона.
+      responses:
+        '204':
+          description: Все сеансы завершены; веб-cookie удаляется
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  # ─── Профиль ─────────────────────────────────────────────────────────────────
+  /api/v1/me:
+    get:
+      tags: [profile]
+      operationId: getMe
+      summary: Профиль текущего пользователя
+      responses:
+        '200':
+          description: Профиль
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/User' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+    patch:
+      tags: [profile]
+      operationId: updateMe
+      summary: Смена ника
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateProfileRequest' }
+      responses:
+        '200':
+          description: Профиль обновлён
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/User' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '409': { $ref: '#/components/responses/Conflict' }
+    delete:
+      tags: [profile]
+      operationId: deleteMe
+      summary: Удаление учётной записи
+      description: |
+        Учётная запись обезличивается: тесты и записи журнала остаются с автором «Удалённый пользователь»,
+        все сеансы удаляются. Владелец команды с другими участниками сначала передаёт владение
+        (`owner_with_members`). Личное пространство удаляется вместе с учётной записью.
+      responses:
+        '204':
+          description: Учётная запись удалена
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /api/v1/me/password:
+    put:
+      tags: [profile]
+      operationId: changePassword
+      summary: Смена пароля
+      description: Все сеансы пользователя, кроме текущего, завершаются.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ChangePasswordRequest' }
+      responses:
+        '204':
+          description: Пароль изменён
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /api/v1/me/telegram:
+    put:
+      tags: [profile]
+      operationId: linkTelegram
+      summary: Привязка Telegram
+      description: Только веб. Данные виджета проверяются так же, как при входе через Telegram.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/TelegramAuthData' }
+      responses:
+        '200':
+          description: Telegram привязан
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/User' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '409': { $ref: '#/components/responses/Conflict' }
+    delete:
+      tags: [profile]
+      operationId: unlinkTelegram
+      summary: Отвязка Telegram
+      responses:
+        '204':
+          description: Telegram отвязан
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  # ─── Команды и участники ─────────────────────────────────────────────────────
+  /api/v1/teams:
+    get:
+      tags: [teams]
+      operationId: listTeams
+      summary: Мои команды
+      description: |
+        Команды, в которых состоит пользователь, включая личное пространство.
+        С `deleted=true` — удалённые за последние 30 суток команды, где пользователь владелец
+        (для восстановления).
+      parameters:
+        - name: deleted
+          in: query
+          schema: { type: boolean, default: false }
+      responses:
+        '200':
+          description: Список команд
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TeamList' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+    post:
+      tags: [teams]
+      operationId: createTeam
+      summary: Создать команду
+      description: Создатель становится владельцем.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateTeamRequest' }
+      responses:
+        '201':
+          description: Команда создана
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Team' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /api/v1/teams/{teamId}:
+    parameters:
+      - $ref: '#/components/parameters/TeamId'
+    get:
+      tags: [teams]
+      operationId: getTeam
+      summary: Команда
+      responses:
+        '200':
+          description: Команда
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Team' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+    patch:
+      tags: [teams]
+      operationId: updateTeam
+      summary: Название и описание команды
+      description: Только владелец. Переданные поля заменяются, отсутствующие не меняются.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateTeamRequest' }
+      responses:
+        '200':
+          description: Команда обновлена
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Team' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+    delete:
+      tags: [teams]
+      operationId: deleteTeam
+      summary: Удалить команду
+      description: |
+        Только владелец. Команда со всеми кабелями и тестами перестаёт быть доступной;
+        восстановить её можно в течение 30 суток. Подтверждение вводом названия — в интерфейсе.
+        Личное пространство удалить нельзя (`personal_team`).
+      responses:
+        '204':
+          description: Команда удалена
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /api/v1/teams/{teamId}/restore:
+    parameters:
+      - $ref: '#/components/parameters/TeamId'
+    post:
+      tags: [teams]
+      operationId: restoreTeam
+      summary: Восстановить удалённую команду
+      description: Только владелец, в течение 30 суток после удаления.
+      responses:
+        '200':
+          description: Команда восстановлена
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Team' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /api/v1/teams/{teamId}/transfer-ownership:
+    parameters:
+      - $ref: '#/components/parameters/TeamId'
+    post:
+      tags: [teams]
+      operationId: transferOwnership
+      summary: Передать владение
+      description: Только владелец. Прежний владелец становится участником.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/TransferOwnershipRequest' }
+      responses:
+        '200':
+          description: Владение передано
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Team' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /api/v1/teams/{teamId}/leave:
+    parameters:
+      - $ref: '#/components/parameters/TeamId'
+    post:
+      tags: [teams]
+      operationId: leaveTeam
+      summary: Выйти из команды
+      description: |
+        Владелец выходит только после передачи владения (`owner_cannot_leave`),
+        из личного пространства выйти нельзя (`personal_team`).
+        Пользователь перестаёт быть ответственным за кабели команды.
+      responses:
+        '204':
+          description: Пользователь вышел из команды
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /api/v1/teams/{teamId}/members:
+    parameters:
+      - $ref: '#/components/parameters/TeamId'
+    get:
+      tags: [teams]
+      operationId: listMembers
+      summary: Участники команды
+      responses:
+        '200':
+          description: Участники
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MemberList' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /api/v1/teams/{teamId}/members/{userId}:
+    parameters:
+      - $ref: '#/components/parameters/TeamId'
+      - $ref: '#/components/parameters/UserId'
+    delete:
+      tags: [teams]
+      operationId: removeMember
+      summary: Исключить участника
+      description: |
+        Только владелец; исключить себя нельзя (`owner_cannot_leave`).
+        Доступ участника к данным команды закрывается сразу, он перестаёт быть ответственным за кабели.
+      responses:
+        '204':
+          description: Участник исключён
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  # ─── Приглашения ─────────────────────────────────────────────────────────────
+  /api/v1/teams/{teamId}/invitations:
+    parameters:
+      - $ref: '#/components/parameters/TeamId'
+    get:
+      tags: [invitations]
+      operationId: listInvitations
+      summary: Действующие приглашения
+      description: Только владелец. Истёкшие, отозванные и использованные не показываются.
+      responses:
+        '200':
+          description: Приглашения
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/InvitationList' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+    post:
+      tags: [invitations]
+      operationId: createInvitation
+      summary: Создать приглашение
+      description: |
+        Только владелец; в личное пространство приглашать нельзя (`personal_team`).
+        Токен возвращается один раз — на сервере хранится только его хеш.
+        Ссылку вида `https://<домен>/invite/<token>` собирает веб.
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateInvitationRequest' }
+      responses:
+        '201':
+          description: Приглашение создано
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CreatedInvitation' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /api/v1/invitations/{invitationId}:
+    parameters:
+      - $ref: '#/components/parameters/InvitationId'
+    delete:
+      tags: [invitations]
+      operationId: revokeInvitation
+      summary: Отозвать приглашение
+      description: Только владелец команды приглашения.
+      responses:
+        '204':
+          description: Приглашение отозвано
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /api/v1/invitations/by-token/{token}:
+    parameters:
+      - $ref: '#/components/parameters/InvitationToken'
+    get:
+      tags: [invitations]
+      operationId: getInvitationByToken
+      summary: Куда ведёт приглашение
+      description: Без входа — чтобы показать посетителю название команды до входа или регистрации.
+      security: []
+      responses:
+        '200':
+          description: Приглашение действует
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/InvitationPreview' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /api/v1/invitations/by-token/{token}/accept:
+    parameters:
+      - $ref: '#/components/parameters/InvitationToken'
+    post:
+      tags: [invitations]
+      operationId: acceptInvitation
+      summary: Вступить в команду
+      description: |
+        Приглашение одноразовое. Проверяется лимит участников по тарифу (`member_limit_reached`).
+      responses:
+        '200':
+          description: Пользователь вступил в команду
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Team' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  # ─── Кабели ──────────────────────────────────────────────────────────────────
+  /api/v1/teams/{teamId}/cables:
+    parameters:
+      - $ref: '#/components/parameters/TeamId'
+    get:
+      tags: [cables]
+      operationId: listCables
+      summary: Каталог кабелей команды
+      description: |
+        Список для веба и каталог для раздела Hub приложения. Без результатов тестов.
+        По умолчанию — кабели не в архиве, сначала с самым свежим тестом.
+      parameters:
+        - name: q
+          in: query
+          description: Поиск по имени без учёта регистра
+          schema: { type: string, maxLength: 100 }
+        - name: cable_type
+          in: query
+          schema: { $ref: '#/components/schemas/CableType' }
+        - name: color
+          in: query
+          schema: { $ref: '#/components/schemas/Color' }
+        - name: health
+          in: query
+          description: |
+            Цвет Health Score: `green` — 80–100, `yellow` — 40–79, `red` — 0–39,
+            `none` — нет действительных тестов.
+          schema:
+            type: string
+            enum: [green, yellow, red, none]
+        - name: assignee
+          in: query
+          description: ID ответственного или `none` — без ответственного
+          schema: { type: string }
+          example: none
+        - name: archived
+          in: query
+          description: '`true` — только архивные, `false` — только не в архиве'
+          schema: { type: boolean, default: false }
+        - name: sort
+          in: query
+          schema:
+            type: string
+            enum: [last_test_at, name, health_score]
+            default: last_test_at
+        - name: order
+          in: query
+          schema: { $ref: '#/components/schemas/SortOrder' }
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Offset'
+      responses:
+        '200':
+          description: Страница кабелей
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CablePage' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /api/v1/cables/{cableId}:
+    parameters:
+      - $ref: '#/components/parameters/CableId'
+    get:
+      tags: [cables]
+      operationId: getCable
+      summary: Кабель
+      responses:
+        '200':
+          description: Кабель
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Cable' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    put:
+      tags: [cables]
+      operationId: updateCable
+      summary: Изменить атрибуты кабеля
+      description: |
+        Полная замена изменяемых атрибутов с оптимистичной блокировкой: `version` — версия,
+        от которой сделана правка. Если кабель успел измениться, ответ `409 version_conflict`
+        с актуальным кабелем в поле `cable`. Тип нельзя менять после первого теста
+        (`cable_type_locked`), архивный кабель не принимает изменений (`cable_archived`),
+        ответственный должен быть участником команды (`not_a_member`).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CableUpdate' }
+      responses:
+        '200':
+          description: Кабель обновлён
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Cable' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: Конфликт версии или состояния кабеля
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/VersionConflictProblem' }
+    delete:
+      tags: [cables]
+      operationId: deleteCable
+      summary: Окончательно удалить кабель
+      description: |
+        Только владелец команды. Кабель удаляется со всей историей тестов безвозвратно;
+        записи журнала остаются. Подтверждение — в интерфейсе.
+      responses:
+        '204':
+          description: Кабель удалён
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /api/v1/cables/{cableId}/archive:
+    parameters:
+      - $ref: '#/components/parameters/CableId'
+    post:
+      tags: [cables]
+      operationId: archiveCable
+      summary: Отправить кабель в архив
+      description: Архивный кабель доступен только для чтения. Повтор для архивного кабеля отвечает его состоянием.
+      responses:
+        '200':
+          description: Кабель в архиве
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Cable' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /api/v1/cables/{cableId}/unarchive:
+    parameters:
+      - $ref: '#/components/parameters/CableId'
+    post:
+      tags: [cables]
+      operationId: unarchiveCable
+      summary: Вернуть кабель из архива
+      responses:
+        '200':
+          description: Кабель возвращён из архива
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Cable' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  # ─── Тесты ───────────────────────────────────────────────────────────────────
+  /api/v1/cables/{cableId}/tests:
+    parameters:
+      - $ref: '#/components/parameters/CableId'
+    get:
+      tags: [tests]
+      operationId: listCableTests
+      summary: История тестов кабеля
+      description: |
+        Упорядочена по времени измерения, при совпадении — по ID. По умолчанию — сначала новые.
+        Тесты отдаются с результатами: по ним строятся лента и графики динамики.
+      parameters:
+        - name: order
+          in: query
+          schema: { $ref: '#/components/schemas/SortOrder' }
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Offset'
+      responses:
+        '200':
+          description: Страница тестов
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TestPage' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /api/v1/tests/{testId}:
+    parameters:
+      - $ref: '#/components/parameters/TestId'
+    get:
+      tags: [tests]
+      operationId: getTest
+      summary: Тест
+      description: |
+        Вместе с тестом — ID предыдущего действительного и эталонного (первого действительного)
+        тестов кабеля для сравнения. Сравнение строит клиент.
+      responses:
+        '200':
+          description: Тест
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TestDetail' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /api/v1/tests/{testId}/invalidation:
+    parameters:
+      - $ref: '#/components/parameters/TestId'
+    put:
+      tags: [tests]
+      operationId: invalidateTest
+      summary: Пометить тест недействительным
+      description: |
+        Тест остаётся в истории, но не учитывается в Health Score кабеля и в сравнениях.
+        Повтор для уже помеченного теста заменяет причину. Архивный кабель — `cable_archived`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/InvalidationRequest' }
+      responses:
+        '200':
+          description: Тест помечен
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Test' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+    delete:
+      tags: [tests]
+      operationId: revalidateTest
+      summary: Снять пометку «недействительный»
+      description: Повтор для теста без пометки ничего не меняет. Архивный кабель — `cable_archived`.
+      responses:
+        '200':
+          description: Пометка снята
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Test' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  # ─── Синхронизация ───────────────────────────────────────────────────────────
+  /api/v1/sync/push:
+    post:
+      tags: [sync]
+      operationId: syncPush
+      summary: Выгрузить кабели, правки и тесты
+      description: |
+        Новые кабели, правки атрибутов и новые тесты одним пакетом, из любых команд пользователя,
+        не больше 100 объектов в сумме. Порядок обработки: кабели → правки → тесты.
+
+        Пакет обрабатывается в одной транзакции, у каждого объекта — своя точка сохранения:
+        отклонённый объект не мешает остальным, принятые фиксируются вместе.
+        Ответ — всегда `200` с результатом по каждому объекту.
+
+        Повтор теста с тем же ID и содержимым принимается с тем же результатом; другое содержимое —
+        `id_conflict`. Повтор нового кабеля в той же команде принимается, в ответе — актуальное состояние.
+
+        Подробно — `docs/spec/hub/sync.md`, раздел 3.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PushRequest' }
+      responses:
+        '200':
+          description: Результат по каждому объекту
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PushResponse' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '426': { $ref: '#/components/responses/AppOutdated' }
+
+  /api/v1/sync/pull:
+    post:
+      tags: [sync]
+      operationId: syncPull
+      summary: Получить изменения отслеживаемых кабелей
+      description: |
+        Изменения кабелей из списка `cables` с номером изменения больше `cursor`: изменённые кабели,
+        новые и изменённые тесты (до 100, по возрастанию номера) и кабели, которых в команде больше нет.
+        Ответ строится по одному снимку БД. Пока `has_more = true`, запрос повторяется с новым курсором.
+
+        Первая загрузка кабеля — тот же запрос с `cursor: 0` и одним этим кабелем.
+        Правило курсора при первой загрузке — `docs/spec/hub/sync.md`, раздел 6.1.
+
+        `POST`, а не `GET`, потому что список отслеживаемых кабелей не помещается в адрес (ADR-023).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PullRequest' }
+      responses:
+        '200':
+          description: Изменения после курсора
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PullResponse' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '426': { $ref: '#/components/responses/AppOutdated' }
+
+  # ─── Журнал ──────────────────────────────────────────────────────────────────
+  /api/v1/teams/{teamId}/events:
+    parameters:
+      - $ref: '#/components/parameters/TeamId'
+    get:
+      tags: [events]
+      operationId: listEvents
+      summary: Журнал действий команды
+      description: Сначала новые. Журнал кабеля — фильтр `cable_id`.
+      parameters:
+        - name: event
+          in: query
+          description: Тип события, например `cable.updated`
+          schema: { type: string }
+        - name: actor_id
+          in: query
+          description: Кто совершил действие
+          schema: { $ref: '#/components/schemas/Uuid' }
+        - name: cable_id
+          in: query
+          schema: { $ref: '#/components/schemas/Uuid' }
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Offset'
+      responses:
+        '200':
+          description: Страница журнала
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/EventPage' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  # ─── ИИ-комментарии ──────────────────────────────────────────────────────────
+  /api/v1/insights:
+    post:
+      tags: [insights]
+      operationId: createInsight
+      summary: Комментарий к результатам теста
+      description: |
+        Без учётной записи. Повторный запрос с теми же данными возвращает тот же комментарий
+        без обращения к модели. Ограничения: частота запросов с одного IP (`rate_limited`)
+        и общий дневной лимит обращений к модели (`insights_unavailable`).
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/InsightRequest' }
+      responses:
+        '200':
+          description: Комментарий
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Insight' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+        '503': { $ref: '#/components/responses/InsightsUnavailable' }
+
+  /api/v1/tests/{testId}/insight:
+    parameters:
+      - $ref: '#/components/parameters/TestId'
+    post:
+      tags: [insights]
+      operationId: getTestInsight
+      summary: Комментарий к тесту
+      description: |
+        Для веба. Если комментарий уже привязан к тесту — возвращает его. Если нет — запрашивает
+        его так же, как `POST /api/v1/insights`, привязывает к тесту и возвращает.
+        Привязанный комментарий больше не меняется.
+      responses:
+        '200':
+          description: Комментарий
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Insight' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+        '503': { $ref: '#/components/responses/InsightsUnavailable' }
+
+  # ─── Служебное ───────────────────────────────────────────────────────────────
+  /health:
+    get:
+      tags: [service]
+      operationId: health
+      summary: Проверка сервера и БД
+      security: []
+      responses:
+        '200':
+          description: Сервер работает, БД доступна
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Health' }
+        '503':
+          description: БД недоступна
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Health' }
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      description: Токен сеанса приложения из ответа на вход или регистрацию.
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: __Host-himo_session
+      description: Cookie веб-сеанса; ставится сервером при входе.
+
+  headers:
+    SessionCookie:
+      description: |
+        Только для `client: web` и входа через Telegram:
+        `__Host-himo_session=<токен>; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=2592000`.
+      schema: { type: string }
+
+  parameters:
+    TeamId:
+      name: teamId
+      in: path
+      required: true
+      schema: { $ref: '#/components/schemas/Uuid' }
+    CableId:
+      name: cableId
+      in: path
+      required: true
+      schema: { $ref: '#/components/schemas/Uuid' }
+    TestId:
+      name: testId
+      in: path
+      required: true
+      schema: { $ref: '#/components/schemas/Uuid' }
+    UserId:
+      name: userId
+      in: path
+      required: true
+      schema: { $ref: '#/components/schemas/Uuid' }
+    InvitationId:
+      name: invitationId
+      in: path
+      required: true
+      schema: { $ref: '#/components/schemas/Uuid' }
+    InvitationToken:
+      name: token
+      in: path
+      required: true
+      description: Токен из ссылки-приглашения
+      schema: { type: string, maxLength: 64 }
+    Limit:
+      name: limit
+      in: query
+      schema: { type: integer, minimum: 1, maximum: 100, default: 50 }
+    Offset:
+      name: offset
+      in: query
+      schema: { type: integer, minimum: 0, default: 0 }
+
+  responses:
+    BadRequest:
+      description: Запрос не прошёл проверку
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+          example:
+            type: about:blank
+            title: Bad Request
+            status: 400
+            code: validation_error
+            detail: Запрос не прошёл проверку
+            errors:
+              - field: name
+                message: не может быть пустым
+    Unauthorized:
+      description: Нет действующего сеанса или неверные данные для входа
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+          example:
+            type: about:blank
+            title: Unauthorized
+            status: 401
+            code: unauthorized
+    Forbidden:
+      description: Нет доступа к команде или действие только для владельца
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+          example:
+            type: about:blank
+            title: Forbidden
+            status: 403
+            code: no_team_access
+            detail: Вы не состоите в этой команде
+    NotFound:
+      description: Объект не найден или принадлежит чужой команде
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+          example:
+            type: about:blank
+            title: Not Found
+            status: 404
+            code: not_found
+    Conflict:
+      description: Действие противоречит текущему состоянию
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+          example:
+            type: about:blank
+            title: Conflict
+            status: 409
+            code: member_limit_reached
+            detail: В команде уже 5 участников — это лимит бесплатного тарифа
+    TooManyRequests:
+      description: Слишком много запросов
+      headers:
+        Retry-After:
+          description: Через сколько секунд можно повторить
+          schema: { type: integer }
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+          example:
+            type: about:blank
+            title: Too Many Requests
+            status: 429
+            code: rate_limited
+    AppOutdated:
+      description: Версия приложения ниже минимальной
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/AppOutdatedProblem' }
+    InsightsUnavailable:
+      description: ИИ-комментарии временно недоступны
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+          example:
+            type: about:blank
+            title: Service Unavailable
+            status: 503
+            code: insights_unavailable
+            detail: Комментарии временно недоступны, попробуйте позже
+
+  schemas:
+    # ─── Общие ─────────────────────────────────────────────────────────────────
+    Uuid:
+      type: string
+      format: uuid
+      description: UUIDv7 (RFC 9562)
+      example: 0192f1a0-5c3e-7a21-9b4d-3e8f12a7c901
+
+    SortOrder:
+      type: string
+      enum: [asc, desc]
+      default: desc
+
+    Problem:
+      type: object
+      description: Ошибка по RFC 9457 с машиночитаемым кодом
+      required: [type, title, status, code]
+      properties:
+        type:
+          type: string
+          example: about:blank
+        title:
+          type: string
+          example: Conflict
+        status:
+          type: integer
+          example: 409
+        detail:
+          type: string
+          description: Пояснение для человека; не предназначено для разбора
+        instance:
+          type: string
+        code:
+          type: string
+          description: Машиночитаемый код ошибки, таблица — в описании API
+          example: cable_archived
+        errors:
+          type: array
+          description: Ошибки проверки по полям — только для `validation_error`
+          items: { $ref: '#/components/schemas/FieldError' }
+
+    FieldError:
+      type: object
+      required: [field, message]
+      properties:
+        field:
+          type: string
+          description: Путь к полю
+          example: tests[2].results.continuity.conductors
+        message:
+          type: string
+          example: для xlr ожидаются pin1, pin2, pin3
+
+    VersionConflictProblem:
+      description: Ошибка `409`; при `version_conflict` в поле `cable` — актуальный кабель
+      allOf:
+        - $ref: '#/components/schemas/Problem'
+        - type: object
+          properties:
+            cable: { $ref: '#/components/schemas/Cable' }
+
+    AppOutdatedProblem:
+      allOf:
+        - $ref: '#/components/schemas/Problem'
+        - type: object
+          required: [min_app_version]
+          properties:
+            min_app_version:
+              type: string
+              example: 0.7.0
+      example:
+        type: about:blank
+        title: Upgrade Required
+        status: 426
+        code: app_outdated
+        min_app_version: 0.7.0
+
+    UserRef:
+      type: object
+      description: Ссылка на пользователя. `nickname = null` — учётная запись удалена («Удалённый пользователь»).
+      required: [id, nickname]
+      properties:
+        id: { $ref: '#/components/schemas/Uuid' }
+        nickname:
+          type: string
+          nullable: true
+          example: vlad
+
+    # ─── Вход и профиль ────────────────────────────────────────────────────────
+    Nickname:
+      type: string
+      description: Латинские буквы, цифры и `_`; уникален без учёта регистра
+      pattern: '^[A-Za-z0-9_]{3,32}$'
+      example: vlad
+
+    Password:
+      type: string
+      minLength: 8
+      maxLength: 128
+      format: password
+
+    ClientType:
+      type: string
+      description: '`web` — токен в cookie, `app` — токен в теле ответа'
+      enum: [web, app]
+
+    RegisterRequest:
+      type: object
+      required: [nickname, password, client]
+      properties:
+        nickname: { $ref: '#/components/schemas/Nickname' }
+        password: { $ref: '#/components/schemas/Password' }
+        client: { $ref: '#/components/schemas/ClientType' }
+
+    LoginRequest:
+      type: object
+      required: [nickname, password, client]
+      properties:
+        nickname:
+          type: string
+          example: vlad
+        password: { $ref: '#/components/schemas/Password' }
+        client: { $ref: '#/components/schemas/ClientType' }
+
+    TelegramAuthData:
+      type: object
+      description: Объект от Telegram Login Widget — передаётся без изменений
+      required: [id, first_name, auth_date, hash]
+      properties:
+        id:
+          type: integer
+          format: int64
+          example: 123456789
+        first_name: { type: string }
+        last_name: { type: string }
+        username: { type: string }
+        photo_url: { type: string }
+        auth_date:
+          type: integer
+          format: int64
+          description: Unix-время авторизации в Telegram
+        hash:
+          type: string
+          description: Подпись данных
+
+    Session:
+      type: object
+      required: [user, expires_at]
+      properties:
+        user: { $ref: '#/components/schemas/User' }
+        token:
+          type: string
+          description: 'Токен сеанса — только для `client: app`'
+          example: session-token-example
+        expires_at:
+          type: string
+          format: date-time
+          description: Срок действия; продлевается при использовании
+
+    User:
+      type: object
+      required: [id, nickname, telegram, created_at]
+      properties:
+        id: { $ref: '#/components/schemas/Uuid' }
+        nickname: { $ref: '#/components/schemas/Nickname' }
+        telegram:
+          description: Привязанный Telegram или `null`
+          nullable: true
+          allOf:
+            - $ref: '#/components/schemas/TelegramAccount'
+        created_at:
+          type: string
+          format: date-time
+
+    TelegramAccount:
+      type: object
+      required: [id, username]
+      properties:
+        id:
+          type: integer
+          format: int64
+        username:
+          type: string
+          nullable: true
+
+    UpdateProfileRequest:
+      type: object
+      required: [nickname]
+      properties:
+        nickname: { $ref: '#/components/schemas/Nickname' }
+
+    ChangePasswordRequest:
+      type: object
+      required: [current_password, new_password]
+      properties:
+        current_password: { type: string, format: password }
+        new_password: { $ref: '#/components/schemas/Password' }
+
+    # ─── Команды ───────────────────────────────────────────────────────────────
+    TeamRole:
+      type: string
+      enum: [owner, member]
+
+    Plan:
+      type: object
+      description: Тариф команды; лимиты задаются конфигурацией сервера
+      required: [key, max_members]
+      properties:
+        key:
+          type: string
+          example: free
+        max_members:
+          type: integer
+          example: 5
+
+    Team:
+      type: object
+      required: [id, name, description, is_personal, role, plan, member_count, created_at, deleted_at]
+      properties:
+        id: { $ref: '#/components/schemas/Uuid' }
+        name:
+          type: string
+          example: Студия «Подвал»
+        description:
+          type: string
+          example: Кабельный парк репетиционной базы
+        is_personal:
+          type: boolean
+          description: Личное пространство — команда из одного человека
+        role:
+          $ref: '#/components/schemas/TeamRole'
+        plan:
+          $ref: '#/components/schemas/Plan'
+        member_count:
+          type: integer
+          example: 3
+        created_at:
+          type: string
+          format: date-time
+        deleted_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: Только в списке удалённых команд
+
+    TeamList:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/Team' }
+
+    CreateTeamRequest:
+      type: object
+      required: [name]
+      properties:
+        name: { type: string, minLength: 1, maxLength: 100 }
+        description: { type: string, maxLength: 1000, default: '' }
+
+    UpdateTeamRequest:
+      type: object
+      properties:
+        name: { type: string, minLength: 1, maxLength: 100 }
+        description: { type: string, maxLength: 1000 }
+
+    TransferOwnershipRequest:
+      type: object
+      required: [user_id]
+      properties:
+        user_id: { $ref: '#/components/schemas/Uuid' }
+
+    Member:
+      type: object
+      required: [user, role, joined_at]
+      properties:
+        user: { $ref: '#/components/schemas/UserRef' }
+        role: { $ref: '#/components/schemas/TeamRole' }
+        joined_at:
+          type: string
+          format: date-time
+
+    MemberList:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/Member' }
+
+    # ─── Приглашения ───────────────────────────────────────────────────────────
+    Invitation:
+      type: object
+      required: [id, team_id, created_by, created_at, expires_at]
+      properties:
+        id: { $ref: '#/components/schemas/Uuid' }
+        team_id: { $ref: '#/components/schemas/Uuid' }
+        created_by: { $ref: '#/components/schemas/UserRef' }
+        created_at:
+          type: string
+          format: date-time
+        expires_at:
+          type: string
+          format: date-time
+
+    InvitationList:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/Invitation' }
+
+    CreateInvitationRequest:
+      type: object
+      properties:
+        expires_in_days:
+          type: integer
+          minimum: 1
+          maximum: 30
+          default: 7
+
+    CreatedInvitation:
+      type: object
+      required: [invitation, token]
+      properties:
+        invitation: { $ref: '#/components/schemas/Invitation' }
+        token:
+          type: string
+          description: Токен для ссылки; показывается один раз
+          example: invitation-token-example
+
+    InvitationPreview:
+      type: object
+      required: [team_name, expires_at]
+      properties:
+        team_name:
+          type: string
+          example: Студия «Подвал»
+        expires_at:
+          type: string
+          format: date-time
+
+    # ─── Кабели ────────────────────────────────────────────────────────────────
+    CableType:
+      type: string
+      enum: [jack_ts, jack_trs, xlr]
+
+    Color:
+      type: string
+      description: 'Цветная метка — hex без `#` в нижнем регистре'
+      pattern: '^[0-9a-f]{6}$'
+      example: '639922'
+
+    CableName:
+      type: string
+      minLength: 1
+      maxLength: 100
+      example: XLR 5 м
+
+    CableNote:
+      type: string
+      maxLength: 2000
+      nullable: true
+      example: Запасной для вокального микрофона
+
+    Cable:
+      type: object
+      required:
+        - id
+        - team_id
+        - name
+        - cable_type
+        - color
+        - note
+        - assignee
+        - created_by
+        - created_at
+        - updated_at
+        - version
+        - archived_at
+        - health_score
+        - last_test_at
+        - test_count
+      properties:
+        id: { $ref: '#/components/schemas/Uuid' }
+        team_id: { $ref: '#/components/schemas/Uuid' }
+        name: { $ref: '#/components/schemas/CableName' }
+        cable_type: { $ref: '#/components/schemas/CableType' }
+        color: { $ref: '#/components/schemas/Color' }
+        note: { $ref: '#/components/schemas/CableNote' }
+        assignee:
+          description: Ответственный или `null` — не назначен
+          nullable: true
+          allOf:
+            - $ref: '#/components/schemas/UserRef'
+        created_by: { $ref: '#/components/schemas/UserRef' }
+        created_at:
+          type: string
+          format: date-time
+          description: Время создания в приложении
+        updated_at:
+          type: string
+          format: date-time
+        version:
+          type: integer
+          description: Версия записи для оптимистичной блокировки
+          example: 3
+        archived_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: '`null` — кабель не в архиве'
+        health_score:
+          type: integer
+          minimum: 0
+          maximum: 100
+          nullable: true
+          description: Health Score последнего действительного теста; `null` — действительных тестов нет
+          example: 92
+        last_test_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: Время измерения последнего теста
+        test_count:
+          type: integer
+          example: 14
+      example:
+        id: 0192f1a0-5c3e-7a21-9b4d-3e8f12a7c901
+        team_id: 0192e000-11aa-7b00-8c00-5d2e6f7a8b90
+        name: XLR 5 м
+        cable_type: xlr
+        color: '639922'
+        note: null
+        assignee:
+          id: 0192d000-0000-7000-8000-000000000001
+          nickname: vlad
+        created_by:
+          id: 0192d000-0000-7000-8000-000000000001
+          nickname: vlad
+        created_at: '2026-10-18T14:02:11Z'
+        updated_at: '2026-10-19T09:30:00Z'
+        version: 2
+        archived_at: null
+        health_score: 92
+        last_test_at: '2026-10-19T09:12:45Z'
+        test_count: 2
+
+    CablePage:
+      type: object
+      required: [items, total]
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/Cable' }
+        total:
+          type: integer
+
+    CableUpdate:
+      type: object
+      description: Все изменяемые атрибуты кабеля и версия, от которой сделана правка
+      required: [version, name, cable_type, color, note, assignee_id]
+      properties:
+        version:
+          type: integer
+          example: 2
+        name: { $ref: '#/components/schemas/CableName' }
+        cable_type: { $ref: '#/components/schemas/CableType' }
+        color: { $ref: '#/components/schemas/Color' }
+        note: { $ref: '#/components/schemas/CableNote' }
+        assignee_id:
+          description: Ответственный или `null` — не назначен
+          nullable: true
+          allOf:
+            - $ref: '#/components/schemas/Uuid'
+
+    NewCable:
+      type: object
+      required: [id, team_id, name, cable_type, color, note, created_at]
+      properties:
+        id: { $ref: '#/components/schemas/Uuid' }
+        team_id:
+          $ref: '#/components/schemas/Uuid'
+        name: { $ref: '#/components/schemas/CableName' }
+        cable_type: { $ref: '#/components/schemas/CableType' }
+        color: { $ref: '#/components/schemas/Color' }
+        note: { $ref: '#/components/schemas/CableNote' }
+        created_at:
+          type: string
+          format: date-time
+          description: Время создания в приложении
+
+    CableUpdateItem:
+      description: Правка атрибутов кабеля в пакете выгрузки
+      allOf:
+        - type: object
+          required: [id]
+          properties:
+            id: { $ref: '#/components/schemas/Uuid' }
+        - $ref: '#/components/schemas/CableUpdate'
+
+    # ─── Тесты ─────────────────────────────────────────────────────────────────
+    ConductorStatus:
+      type: string
+      description: '`ok` — менее 5 Ом, `warning` — 5–50 Ом, `open` — обрыв, `short` — короткое замыкание'
+      enum: [ok, warning, open, short]
+
+    Conductor:
+      type: object
+      required: [r, s]
+      additionalProperties: true
+      properties:
+        r:
+          type: number
+          minimum: 0
+          maximum: 1000000
+          description: Сопротивление, Ом
+          example: 0.91
+        s: { $ref: '#/components/schemas/ConductorStatus' }
+
+    Continuity:
+      type: object
+      description: |
+        Целостность. Состав проводников зависит от типа кабеля:
+        `jack_ts` — tip, sleeve; `jack_trs` — tip, ring, sleeve; `xlr` — pin1, pin2, pin3.
+      required: [status, conductors]
+      additionalProperties: true
+      properties:
+        status:
+          type: string
+          enum: [ok, warning, fail]
+        conductors:
+          type: object
+          additionalProperties: false
+          properties:
+            tip: { $ref: '#/components/schemas/Conductor' }
+            ring: { $ref: '#/components/schemas/Conductor' }
+            sleeve: { $ref: '#/components/schemas/Conductor' }
+            pin1: { $ref: '#/components/schemas/Conductor' }
+            pin2: { $ref: '#/components/schemas/Conductor' }
+            pin3: { $ref: '#/components/schemas/Conductor' }
+
+    Cmrr:
+      type: object
+      description: CMRR — только для `jack_trs` и `xlr`
+      required: [status, cmrr_db]
+      additionalProperties: true
+      properties:
+        status:
+          type: string
+          description: '`excellent` — более 60 дБ, `ok` — 40–60 дБ, `fail` — менее 40 дБ'
+          enum: [excellent, ok, fail]
+        cmrr_db:
+          type: number
+          minimum: 0
+          maximum: 200
+          example: 72.4
+
+    FreqResponse:
+      type: object
+      description: АЧХ — отклонения относительно 1 кГц в точках таблицы частот версии протокола `pv`
+      required: [status, v]
+      additionalProperties: true
+      properties:
+        status:
+          type: string
+          enum: [excellent, ok, fail]
+        v:
+          type: array
+          description: Отклонения, дБ; для `pv = 1` — 30 точек
+          minItems: 30
+          maxItems: 30
+          items:
+            type: number
+            minimum: -100
+            maximum: 100
+        f:
+          type: array
+          readOnly: true
+          description: Частоты, Гц, в том же порядке, что `v`; добавляет сервер по `pv` теста
+          items:
+            type: integer
+
+    TestResults:
+      type: object
+      description: |
+        Результаты в формате BLE-протокола; ключ есть, только если измерение выполнено,
+        хотя бы одно обязательно. Незнакомые поля внутри измерений сохраняются без изменений.
+      minProperties: 1
+      additionalProperties: false
+      properties:
+        continuity: { $ref: '#/components/schemas/Continuity' }
+        cmrr: { $ref: '#/components/schemas/Cmrr' }
+        freq_response: { $ref: '#/components/schemas/FreqResponse' }
+
+    TestMeta:
+      type: object
+      description: Данные теста, которые передаёт приложение
+      required:
+        - measured_at
+        - device_id
+        - pv
+        - app_version
+        - rules_version
+        - firmware_version
+        - health_score
+        - health_incomplete
+        - note
+        - results
+      properties:
+        measured_at:
+          type: string
+          format: date-time
+          description: Время измерения по часам приложения
+        device_id:
+          type: string
+          maxLength: 64
+          description: ID прибора (MAC или UUID BLE-устройства)
+          example: 'A4:CF:12:8B:3E:01'
+        pv:
+          type: integer
+          minimum: 1
+          description: Версия BLE-протокола
+          example: 1
+        app_version:
+          type: string
+          maxLength: 32
+          example: 0.7.0
+        rules_version:
+          type: string
+          maxLength: 32
+          description: Версия правил расчёта вердиктов и Health Score
+          example: '1'
+        firmware_version:
+          type: string
+          maxLength: 32
+          nullable: true
+        health_score:
+          type: integer
+          minimum: 0
+          maximum: 100
+          nullable: true
+          example: 92
+        health_incomplete:
+          type: boolean
+          description: Health Score неполный — выполнены не все применимые измерения (ADR-011)
+        note:
+          type: string
+          maxLength: 2000
+          nullable: true
+        results: { $ref: '#/components/schemas/TestResults' }
+
+    NewTest:
+      description: Тест в пакете выгрузки
+      allOf:
+        - type: object
+          required: [id, cable_id]
+          properties:
+            id: { $ref: '#/components/schemas/Uuid' }
+            cable_id: { $ref: '#/components/schemas/Uuid' }
+        - $ref: '#/components/schemas/TestMeta'
+
+    Invalidation:
+      type: object
+      required: [at, by, reason]
+      properties:
+        at:
+          type: string
+          format: date-time
+        by: { $ref: '#/components/schemas/UserRef' }
+        reason:
+          type: string
+          example: Перепутан кабель
+
+    InvalidationRequest:
+      type: object
+      required: [reason]
+      properties:
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 500
+
+    Test:
+      allOf:
+        - type: object
+          required: [id, cable_id, author, received_at, invalidation, insight]
+          properties:
+            id: { $ref: '#/components/schemas/Uuid' }
+            cable_id: { $ref: '#/components/schemas/Uuid' }
+            author:
+              $ref: '#/components/schemas/UserRef'
+            received_at:
+              type: string
+              format: date-time
+              description: Время приёма сервером
+            invalidation:
+              description: Пометка «недействительный» или `null`
+              nullable: true
+              allOf:
+                - $ref: '#/components/schemas/Invalidation'
+            insight:
+              description: Привязанный ИИ-комментарий или `null`
+              nullable: true
+              allOf:
+                - $ref: '#/components/schemas/Insight'
+        - $ref: '#/components/schemas/TestMeta'
+      example:
+        id: 0192f1a2-7d10-7c3a-a1b2-4c5d6e7f8091
+        cable_id: 0192f1a0-5c3e-7a21-9b4d-3e8f12a7c901
+        author:
+          id: 0192d000-0000-7000-8000-000000000001
+          nickname: vlad
+        measured_at: '2026-10-19T09:12:45Z'
+        received_at: '2026-10-19T09:20:03Z'
+        device_id: 'A4:CF:12:8B:3E:01'
+        pv: 1
+        app_version: 0.7.0
+        rules_version: '1'
+        firmware_version: null
+        health_score: 92
+        health_incomplete: false
+        note: null
+        results:
+          continuity:
+            status: ok
+            conductors:
+              pin1: { r: 0.91, s: ok }
+              pin2: { r: 1.02, s: ok }
+              pin3: { r: 0.95, s: ok }
+          cmrr:
+            status: excellent
+            cmrr_db: 72.4
+          freq_response:
+            status: ok
+            v: [0.1, 0.1, 0.1, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                0.0, 0.0, 0.0, 0.0, 0.0, 0.0, -0.1, -0.2, -0.3, -0.5, -0.7, -1.0, -1.5, -2.3, -3.8]
+            f: [10, 13, 18, 24, 31, 42, 56, 74, 99, 131, 175, 232, 309, 412, 548,
+                730, 1000, 1293, 1721, 2291, 3050, 4060, 5404, 7192, 9574, 12742, 16959, 22573, 30043, 40000]
+        invalidation: null
+        insight: null
+
+    TestDetail:
+      description: Тест с ID тестов для сравнения
+      allOf:
+        - $ref: '#/components/schemas/Test'
+        - type: object
+          required: [previous_test_id, reference_test_id]
+          properties:
+            previous_test_id:
+              description: Предыдущий действительный тест кабеля или `null`
+              nullable: true
+              allOf:
+                - $ref: '#/components/schemas/Uuid'
+            reference_test_id:
+              description: |
+                Эталонный — первый действительный тест кабеля; `null`, если это он сам
+                или действительных тестов нет
+              nullable: true
+              allOf:
+                - $ref: '#/components/schemas/Uuid'
+
+    TestPage:
+      type: object
+      required: [items, total]
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/Test' }
+        total:
+          type: integer
+
+    # ─── Синхронизация ─────────────────────────────────────────────────────────
+    PushRequest:
+      type: object
+      description: Не больше 100 объектов в сумме по трём разделам
+      required: [cables, cable_updates, tests]
+      properties:
+        cables:
+          type: array
+          maxItems: 100
+          items: { $ref: '#/components/schemas/NewCable' }
+        cable_updates:
+          type: array
+          maxItems: 100
+          items: { $ref: '#/components/schemas/CableUpdateItem' }
+        tests:
+          type: array
+          maxItems: 100
+          items: { $ref: '#/components/schemas/NewTest' }
+
+    ItemStatus:
+      type: string
+      enum: [accepted, rejected]
+
+    ItemError:
+      type: object
+      required: [code]
+      properties:
+        code:
+          type: string
+          description: Код из таблицы ошибок, а также `cable_not_found` и `id_conflict`
+          example: version_conflict
+        detail:
+          type: string
+
+    PushCableResult:
+      type: object
+      description: |
+        Результат по новому кабелю или правке. `cable` — состояние кабеля на сервере:
+        при `accepted` и при отказе `version_conflict`.
+      required: [id, status]
+      properties:
+        id: { $ref: '#/components/schemas/Uuid' }
+        status: { $ref: '#/components/schemas/ItemStatus' }
+        error: { $ref: '#/components/schemas/ItemError' }
+        cable: { $ref: '#/components/schemas/Cable' }
+
+    PushTestResult:
+      type: object
+      required: [id, status]
+      properties:
+        id: { $ref: '#/components/schemas/Uuid' }
+        status: { $ref: '#/components/schemas/ItemStatus' }
+        error: { $ref: '#/components/schemas/ItemError' }
+
+    PushResponse:
+      type: object
+      description: Результаты в том же порядке, что объекты в запросе
+      required: [cables, cable_updates, tests]
+      properties:
+        cables:
+          type: array
+          items: { $ref: '#/components/schemas/PushCableResult' }
+        cable_updates:
+          type: array
+          items: { $ref: '#/components/schemas/PushCableResult' }
+        tests:
+          type: array
+          items: { $ref: '#/components/schemas/PushTestResult' }
+
+    PullRequest:
+      type: object
+      required: [team_id, cursor, cables]
+      properties:
+        team_id: { $ref: '#/components/schemas/Uuid' }
+        cursor:
+          type: integer
+          format: int64
+          minimum: 0
+          description: Курсор команды из прошлого ответа; `0` — с начала
+          example: 3
+        cables:
+          type: array
+          description: Отслеживаемые кабели команды
+          minItems: 1
+          maxItems: 1000
+          items: { $ref: '#/components/schemas/Uuid' }
+
+    PullResponse:
+      type: object
+      required: [cables, tests, deleted_cables, cursor, has_more]
+      properties:
+        cables:
+          type: array
+          description: Отслеживаемые кабели, изменённые после курсора
+          items: { $ref: '#/components/schemas/Cable' }
+        tests:
+          type: array
+          description: Новые и изменённые тесты отслеживаемых кабелей, по возрастанию номера изменения, до 100
+          items: { $ref: '#/components/schemas/Test' }
+        deleted_cables:
+          type: array
+          description: Отслеживаемые кабели, которых в команде больше нет
+          items: { $ref: '#/components/schemas/Uuid' }
+        cursor:
+          type: integer
+          format: int64
+          description: Новый курсор
+          example: 5
+        has_more:
+          type: boolean
+          description: Есть ещё изменения — повторить запрос с новым курсором
+
+    # ─── Журнал ────────────────────────────────────────────────────────────────
+    AuditEvent:
+      type: object
+      required: [id, event, actor, cable_id, test_id, subject_user, details, created_at]
+      properties:
+        id:
+          type: integer
+          format: int64
+        event:
+          type: string
+          description: Тип события — `docs/spec/hub/data-model.md`, раздел 3.6
+          example: cable.updated
+        actor: { $ref: '#/components/schemas/UserRef' }
+        cable_id:
+          description: Кабель; может ссылаться на уже удалённый кабель
+          nullable: true
+          allOf:
+            - $ref: '#/components/schemas/Uuid'
+        test_id:
+          nullable: true
+          allOf:
+            - $ref: '#/components/schemas/Uuid'
+        subject_user:
+          description: Кого пригласили, исключили, назначили
+          nullable: true
+          allOf:
+            - $ref: '#/components/schemas/UserRef'
+        details:
+          type: object
+          additionalProperties: true
+          description: Подробности события, например «было / стало»
+          example:
+            cable_name: XLR 5 м
+            changes:
+              name: { from: XLR 5м, to: XLR 5 м }
+        created_at:
+          type: string
+          format: date-time
+
+    EventPage:
+      type: object
+      required: [items, total]
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/AuditEvent' }
+        total:
+          type: integer
+
+    # ─── ИИ-комментарии ────────────────────────────────────────────────────────
+    InsightRequest:
+      type: object
+      description: |
+        Данные для комментария. Ключ кэша — хеш канонического представления этого объекта
+        вместе с версией промпта и моделью.
+      required: [cable_type, pv, health_score, health_incomplete, results]
+      properties:
+        cable_type: { $ref: '#/components/schemas/CableType' }
+        pv:
+          type: integer
+          minimum: 1
+          example: 1
+        health_score:
+          type: integer
+          minimum: 0
+          maximum: 100
+          nullable: true
+        health_incomplete:
+          type: boolean
+        results: { $ref: '#/components/schemas/TestResults' }
+
+    Insight:
+      type: object
+      required: [id, body, model, created_at]
+      properties:
+        id: { $ref: '#/components/schemas/Uuid' }
+        body:
+          type: string
+          description: Текст комментария
+          example: Все три проводника в норме, синфазные помехи подавляются отлично. Небольшой спад АЧХ выше 20 кГц за пределами слышимого диапазона.
+        model:
+          type: string
+          example: glm-4.7-flash
+        created_at:
+          type: string
+          format: date-time
+
+    # ─── Служебное ─────────────────────────────────────────────────────────────
+    Health:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [ok, unavailable]
