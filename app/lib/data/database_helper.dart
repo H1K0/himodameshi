@@ -138,12 +138,6 @@ class DatabaseHelper {
   Future<void> importMockDataIfEmpty() async {
     try {
       final db = await database;
-      final count = Sqflite.firstIntValue(await db.rawQuery('SELECT COUNT(*) FROM cables'));
-
-      if (count != null && count > 0) {
-        print('🟢 [DB Import] База не пуста ($count кабелей), импорт пропущен.');
-        return;
-      }
 
       final jsonString = await rootBundle.loadString('mock/ble_mock_packets.json');
       final Map<String, dynamic> jsonData = jsonDecode(jsonString);
@@ -462,6 +456,42 @@ class DatabaseHelper {
       'created_at': cable['created_at'],
       'note': cable['note'] ?? '',
       'history': history,
+    };
+  }
+  /// Получить полные данные конкретной сессии для отображения результатов
+  Future<Map<String, dynamic>?> getSessionDetails(int sessionId) async {
+    final db = await database;
+
+    // Получаем сессию и кабель
+    final sessionResult = await db.rawQuery('''
+      SELECT 
+        ts.id as session_id,
+        ts.health_score,
+        ts.started_at,
+        c.cable_type
+      FROM test_sessions ts
+      JOIN cables c ON ts.cable_id = c.id
+      WHERE ts.id = ?
+    ''', [sessionId]);
+
+    if (sessionResult.isEmpty) return null;
+    final session = sessionResult.first;
+
+    // Целостность
+    final continuity = await db.query('continuity_results', where: 'session_id = ?', whereArgs: [sessionId]);
+    // CMRR
+    final cmrr = await db.query('cmrr_results', where: 'session_id = ?', whereArgs: [sessionId]);
+    // АЧХ
+    final freq = await db.query('freq_response_results', where: 'session_id = ?', whereArgs: [sessionId]);
+
+    return {
+      'session_id': session['session_id'],
+      'health_score': session['health_score'],
+      'started_at': session['started_at'],
+      'cable_type': session['cable_type'],
+      'continuity': continuity.isNotEmpty ? continuity.first : null,
+      'cmrr': cmrr.isNotEmpty ? cmrr.first : null,
+      'freq_response': freq.isNotEmpty ? freq.first : null,
     };
   }
 }

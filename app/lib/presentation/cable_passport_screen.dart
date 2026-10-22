@@ -3,6 +3,7 @@ import 'dart:ui';
 import '/data/test_models.dart';
 import '/data/database_helper.dart';
 import 'testing_screen.dart';
+import 'testing_results_screen.dart';
 
 class CablePassportScreen extends StatefulWidget {
   final int cableId;
@@ -27,8 +28,6 @@ class _CablePassportScreenState extends State<CablePassportScreen> {
   String get _cableType => _cableData?['cable_type'] ?? 'unknown';
   String get _cableNote => _cableData?['note'] ?? '';
 
-  // Пока оставим заглушку для healthScore, так как он сложно вычисляется из истории
-  // TODO: реализовать вычисление актуального Health Score из истории
   int get _healthScore {
     final history = _cableData?['history'] as List?;
     if (history != null && history.isNotEmpty) {
@@ -78,7 +77,7 @@ class _CablePassportScreenState extends State<CablePassportScreen> {
   Future<void> _deleteCable() async {
     await DatabaseHelper().deleteCable(widget.cableId);
     if (!mounted) return;
-    Navigator.pop(context); // Закрываем паспорт и возвращаемся в коллекцию
+    Navigator.pop(context);
   }
 
   void _openRenameSheet() {
@@ -239,8 +238,8 @@ class _CablePassportScreenState extends State<CablePassportScreen> {
                     Expanded(
                       child: ElevatedButton(
                         onPressed: () {
-                          Navigator.pop(context); // Закрываем диалог
-                          _deleteCable(); // Удаляем и закрываем экран
+                          Navigator.pop(context);
+                          _deleteCable();
                         },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFFE24B4A),
@@ -323,12 +322,10 @@ class _CablePassportScreenState extends State<CablePassportScreen> {
     }
   }
 
-  // Получаем историю в хронологическом порядке (от старых к новым)
   List<int> get _healthScoreHistory {
     final history = _cableData?['history'] as List?;
     if (history == null || history.isEmpty) return [];
 
-    // Берем только завершенные сессии с health_score и переворачиваем
     final scores = history
         .where((s) => s['health_score'] != null)
         .map((s) => s['health_score'] as int)
@@ -425,7 +422,7 @@ class _CablePassportScreenState extends State<CablePassportScreen> {
                           ],
                         ),
                         const SizedBox(height: 4),
-                        const Text('Добавлен недавно', style: TextStyle(fontSize: 10, color: Color(0xFF888888))), // TODO: выводить реальную дату
+                        const Text('Добавлен недавно', style: TextStyle(fontSize: 10, color: Color(0xFF888888))),
                         const SizedBox(height: 2),
                         Text(_cableNote.isEmpty ? '' : '«$_cableNote»', style: const TextStyle(fontSize: 10, fontStyle: FontStyle.italic, color: Color(0xFF888888))),
                       ],
@@ -470,28 +467,18 @@ class _CablePassportScreenState extends State<CablePassportScreen> {
                 ],
               ),
             ),
+
             // Динамика Health Score
             Padding(
               padding: const EdgeInsets.fromLTRB(24, 16, 24, 6),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'ДИНАМИКА HEALTH SCORE',
-                    style: TextStyle(
-                      fontSize: 10,
-                      color: Color(0xFF666666),
-                      letterSpacing: 1.5,
-                    ),
-                  ),
+                  const Text('ДИНАМИКА HEALTH SCORE', style: TextStyle(fontSize: 10, color: Color(0xFF666666), letterSpacing: 1.5)),
                   const SizedBox(height: 8),
                   Container(
                     padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF111111),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: const Color(0xFF1F1F1F)),
-                    ),
+                    decoration: BoxDecoration(color: const Color(0xFF111111), borderRadius: BorderRadius.circular(12), border: Border.all(color: const Color(0xFF1F1F1F))),
                     child: SizedBox(
                       width: double.infinity,
                       height: 90,
@@ -518,9 +505,9 @@ class _CablePassportScreenState extends State<CablePassportScreen> {
                     children: [
                       Expanded(child: _buildPinsCard()),
                       const SizedBox(width: 6),
-                      Expanded(child: _buildMetricCard(title: 'CMRR', value: '68', unit: 'дБ')), // TODO: выводить реальные данные
+                      Expanded(child: _buildMetricCard(title: 'CMRR', value: '68', unit: 'дБ')),
                       const SizedBox(width: 6),
-                      Expanded(child: _buildMetricCard(title: 'АЧХ', value: '22.4', unit: 'кГц')), // TODO: выводить реальные данные
+                      Expanded(child: _buildMetricCard(title: 'АЧХ', value: '22.4', unit: 'кГц')),
                     ],
                   ),
                 ],
@@ -540,31 +527,45 @@ class _CablePassportScreenState extends State<CablePassportScreen> {
                   else
                     ...history.map((item) {
                       final score = item['health_score'] as int? ?? 0;
-                      // TODO: выводить реальные CMRR и Freq из вложенных объектов
-                      return Container(
-                        margin: const EdgeInsets.only(bottom: 5),
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                        decoration: BoxDecoration(color: const Color(0xFF111111), borderRadius: BorderRadius.circular(8), border: Border.all(color: const Color(0xFF1F1F1F))),
-                        child: Row(
-                          children: [
-                            Container(
-                              width: 28, height: 28,
-                              decoration: BoxDecoration(color: _getScoreColor(score).withValues(alpha: 0.12), shape: BoxShape.circle, border: Border.all(color: _getScoreColor(score).withValues(alpha: 0.5))),
-                              child: Center(child: Text('$score', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w500, color: _getScoreColor(score)))),
-                            ),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const Text('Проверка', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: Color(0xFFFAFAFA))), // TODO: конвертировать timestamp
-                                  const SizedBox(height: 2),
-                                  const Text('Детали не сохранены', style: TextStyle(fontSize: 9, color: Color(0xFF666666))),
-                                ],
+                      final sessionId = item['session_id'] as int;
+
+                      return GestureDetector(
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => TestingResultsScreen(
+                                sessionId: sessionId,
+                                selectedTests: const [],
                               ),
                             ),
-                            const Icon(Icons.chevron_right, size: 16, color: Color(0xFF444444)),
-                          ],
+                          );
+                        },
+                        child: Container(
+                          margin: const EdgeInsets.only(bottom: 5),
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                          decoration: BoxDecoration(color: const Color(0xFF111111), borderRadius: BorderRadius.circular(8), border: Border.all(color: const Color(0xFF1F1F1F))),
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 28, height: 28,
+                                decoration: BoxDecoration(color: _getScoreColor(score).withValues(alpha: 0.12), shape: BoxShape.circle, border: Border.all(color: _getScoreColor(score).withValues(alpha: 0.5))),
+                                child: Center(child: Text('$score', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w500, color: _getScoreColor(score)))),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Text('Проверка', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: Color(0xFFFAFAFA))),
+                                    const SizedBox(height: 2),
+                                    const Text('Нажмите для деталей', style: TextStyle(fontSize: 9, color: Color(0xFF666666))),
+                                  ],
+                                ),
+                              ),
+                              const Icon(Icons.chevron_right, size: 16, color: Color(0xFF444444)),
+                            ],
+                          ),
                         ),
                       );
                     }).toList(),
@@ -599,14 +600,13 @@ class _CablePassportScreenState extends State<CablePassportScreen> {
     );
   }
 
-
-
   Color _getScoreColor(int score) {
     if (score >= 80) return const Color(0xFF97C459);
     if (score >= 50) return const Color(0xFFEF9F27);
     return const Color(0xFFE24B4A);
   }
 }
+
 // График динамики Health Score
 class _HealthScoreGraphPainter extends CustomPainter {
   final List<int> history;
@@ -656,11 +656,6 @@ class _HealthScoreGraphPainter extends CustomPainter {
     final pointPaint = Paint()
       ..color = const Color(0xFF0A0A0A)
       ..style = PaintingStyle.fill;
-
-    final pointStrokePaint = Paint()
-      ..color = const Color(0xFF97C459)
-      ..strokeWidth = 1.6
-      ..style = PaintingStyle.stroke;
 
     // Если точка всего одна, ставим ее по центру
     final int count = history.length;

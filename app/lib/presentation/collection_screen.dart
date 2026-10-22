@@ -81,11 +81,6 @@ class _CollectionScreenState extends State<CollectionScreen> {
     try {
       final cables = await _dataManager.getAllCables();
 
-      // ОТЛАДКА: смотрим, что пришло
-      if (cables.isNotEmpty) {
-        print('🔴 [Collection] Первый кабель: ${cables.first}');
-      }
-
       setState(() {
         _allCables = cables;
         _applyFilters();

@@ -8,60 +8,125 @@ import 'testing_progress_screen.dart';
 import 'cable_passport_screen.dart';
 import '/domain/freq_response_stats.dart';
 
-class TestingResultsScreen extends StatelessWidget {
-  final CableType cableType;
+class TestingResultsScreen extends StatefulWidget {
+  final CableType? cableType;
   final List<TestType> selectedTests;
   final double totalTimeSeconds;
 
-  // Сгенерированные (mock) или реальные результаты
+  // Данные для режима "только что протестировали"
   final Map<String, dynamic>? continuityResult;
   final double? cmrrDb;
   final List<double>? freqValues;
 
+
+  // ID сессии для режима "просмотр из истории"
+  final int? sessionId;
+
   const TestingResultsScreen({
     super.key,
-    required this.cableType,
+    this.cableType,
     required this.selectedTests,
-    required this.totalTimeSeconds,
+    this.totalTimeSeconds = 0.0,
     this.continuityResult,
     this.cmrrDb,
     this.freqValues,
+    this.sessionId,
   });
 
+  @override
+  State<TestingResultsScreen> createState() => _TestingResultsScreenState();
+}
+
+class _TestingResultsScreenState extends State<TestingResultsScreen> {
+  bool _isLoading = false;
+
+  late CableType _cableType;
+  late Map<String, dynamic>? _continuityResult;
+  late double? _cmrrDb;
+  late List<double>? _freqValues;
+  int? _savedHealthScore;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.sessionId != null) {
+      _loadFromDb();
+    } else {
+      _cableType = widget.cableType!;
+      _continuityResult = widget.continuityResult;
+      _cmrrDb = widget.cmrrDb;
+      _freqValues = widget.freqValues;
+    }
+  }
+
+  Future<void> _loadFromDb() async {
+    setState(() => _isLoading = true);
+    final data = await DatabaseHelper().getSessionDetails(widget.sessionId!);
+
+    if (data == null) {
+      setState(() => _isLoading = false);
+      return;
+    }
+
+    // Парсим данные из БД
+    _savedHealthScore = data['health_score'] as int?;
+    final cableTypeStr = data['cable_type'] as String;
+    _cableType = cableTypeStr == 'xlr' ? CableType.xlr
+        : (cableTypeStr == 'jack_trs' ? CableType.jackTrs : CableType.jackTs);
+
+    _continuityResult = data['continuity'] != null
+        ? {'conductors': jsonDecode(data['continuity']['conductors'])}
+        : null;
+
+    _cmrrDb = data['cmrr'] != null ? (data['cmrr']['value_db'] as num).toDouble() : null;
+
+    _freqValues = data['freq_response'] != null
+        ? (jsonDecode(data['freq_response']['points']) as List).map((e) => (e as num).toDouble()).toList()
+        : null;
+
+    setState(() => _isLoading = false);
+  }
+
   // -------------------------------------------------------------------------
-  // Расчёт Health Score по сгенерированным данным
+  // Расчёт Health Score по данным
   // -------------------------------------------------------------------------
 
   HealthScoreResult get _healthResult {
-    final conductors = (continuityResult?['conductors'] as List?)
+    final conductors = (_continuityResult?['conductors'] as List?)
         ?.cast<Map<String, dynamic>>() ??
         [];
 
     return HealthScoreCalculator.calculate(
-      cableType: cableType,
+      cableType: _cableType,
       continuityConductors: conductors,
-      cmrrDb: cmrrDb,
-      freqResponseValues: freqValues,
-      continuityRun: selectedTests.contains(TestType.continuity),
-      cmrrRun: selectedTests.contains(TestType.cmrr),
-      freqRun: selectedTests.contains(TestType.freqResponse),
+      cmrrDb: _cmrrDb,
+      freqResponseValues: _freqValues,
+      continuityRun: _continuityResult != null || widget.selectedTests.contains(TestType.continuity),
+      cmrrRun: _cmrrDb != null || widget.selectedTests.contains(TestType.cmrr),
+      freqRun: _freqValues != null || widget.selectedTests.contains(TestType.freqResponse),
     );
   }
 
-  int get _healthScore => (_healthResult.score ?? 0).round();
+  int get _healthScore {
+    // Если смотрим из истории — берем сохраненный в БД результат
+    if (_savedHealthScore != null) return _savedHealthScore!;
+
+    // Иначе (после теста) считаем по формуле
+    return (_healthResult.score ?? 0).round();
+  }
 
   String get _formattedTime {
-    if (totalTimeSeconds < 60) {
-      return '${totalTimeSeconds.toStringAsFixed(1)} с';
+    if (widget.totalTimeSeconds < 60) {
+      return '${widget.totalTimeSeconds.toStringAsFixed(1)} с';
     } else {
-      final minutes = (totalTimeSeconds / 60).floor();
-      final seconds = totalTimeSeconds % 60;
+      final minutes = (widget.totalTimeSeconds / 60).floor();
+      final seconds = widget.totalTimeSeconds % 60;
       return '$minutes мин ${seconds.toStringAsFixed(1)} с';
     }
   }
 
   String get _cableDisplayName {
-    switch (cableType) {
+    switch (_cableType) {
       case CableType.jackTs:
         return 'Jack TS · 2-pin';
       case CableType.jackTrs:
@@ -89,12 +154,11 @@ class TestingResultsScreen extends StatelessWidget {
 
   /// Строка результата целостности: диапазон сопротивлений + худший статус
   String get _continuityResultText {
-    if (continuityResult == null) return '—';
-    final conductors =
-    (continuityResult!['conductors'] as List).cast<Map<String, dynamic>>();
+    if (_continuityResult == null) return '—';
+    final conductors = (_continuityResult!['conductors'] as List).cast<Map<String, dynamic>>();
     if (conductors.isEmpty) return '—';
 
-    final rs = conductors.map((c) => c['r'] as double).toList();
+    final rs = conductors.map((c) => (c['r'] as num).toDouble()).toList();
     final minR = rs.reduce((a, b) => a < b ? a : b);
     final maxR = rs.reduce((a, b) => a > b ? a : b);
 
@@ -109,9 +173,8 @@ class TestingResultsScreen extends StatelessWidget {
 
   /// Статус целостности для иконки: ok / warning / fail
   String get _continuityStatus {
-    if (continuityResult == null) return 'fail';
-    final conductors =
-    (continuityResult!['conductors'] as List).cast<Map<String, dynamic>>();
+    if (_continuityResult == null) return 'fail';
+    final conductors = (_continuityResult!['conductors'] as List).cast<Map<String, dynamic>>();
     if (conductors.any((c) => c['s'] == 'open' || c['s'] == 'short')) {
       return 'fail';
     }
@@ -121,30 +184,25 @@ class TestingResultsScreen extends StatelessWidget {
 
   /// Строка результата CMRR
   String get _cmrrResultText {
-    if (cmrrDb == null) return '—';
-    return '${cmrrDb!.toStringAsFixed(1)} дБ';
+    if (_cmrrDb == null) return '—';
+    return '${_cmrrDb!.toStringAsFixed(1)} дБ';
   }
 
   /// Статус CMRR для иконки
   String get _cmrrStatus {
-    if (cmrrDb == null) return 'fail';
-    if (cmrrDb! >= 60) return 'ok';
-    if (cmrrDb! >= 40) return 'warning';
+    if (_cmrrDb == null) return 'fail';
+    if (_cmrrDb! >= 60) return 'ok';
+    if (_cmrrDb! >= 40) return 'warning';
     return 'fail';
   }
 
   /// Строка результата АЧХ: пик завала в аудиодиапазоне
   String get _freqResultText {
-    if (freqValues == null || freqValues!.isEmpty) return '—';
-    if (freqValues!.any((v) => v <= -99.0)) return 'нет сигнала';
+    if (_freqValues == null || _freqValues!.isEmpty) return '—';
+    if (_freqValues!.any((v) => v <= -99.0)) return 'нет сигнала';
 
-    // Пик в аудиодиапазоне: индексы 3..26 (20 Гц – 17 кГц)
-    final audio = freqValues!.sublist(3, 27);
-    double peak = 0.0;
-    for (final v in audio) {
-      if (v.abs() > peak) peak = v.abs();
-    }
-    return 'спад −${peak.toStringAsFixed(1)} дБ';
+    final stats = FreqResponseStats.fromValues(_freqValues!);
+    return 'спад −${stats.peak.toStringAsFixed(1)} дБ';
   }
 
   void _showRepeatDialog(BuildContext context) {
@@ -228,9 +286,9 @@ class TestingResultsScreen extends StatelessWidget {
                             context,
                             MaterialPageRoute(
                               builder: (context) => TestingProgressScreen(
-                                cableType: cableType,
-                                selectedTests: selectedTests,
-                                totalDuration: selectedTests.length * 10,
+                                cableType: _cableType,
+                                selectedTests: widget.selectedTests,
+                                totalDuration: widget.selectedTests.length * 10,
                               ),
                             ),
                           );
@@ -273,19 +331,26 @@ class TestingResultsScreen extends StatelessWidget {
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
       builder: (context) => _SaveToCollectionSheet(
-        cableType: cableType,
-        selectedTests: selectedTests,
-        healthScore: _healthScore.toInt(),
+        cableType: _cableType,
+        selectedTests: widget.selectedTests,
+        healthScore: _healthScore,
         continuityResult: _continuityResultText,
-        cmrrDb: cmrrDb ?? 0.0,
+        cmrrDb: _cmrrDb ?? 0.0,
         freqResponseResult: _freqResultText,
-        totalTimeSeconds: totalTimeSeconds,
+        totalTimeSeconds: widget.totalTimeSeconds,
       ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Scaffold(
+        backgroundColor: Color(0xFF0A0A0A),
+        body: Center(child: CircularProgressIndicator(color: Color(0xFFEF9F27))),
+      );
+    }
+
     return Scaffold(
       backgroundColor: const Color(0xFF0A0A0A),
       appBar: AppBar(
@@ -385,7 +450,7 @@ class TestingResultsScreen extends StatelessWidget {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        '$_cableDisplayName · $_formattedTime',
+                        '$_cableDisplayName · ${widget.totalTimeSeconds > 0 ? _formattedTime : "Архивная проверка"}',
                         style: const TextStyle(
                           fontSize: 11,
                           color: Color(0xFF888888),
@@ -420,7 +485,7 @@ class TestingResultsScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 6),
                   // CMRR (показываем только если был выбран)
-                  if (selectedTests.contains(TestType.cmrr))
+                  if (_cmrrDb != null)
                     _buildMeasurementItem(
                       title: 'CMRR',
                       value: _cmrrResultText,
@@ -428,86 +493,87 @@ class TestingResultsScreen extends StatelessWidget {
                     ),
                   const SizedBox(height: 6),
                   // АЧХ (показываем только если был выбран)
-                  if (selectedTests.contains(TestType.freqResponse))
+                  if (_freqValues != null)
                     _buildFreqResponseItem(context),
                 ],
               ),
             ),
 
-            // Кнопки действий
-            Padding(
-              padding: const EdgeInsets.fromLTRB(24, 10, 24, 14),
-              child: Column(
-                children: [
-                  ElevatedButton(
-                    onPressed: () => _showSaveToCollectionSheet(context),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFFEF9F27),
-                      foregroundColor: const Color(0xFF2A1A00),
-                      minimumSize: const Size(double.infinity, 48),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+            // Кнопки действий (скрываем в режиме просмотра истории)
+            if (widget.sessionId == null)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(24, 10, 24, 14),
+                child: Column(
+                  children: [
+                    ElevatedButton(
+                      onPressed: () => _showSaveToCollectionSheet(context),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFEF9F27),
+                        foregroundColor: const Color(0xFF2A1A00),
+                        minimumSize: const Size(double.infinity, 48),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: const Text(
+                        'Сохранить в коллекцию',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                        ),
                       ),
                     ),
-                    child: const Text(
-                      'Сохранить в коллекцию',
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton(
-                          onPressed: () => _showRepeatDialog(context),
-                          style: OutlinedButton.styleFrom(
-                            backgroundColor: Colors.transparent,
-                            side: const BorderSide(color: Color(0xFF2A2A2A)),
-                            padding: const EdgeInsets.symmetric(vertical: 11),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
+                    const SizedBox(height: 6),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: () => _showRepeatDialog(context),
+                            style: OutlinedButton.styleFrom(
+                              backgroundColor: Colors.transparent,
+                              side: const BorderSide(color: Color(0xFF2A2A2A)),
+                              padding: const EdgeInsets.symmetric(vertical: 11),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
                             ),
-                          ),
-                          child: const Text(
-                            'Повторить',
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w500,
-                              color: Color(0xFFAAAAAA),
+                            child: const Text(
+                              'Повторить',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w500,
+                                color: Color(0xFFAAAAAA),
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                      const SizedBox(width: 6),
-                      Expanded(
-                        child: OutlinedButton(
-                          onPressed: () => _discardResult(context),
-                          style: OutlinedButton.styleFrom(
-                            backgroundColor: Colors.transparent,
-                            side: const BorderSide(color: Color(0xFF2A2A2A)),
-                            padding: const EdgeInsets.symmetric(vertical: 11),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: () => _discardResult(context),
+                            style: OutlinedButton.styleFrom(
+                              backgroundColor: Colors.transparent,
+                              side: const BorderSide(color: Color(0xFF2A2A2A)),
+                              padding: const EdgeInsets.symmetric(vertical: 11),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
                             ),
-                          ),
-                          child: const Text(
-                            'Отбросить',
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w500,
-                              color: Color(0xFF888888),
+                            child: const Text(
+                              'Отбросить',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w500,
+                                color: Color(0xFF888888),
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                    ],
-                  ),
-                ],
+                      ],
+                    ),
+                  ],
+                ),
               ),
-            ),
           ],
         ),
       ),
@@ -634,8 +700,7 @@ class TestingResultsScreen extends StatelessWidget {
               ),
               TextButton(
                 onPressed: () {
-                  // Считаем peak/sigma в аудио-диапазоне для передачи в DetailsScreen
-                  final freqValues = this.freqValues;
+                  final freqValues = _freqValues;
                   double? peak;
                   double? sigma;
                   bool hasNoSignal = false;
@@ -654,14 +719,13 @@ class TestingResultsScreen extends StatelessWidget {
                     }
                   }
 
-                  // Считаем диапазон сопротивлений из continuityResult
                   double? contMin;
                   double? contMax;
-                  if (continuityResult != null) {
-                    final conductors = (continuityResult!['conductors'] as List)
+                  if (_continuityResult != null) {
+                    final conductors = (_continuityResult!['conductors'] as List)
                         .cast<Map<String, dynamic>>();
                     if (conductors.isNotEmpty) {
-                      final rs = conductors.map((c) => c['r'] as double).toList();
+                      final rs = conductors.map((c) => (c['r'] as num).toDouble()).toList();
                       contMin = rs.reduce((a, b) => a < b ? a : b);
                       contMax = rs.reduce((a, b) => a > b ? a : b);
                     }
@@ -671,11 +735,11 @@ class TestingResultsScreen extends StatelessWidget {
                     context,
                     MaterialPageRoute(
                       builder: (context) => DetailsScreen(
-                        cableType: cableType,
+                        cableType: _cableType,
                         healthScore: _healthScore,
                         continuityMin: contMin,
                         continuityMax: contMax,
-                        cmrrDb: cmrrDb,
+                        cmrrDb: _cmrrDb,
                         freqPeak: peak,
                         freqSigma: sigma,
                         freqValues: freqValues,
@@ -707,7 +771,7 @@ class TestingResultsScreen extends StatelessWidget {
             width: double.infinity,
             height: 46,
             child: CustomPaint(
-              painter: _MiniGraphPainter(values: freqValues),
+              painter: _MiniGraphPainter(values: _freqValues),
             ),
           ),
         ],
@@ -747,7 +811,7 @@ class _MiniGraphPainter extends CustomPainter {
     final bool hasDrop = values!.any((v) => v < -3.0);
 
     final graphPaint = Paint()
-      ..color = hasDrop ? const Color(0xFFE24B4A) : const Color(0xFFEF9F27) // Красный при провале
+      ..color = hasDrop ? const Color(0xFFE24B4A) : const Color(0xFFEF9F27)
       ..strokeWidth = 1.6
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round;
@@ -756,11 +820,7 @@ class _MiniGraphPainter extends CustomPainter {
 
     bool first = true;
     for (int i = 0; i < 30; i++) {
-      // X: растягиваем на всю ширину мини-графика
       final double x = (i / 29) * width;
-
-      // Y: отображаем диапазон от +3 до -3 дБ в высоту от 5 до 45 пикселей.
-      // Центр (0 дБ) — это y = 25. Шаг — 6.6 пикселя на 1 дБ.
       final double y = 25 - (values![i] * 6.6);
 
       if (first) {
@@ -875,7 +935,6 @@ class _SaveToCollectionSheetState extends State<_SaveToCollectionSheet> {
   }
 
   Map<String, dynamic> _parseContinuityResult() {
-    // Пример парсинга для демонстрации
     if (widget.cableType == CableType.xlr) {
       return {
         'pin1': {'r': 0.9, 's': 'ok'},
@@ -922,7 +981,7 @@ class _SaveToCollectionSheetState extends State<_SaveToCollectionSheet> {
 
   Future<void> _saveTestSession(int cableId) async {
     final int now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
-    final String bleDeviceId = 'HM-2A4F-001'; // В реальном приложении брать из BleProvider
+    final String bleDeviceId = 'HM-2A4F-001';
 
     final Map<String, dynamic> session = {
       'cable_id': cableId,
@@ -932,7 +991,6 @@ class _SaveToCollectionSheetState extends State<_SaveToCollectionSheet> {
     };
     final int sessionId = await DatabaseHelper().insertTestSession(session);
 
-    // Сохраняем результаты целостности, если тест был выбран
     if (widget.selectedTests.contains(TestType.continuity)) {
       final conductors = _parseContinuityResult();
       final continuityStatus = _getContinuityStatus();
@@ -943,7 +1001,6 @@ class _SaveToCollectionSheetState extends State<_SaveToCollectionSheet> {
       });
     }
 
-    // Сохраняем CMRR, если был выбран
     if (widget.selectedTests.contains(TestType.cmrr)) {
       final cmrrStatus = _getCmrrStatus();
       await DatabaseHelper().insertCmrrResult({
@@ -953,7 +1010,6 @@ class _SaveToCollectionSheetState extends State<_SaveToCollectionSheet> {
       });
     }
 
-    // Сохраняем АЧХ, если был выбран
     if (widget.selectedTests.contains(TestType.freqResponse)) {
       final points = _generateFreqPoints();
       final freqStatus = _getFreqStatus();
@@ -1000,7 +1056,7 @@ class _SaveToCollectionSheetState extends State<_SaveToCollectionSheet> {
             context,
             MaterialPageRoute(
               builder: (context) => CablePassportScreen(
-                cableId: cableId, // <-- ИЗМЕНЕНО: передаем только ID
+                cableId: cableId,
                 onBack: () => Navigator.pop(context),
               ),
             ),
@@ -1024,10 +1080,7 @@ class _SaveToCollectionSheetState extends State<_SaveToCollectionSheet> {
       final int cableId = int.parse(_selectedCableId!);
       try {
         await _saveTestSession(cableId);
-
-        // Получаем имя кабеля для снекбара (из уже загруженного списка _cables)
         final cable = _cables.firstWhere((c) => c['id'] == cableId);
-
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text('Результат добавлен к кабелю ${cable['name']}'), backgroundColor: Color(0xFF97C459)),
@@ -1037,7 +1090,7 @@ class _SaveToCollectionSheetState extends State<_SaveToCollectionSheet> {
             context,
             MaterialPageRoute(
               builder: (context) => CablePassportScreen(
-                cableId: cableId, // <-- ИЗМЕНЕНО: передаем только ID
+                cableId: cableId,
                 onBack: () => Navigator.pop(context),
               ),
             ),
