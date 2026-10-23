@@ -240,7 +240,7 @@ class _CollectionScreenState extends State<CollectionScreen> {
   }
 
   void _navigateToCableDetail(Map<String, dynamic> cable) {
-    final int cableId = cable['id']; // <-- берем id из списка
+    final String cableId = cable['id']; // <-- берем id из списка
 
     Navigator.push(
       context,

@@ -4,7 +4,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart';
 import 'dart:convert';
 import 'package:flutter/services.dart';
-
+import 'package:uuidv7/uuidv7.dart';
 import '../domain/health_score_calculator.dart';
 
 class DatabaseHelper {
@@ -32,10 +32,9 @@ class DatabaseHelper {
   }
 
   Future<void> _onCreate(Database db, int version) async {
-    // Создание таблиц
     await db.execute('''
       CREATE TABLE cables (
-        id          INTEGER PRIMARY KEY AUTOINCREMENT,
+        id          TEXT     PRIMARY KEY,
         name        TEXT     NOT NULL,
         color       TEXT     NOT NULL,
         cable_type  TEXT     NOT NULL,
@@ -46,17 +45,17 @@ class DatabaseHelper {
 
     await db.execute('''
       CREATE TABLE test_sessions (
-        id             INTEGER PRIMARY KEY AUTOINCREMENT,
-        cable_id       INTEGER NOT NULL REFERENCES cables(id) ON DELETE CASCADE,
-        started_at     INTEGER NOT NULL,
+        id             TEXT     PRIMARY KEY,
+        cable_id       TEXT     NOT NULL REFERENCES cables(id) ON DELETE CASCADE,
+        started_at     INTEGER  NOT NULL,
         health_score   INTEGER,
-        ble_device_id  TEXT    NOT NULL
+        ble_device_id  TEXT     NOT NULL
       )
     ''');
 
     await db.execute('''
       CREATE TABLE continuity_results (
-        session_id   INTEGER PRIMARY KEY REFERENCES test_sessions(id) ON DELETE CASCADE,
+        session_id   TEXT PRIMARY KEY REFERENCES test_sessions(id) ON DELETE CASCADE,
         status       TEXT NOT NULL,
         conductors   TEXT NOT NULL
       )
@@ -64,7 +63,7 @@ class DatabaseHelper {
 
     await db.execute('''
       CREATE TABLE cmrr_results (
-        session_id  INTEGER PRIMARY KEY REFERENCES test_sessions(id) ON DELETE CASCADE,
+        session_id  TEXT PRIMARY KEY REFERENCES test_sessions(id) ON DELETE CASCADE,
         value_db    REAL NOT NULL,
         status      TEXT NOT NULL
       )
@@ -72,7 +71,7 @@ class DatabaseHelper {
 
     await db.execute('''
       CREATE TABLE freq_response_results (
-        session_id  INTEGER PRIMARY KEY REFERENCES test_sessions(id) ON DELETE CASCADE,
+        session_id  TEXT PRIMARY KEY REFERENCES test_sessions(id) ON DELETE CASCADE,
         status      TEXT NOT NULL,
         points      TEXT NOT NULL
       )
@@ -80,12 +79,13 @@ class DatabaseHelper {
   }
 
   // ---------- C A B L E S ----------
+
   Future<List<Map<String, dynamic>>> getCables() async {
     final db = await database;
     return await db.query('cables', orderBy: 'name ASC');
   }
 
-  Future<Map<String, dynamic>?> getCableById(int id) async {
+  Future<Map<String, dynamic>?> getCableById(String id) async {
     final db = await database;
     final List<Map<String, dynamic>> result = await db.query(
       'cables',
@@ -95,156 +95,169 @@ class DatabaseHelper {
     return result.isNotEmpty ? result.first : null;
   }
 
-  Future<int> insertCable(Map<String, dynamic> cable) async {
+  Future<String> insertCable(Map<String, dynamic> cable) async {
     final db = await database;
-    return await db.insert('cables', cable);
+    final String newId = generateUuidV7String();
+    final Map<String, dynamic> data = Map.from(cable);
+    data['id'] = newId;
+    await db.insert('cables', data);
+    return newId; // Возвращаем сгенерированный ID
   }
 
-  Future<int> updateCable(int id, Map<String, dynamic> cable) async {
+  Future<int> updateCable(String id, Map<String, dynamic> cable) async {
     final db = await database;
     return await db.update('cables', cable, where: 'id = ?', whereArgs: [id]);
   }
 
-  Future<int> deleteCable(int id) async {
+  Future<int> deleteCable(String id) async {
     final db = await database;
     return await db.delete('cables', where: 'id = ?', whereArgs: [id]);
   }
 
   // ---------- T E S T   S E S S I O N S ----------
-  Future<int> insertTestSession(Map<String, dynamic> session) async {
+
+  Future<String> insertTestSession(Map<String, dynamic> session) async {
     final db = await database;
-    return await db.insert('test_sessions', session);
+    final String newId = generateUuidV7String();
+    final Map<String, dynamic> data = Map.from(session);
+    data['id'] = newId;
+    await db.insert('test_sessions', data);
+    return newId; // Возвращаем сгенерированный ID
   }
 
-  // ---------- C O N T I N U I T Y   R E S U L T S ----------
+  // ---------- R E S U L T S ----------
+
   Future<int> insertContinuityResult(Map<String, dynamic> result) async {
     final db = await database;
     return await db.insert('continuity_results', result);
   }
 
-  // ---------- C M R R   R E S U L T S ----------
   Future<int> insertCmrrResult(Map<String, dynamic> result) async {
     final db = await database;
     return await db.insert('cmrr_results', result);
   }
 
-  // ---------- F R E Q   R E S P O N S E   R E S U L T S ----------
   Future<int> insertFreqResponseResult(Map<String, dynamic> result) async {
     final db = await database;
     return await db.insert('freq_response_results', result);
   }
 
+  /// Получить последнюю тестовую сессию для кабеля
+  Future<Map<String, dynamic>?> getLastTestSession(String cableId) async {
+    final db = await database;
+    final result = await db.query(
+      'test_sessions',
+      where: 'cable_id = ?',
+      whereArgs: [cableId],
+      orderBy: 'started_at DESC',
+      limit: 1,
+    );
+    return result.isNotEmpty ? result.first : null;
+  }
+
   // ---------- Вспомогательные методы ----------
   Future<void> importMockDataIfEmpty() async {
-    try {
-      final db = await database;
+    final db = await database;
+    final count = Sqflite.firstIntValue(await db.rawQuery('SELECT COUNT(*) FROM cables'));
 
-      final jsonString = await rootBundle.loadString('mock/ble_mock_packets.json');
-      final Map<String, dynamic> jsonData = jsonDecode(jsonString);
-      final continuityResults = jsonData['results']['continuity'] as Map<String, dynamic>;
-      final cmrrResults = jsonData['results']['cmrr'] as Map<String, dynamic>;
-      final freqResults = jsonData['results']['freq_response'] as Map<String, dynamic>;
+    if (count != null && count > 0) return; // Если уже есть данные, не импортируем
 
-      final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+    final jsonString = await rootBundle.loadString('mock/ble_mock_packets.json');
+    final Map<String, dynamic> jsonData = jsonDecode(jsonString);
+    final continuityResults = jsonData['results']['continuity'] as Map<String, dynamic>;
+    final cmrrResults = jsonData['results']['cmrr'] as Map<String, dynamic>;
+    final freqResults = jsonData['results']['freq_response'] as Map<String, dynamic>;
 
-      for (final entry in continuityResults.entries) {
-        final cableIdStr = entry.key;
-        if (cableIdStr.startsWith('_')) continue;
+    final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
 
-        try {
-          final continuityData = entry.value;
-          final cableTypeStr = continuityData['cable'] ?? 'unknown';
+    for (final entry in continuityResults.entries) {
+      final cableIdStr = entry.key;
+      if (cableIdStr.startsWith('_')) continue;
 
-          String displayName = cableIdStr.split('_').map((word) => word.isNotEmpty ? word[0].toUpperCase() + word.substring(1) : '').join(' ');
+      final continuityData = entry.value;
+      final cableTypeStr = continuityData['cable'] ?? 'unknown';
 
-          final int cableId = await db.insert('cables', {
-            'name': displayName,
-            'color': '639922',
-            'cable_type': cableTypeStr,
-            'created_at': now,
-            'note': 'Импортирован из mock-данных',
-          });
-          print('🟢 [DB Import] Создан кабель: $displayName (ID: $cableId)');
+      String displayName = cableIdStr.split('_').map((word) => word.isNotEmpty ? word[0].toUpperCase() + word.substring(1) : '').join(' ');
 
-          final conductorsMap = continuityData['conductors'] as Map<String, dynamic>;
-          final List<Map<String, dynamic>> conductors = [];
-          for (final condEntry in conductorsMap.entries) {
-            conductors.add({
-              'name': condEntry.key,
-              'r': (condEntry.value['r'] as num).toDouble(),
-              's': condEntry.value['s'] as String,
-            });
-          }
+      // ИСПОЛЬЗУЕМ insertCable
+      final String cableId = await insertCable({
+        'name': displayName,
+        'color': '639922',
+        'cable_type': cableTypeStr,
+        'created_at': now,
+        'note': 'Импортирован из mock-данных',
+      });
 
-          final double? cmrrDb = cmrrResults.containsKey(cableIdStr)
-              ? (cmrrResults[cableIdStr]['cmrr_db'] as num).toDouble()
-              : null;
-
-          List<double>? freqValues;
-          if (freqResults.containsKey(cableIdStr)) {
-            freqValues = (freqResults[cableIdStr]['v'] as List).map((e) => (e as num).toDouble()).toList();
-          }
-
-          CableType? cableType;
-          switch (cableTypeStr) {
-            case 'xlr': cableType = CableType.xlr; break;
-            case 'jack_trs': cableType = CableType.jackTrs; break;
-            case 'jack_ts': cableType = CableType.jackTs; break;
-          }
-
-          int healthScore = 0;
-          if (cableType != null) {
-            final healthResult = HealthScoreCalculator.calculate(
-              cableType: cableType,
-              continuityConductors: conductors,
-              cmrrDb: cmrrDb,
-              freqResponseValues: freqValues,
-              continuityRun: true,
-              cmrrRun: cableType.supportsCmrr,
-              freqRun: freqValues != null,
-            );
-            healthScore = (healthResult.score ?? 0).toInt();
-          }
-
-          final int sessionId = await db.insert('test_sessions', {
-            'cable_id': cableId,
-            'started_at': now,
-            'health_score': healthScore,
-            'ble_device_id': 'MOCK-DEVICE',
-          });
-          print('🟢 [DB Import] Создана сессия (ID: $sessionId), Score: $healthScore');
-
-          await db.insert('continuity_results', {
-            'session_id': sessionId,
-            'status': continuityData['status'],
-            'conductors': jsonEncode(conductors),
-          });
-          print('🟢 [DB Import] Сохранена целостность для сессии $sessionId');
-
-          if (cmrrDb != null) {
-            await db.insert('cmrr_results', {
-              'session_id': sessionId,
-              'value_db': cmrrDb,
-              'status': cmrrResults[cableIdStr]['status'],
-            });
-            print('🟢 [DB Import] Сохранен CMRR для сессии $sessionId');
-          }
-
-          if (freqValues != null) {
-            await db.insert('freq_response_results', {
-              'session_id': sessionId,
-              'status': freqResults[cableIdStr]['status'],
-              'points': jsonEncode(freqValues),
-            });
-            print('🟢 [DB Import] Сохранена АЧХ для сессии $sessionId');
-          }
-        } catch (e) {
-          print('🔴 [DB Import] ОШИБКА при импорте теста $cableIdStr: $e');
-        }
+      final conductorsMap = continuityData['conductors'] as Map<String, dynamic>;
+      final List<Map<String, dynamic>> conductors = [];
+      for (final condEntry in conductorsMap.entries) {
+        conductors.add({
+          'name': condEntry.key,
+          'r': (condEntry.value['r'] as num).toDouble(),
+          's': condEntry.value['s'] as String,
+        });
       }
-      print('🟢 [DB Import] Импорт завершен.');
-    } catch (e) {
-      print('🔴 [DB Import] КРИТИЧЕСКАЯ ОШИБКА: $e');
+
+      final double? cmrrDb = cmrrResults.containsKey(cableIdStr)
+          ? (cmrrResults[cableIdStr]['cmrr_db'] as num).toDouble()
+          : null;
+
+      List<double>? freqValues;
+      if (freqResults.containsKey(cableIdStr)) {
+        freqValues = (freqResults[cableIdStr]['v'] as List).map((e) => (e as num).toDouble()).toList();
+      }
+
+      CableType? cableType;
+      switch (cableTypeStr) {
+        case 'xlr': cableType = CableType.xlr; break;
+        case 'jack_trs': cableType = CableType.jackTrs; break;
+        case 'jack_ts': cableType = CableType.jackTs; break;
+      }
+
+      int healthScore = 0;
+      if (cableType != null) {
+        final healthResult = HealthScoreCalculator.calculate(
+          cableType: cableType,
+          continuityConductors: conductors,
+          cmrrDb: cmrrDb,
+          freqResponseValues: freqValues,
+          continuityRun: true,
+          cmrrRun: cableType.supportsCmrr,
+          freqRun: freqValues != null,
+        );
+        healthScore = (healthResult.score ?? 0).toInt();
+      }
+
+      // ИСПОЛЬЗУЕМ insertTestSession
+      final String sessionId = await insertTestSession({
+        'cable_id': cableId,
+        'started_at': now,
+        'health_score': healthScore,
+        'ble_device_id': 'MOCK-DEVICE',
+      });
+
+      // Вставляем результаты
+      await insertContinuityResult({
+        'session_id': sessionId,
+        'status': continuityData['status'],
+        'conductors': jsonEncode(conductors),
+      });
+
+      if (cmrrDb != null) {
+        await insertCmrrResult({
+          'session_id': sessionId,
+          'value_db': cmrrDb,
+          'status': cmrrResults[cableIdStr]['status'],
+        });
+      }
+
+      if (freqValues != null) {
+        await insertFreqResponseResult({
+          'session_id': sessionId,
+          'status': freqResults[cableIdStr]['status'],
+          'points': jsonEncode(freqValues),
+        });
+      }
     }
   }
 
@@ -297,20 +310,6 @@ class DatabaseHelper {
     ''');
 
     return Sqflite.firstIntValue(result) ?? 0;
-  }
-
-  /// Получить последнюю тестовую сессию для кабеля
-  Future<Map<String, dynamic>?> getLastTestSession(int cableId) async {
-    final db = await database;
-    final result = await db.query(
-      'test_sessions',
-      where: 'cable_id = ?',
-      whereArgs: [cableId],
-      orderBy: 'started_at DESC',
-      limit: 1,
-    );
-
-    return result.isNotEmpty ? result.first : null;
   }
 
   /// Получить последние N тестовых сессий для главного экрана
@@ -376,7 +375,7 @@ class DatabaseHelper {
 
     return result.map((row) {
       return {
-        'id': row['id'],
+        'id': row['id'] as String,
         'name': row['name'],
         'color': row['color'],
         'cable_type': row['cable_type'],
@@ -384,13 +383,13 @@ class DatabaseHelper {
         'note': row['note'] ?? '',
         'healthScore': row['last_health_score'],
         'lastCheck': row['last_check_date'],
-        'checksCount': row['checks_count'] ?? 0, // <-- ДОБАВИЛИ СЧЕТЧИК
+        'checksCount': row['checks_count'] ?? 0,
       };
     }).toList();
   }
 
   /// Получить полную информацию о кабеле для паспорта
-  Future<Map<String, dynamic>?> getCableWithHistory(int cableId) async {
+  Future<Map<String, dynamic>?> getCableWithHistory(String cableId) async {
     final db = await database;
 
     // Основная информация о кабеле
@@ -459,7 +458,7 @@ class DatabaseHelper {
     };
   }
   /// Получить полные данные конкретной сессии для отображения результатов
-  Future<Map<String, dynamic>?> getSessionDetails(int sessionId) async {
+  Future<Map<String, dynamic>?> getSessionDetails(String sessionId) async {
     final db = await database;
 
     // Получаем сессию и кабель

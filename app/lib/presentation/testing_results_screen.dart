@@ -20,7 +20,7 @@ class TestingResultsScreen extends StatefulWidget {
 
 
   // ID сессии для режима "просмотр из истории"
-  final int? sessionId;
+  final String? sessionId;
 
   const TestingResultsScreen({
     super.key,
@@ -979,7 +979,7 @@ class _SaveToCollectionSheetState extends State<_SaveToCollectionSheet> {
     return 'fail';
   }
 
-  Future<void> _saveTestSession(int cableId) async {
+  Future<void> _saveTestSession(String cableId) async {
     final int now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
     final String bleDeviceId = 'HM-2A4F-001';
 
@@ -989,7 +989,7 @@ class _SaveToCollectionSheetState extends State<_SaveToCollectionSheet> {
       'health_score': widget.healthScore,
       'ble_device_id': bleDeviceId,
     };
-    final int sessionId = await DatabaseHelper().insertTestSession(session);
+    final String sessionId = await DatabaseHelper().insertTestSession(session);
 
     if (widget.selectedTests.contains(TestType.continuity)) {
       final conductors = _parseContinuityResult();
@@ -1045,7 +1045,7 @@ class _SaveToCollectionSheetState extends State<_SaveToCollectionSheet> {
       };
 
       try {
-        final int cableId = await DatabaseHelper().insertCable(newCable);
+        final String cableId = await DatabaseHelper().insertCable(newCable);
         await _saveTestSession(cableId);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -1077,7 +1077,7 @@ class _SaveToCollectionSheetState extends State<_SaveToCollectionSheet> {
         return;
       }
 
-      final int cableId = int.parse(_selectedCableId!);
+      final String cableId = _selectedCableId!;
       try {
         await _saveTestSession(cableId);
         final cable = _cables.firstWhere((c) => c['id'] == cableId);

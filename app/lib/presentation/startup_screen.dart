@@ -19,7 +19,7 @@ class StartupScreen extends StatefulWidget {
 
 class _StartupScreenState extends State<StartupScreen> {
   String _currentView = 'main';
-  int? _selectedCableId;
+  String? _selectedCableId;
   List<Map<String, dynamic>> _recentCables = [];
   bool _isLoading = true;
   bool _isBleMenuVisible = false;
@@ -192,7 +192,7 @@ class _StartupScreenState extends State<StartupScreen> {
     });
   }
 
-  void _showCablePassport(int cableId) { // <-- принимает int
+  void _showCablePassport(String cableId) { // <-- принимает int
     setState(() {
       _selectedCableId = cableId; // сохраняем id
       _currentView = 'cable_passport';
@@ -713,7 +713,7 @@ class _StartupScreenState extends State<StartupScreen> {
     required Color color,
     required String title,
     required String subtitle,
-    required int? cableId,
+    required String? cableId,
     required String cableName,
     required String cableType,
     required int healthScore,

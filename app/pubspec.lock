@@ -669,6 +669,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "3.1.5"
+  uuidv7:
+    dependency: "direct main"
+    description:
+      name: uuidv7
+      sha256: "7f4804cda08812ae639b22504ef7b8b8e1ef53a75ae65aeebca28f1b00060fe0"
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.0.1"
   vector_math:
     dependency: transitive
     description:

@@ -6,7 +6,7 @@ import 'testing_screen.dart';
 import 'testing_results_screen.dart';
 
 class CablePassportScreen extends StatefulWidget {
-  final int cableId;
+  final String cableId;
   final VoidCallback onBack;
 
   const CablePassportScreen({
@@ -527,7 +527,7 @@ class _CablePassportScreenState extends State<CablePassportScreen> {
                   else
                     ...history.map((item) {
                       final score = item['health_score'] as int? ?? 0;
-                      final sessionId = item['session_id'] as int;
+                      final sessionId = item['session_id'];
 
                       return GestureDetector(
                         onTap: () {
