@@ -41,15 +41,15 @@
         <div style="flex: 2; background: #E24B4A;"></div>
       </div>
       <div style="display: flex; justify-content: space-between; font-size: 10px; color: #888;">
-        <span><span style="color: #97C459;">●</span> 18 исправны</span>
-        <span><span style="color: #EF9F27;">●</span> 4 внимание</span>
-        <span><span style="color: #E24B4A;">●</span> 2 брак</span>
+        <span><span style="color: #97C459;">●</span> 18 в норме</span>
+        <span><span style="color: #EF9F27;">●</span> 4 отклонения</span>
+        <span><span style="color: #E24B4A;">●</span> 2 критично</span>
       </div>
     </div>
   </div>
 
   <div style="padding: 4px 24px 12px;">
-    <button onclick="goto('testSetup')" style="width: 100%; background: #EF9F27; color: #2a1a00; border: none; border-radius: 12px; padding: 16px; font-size: 14px; font-weight: 500; font-family: var(--font-sans); cursor: pointer; display: flex; align-items: center; justify-content: space-between;">
+    <button onclick="newTest()" style="width: 100%; background: #EF9F27; color: #2a1a00; border: none; border-radius: 12px; padding: 16px; font-size: 14px; font-weight: 500; font-family: var(--font-sans); cursor: pointer; display: flex; align-items: center; justify-content: space-between;">
       <span style="display: flex; align-items: center; gap: 10px;">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2a1a00" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M10 8l6 4-6 4V8z" fill="#2a1a00"/></svg>
         Запустить тестирование
@@ -67,37 +67,16 @@
     <button onclick="goto('device')" style="background: #111; border: 0.5px solid #1f1f1f; border-radius: 12px; padding: 14px 12px; text-align: left; cursor: pointer; color: #e8e8e8; font-family: var(--font-sans);">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#EF9F27" stroke-width="1.8" stroke-linecap="round" style="margin-bottom: 8px;"><rect x="5" y="7" width="15" height="10" rx="2"/><path d="M20 11v2"/><path d="M8 11v2M12 10v4"/></svg>
       <div style="font-size: 12px; font-weight: 500; color: #fafafa;">Устройство</div>
-      <div style="font-size: 10px; color: #666; margin-top: 2px;">78% · откалибровано</div>
+      <div style="font-size: 10px; color: #666; margin-top: 2px;">HM-2A4F · подключено</div>
     </button>
   </div>
 
   <div style="padding: 0 24px 80px;">
     <div style="font-size: 10px; color: #666; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 10px;">Последние проверки</div>
     <div style="display: flex; flex-direction: column; gap: 6px;">
-      <button onclick="goto('cableDetail')" style="background: #111; border: 0.5px solid #1f1f1f; border-radius: 10px; padding: 10px 12px; cursor: pointer; font-family: var(--font-sans); text-align: left; display: flex; align-items: center; gap: 12px;">
-        <div style="width: 7px; height: 28px; border-radius: 3px; background: #639922;"></div>
-        <div style="flex: 1; min-width: 0;">
-          <div style="font-size: 12px; font-weight: 500; color: #fafafa;">Mogami #1 · XLR</div>
-          <div style="font-size: 10px; color: #666;">CMRR 68 дБ · 2 часа назад</div>
-        </div>
-        <span style="font-size: 14px; color: #444;">›</span>
-      </button>
-      <button onclick="goto('cableDetail')" style="background: #111; border: 0.5px solid #1f1f1f; border-radius: 10px; padding: 10px 12px; cursor: pointer; font-family: var(--font-sans); text-align: left; display: flex; align-items: center; gap: 12px;">
-        <div style="width: 7px; height: 28px; border-radius: 3px; background: #EF9F27;"></div>
-        <div style="flex: 1; min-width: 0;">
-          <div style="font-size: 12px; font-weight: 500; color: #fafafa;">Гитарный длинный · Jack</div>
-          <div style="font-size: 10px; color: #666;">сопр. растёт · вчера</div>
-        </div>
-        <span style="font-size: 14px; color: #444;">›</span>
-      </button>
-      <button onclick="goto('cableDetail')" style="background: #111; border: 0.5px solid #1f1f1f; border-radius: 10px; padding: 10px 12px; cursor: pointer; font-family: var(--font-sans); text-align: left; display: flex; align-items: center; gap: 12px;">
-        <div style="width: 7px; height: 28px; border-radius: 3px; background: #E24B4A;"></div>
-        <div style="flex: 1; min-width: 0;">
-          <div style="font-size: 12px; font-weight: 500; color: #fafafa;">XLR #07 · XLR</div>
-          <div style="font-size: 10px; color: #666;">обрыв pin 3 · 3 дня</div>
-        </div>
-        <span style="font-size: 14px; color: #444;">›</span>
-      </button>
+      <button onclick="goto('cableDetail')" class="cable-row"><div class="strip" style="background: #378ADD;"></div><div class="main"><div class="ttl">Mogami #1 <span class="tag">XLR</span></div><div class="sub">CMRR 68 дБ · 2 часа назад</div></div><div class="score" style="color: #97C459;">84<div>/100</div></div></button>
+      <button onclick="goto('cableDetail')" class="cable-row"><div class="strip" style="background: #9B59B6;"></div><div class="main"><div class="ttl">Гитарный длинный <span class="tag">TS</span></div><div class="sub">сопр. 12 Ом · вчера</div></div><div class="score" style="color: #EF9F27;">68<div>/100</div></div></button>
+      <button onclick="goto('cableDetail')" class="cable-row"><div class="strip" style="background: #1ABC9C;"></div><div class="main"><div class="ttl">XLR #07 <span class="tag">XLR</span></div><div class="sub">обрыв pin 3 · 3 дня</div></div><div class="score" style="color: #E24B4A;">0<div>/100</div></div></button>
     </div>
   </div>
 </div>
@@ -114,6 +93,7 @@
 
   <div style="padding: 14px 24px 6px;">
     <div style="font-size: 10px; color: #666; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 10px;">1 · Тип кабеля</div>
+    <div id="type-locked" style="display: none; font-size: 10px; color: #888; margin: -4px 0 8px;">Тип нельзя изменить: у кабеля уже есть тесты</div>
     <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px;">
       <button id="type-ts" onclick="selectType('ts')" class="type-btn" style="background: rgba(239,159,39,0.08); border: 0.5px solid #EF9F27; border-radius: 10px; padding: 12px 6px; cursor: pointer; font-family: var(--font-sans); display: flex; flex-direction: column; align-items: center; gap: 6px;">
         <svg width="26" height="26" viewBox="0 0 40 28"><rect x="2" y="11" width="10" height="6" rx="0.5" fill="none" stroke="#888" stroke-width="0.8"/><rect x="12" y="9" width="3" height="10" rx="0.5" fill="#666"/><rect x="15" y="11" width="22" height="6" rx="0.5" fill="none" stroke="#EF9F27" stroke-width="1.2"/><rect x="32" y="11" width="0.8" height="6" fill="#EF9F27"/><circle cx="37" cy="14" r="1.5" fill="#EF9F27"/></svg>
@@ -189,8 +169,8 @@
   </div>
 
   <div style="padding: 20px 24px 4px; text-align: center;">
-    <div style="font-size: 10px; color: #666; text-transform: uppercase; letter-spacing: 2px;">XLR · 3-pin</div>
-    <div style="font-size: 12px; color: #888; margin-top: 4px;">тест <span id="run-step">1</span> из 3</div>
+    <div style="font-size: 10px; color: #666; text-transform: uppercase; letter-spacing: 2px;" id="run-type">XLR</div>
+    <div style="font-size: 12px; color: #888; margin-top: 4px;">тест <span id="run-step">1</span> из <span id="run-total">3</span></div>
   </div>
 
   <div style="padding: 8px 24px 16px; display: flex; justify-content: center;">
@@ -218,8 +198,8 @@
 
 <div id="screen-results" class="screen" style="display: none; position: absolute; inset: 0; overflow-y: auto;">
   <div style="padding: 12px 20px 6px; display: flex; align-items: center; justify-content: space-between;">
-    <button onclick="goto('dashboard')" style="background: transparent; border: none; color: #888; font-size: 22px; cursor: pointer; padding: 4px 8px; font-family: var(--font-sans);">×</button>
-    <div style="font-size: 14px; font-weight: 500; color: #fafafa;">Результаты</div>
+    <button onclick="closeResults()" style="background: transparent; border: none; color: #888; font-size: 22px; cursor: pointer; padding: 4px 8px; font-family: var(--font-sans);">×</button>
+    <div id="res-title" style="font-size: 14px; font-weight: 500; color: #fafafa;">Результаты</div>
     <button class="ble-badge" onclick="toggleBle(event)" style="display: flex; align-items: center; gap: 5px; padding: 5px 9px; background: rgba(239,159,39,0.1); border: 0.5px solid rgba(239,159,39,0.4); border-radius: 20px; cursor: pointer;">
       <div style="width: 5px; height: 5px; border-radius: 50%; background: #EF9F27;"></div>
       <span style="font-size: 10px; color: #EF9F27; font-weight: 500;">BLE</span>
@@ -227,20 +207,21 @@
   </div>
 
   <div style="padding: 14px 24px 6px;">
-    <div style="background: linear-gradient(180deg, rgba(99,153,34,0.12) 0%, rgba(99,153,34,0.02) 100%); border: 0.5px solid rgba(151,196,89,0.35); border-radius: 14px; padding: 18px; text-align: center;">
-      <div style="display: inline-flex; align-items: center; gap: 8px; padding: 4px 10px; background: rgba(99,153,34,0.18); border-radius: 20px; margin-bottom: 10px;">
-        <div style="width: 5px; height: 5px; border-radius: 50%; background: #97C459;"></div>
-        <span style="font-size: 10px; color: #97C459; font-weight: 500; letter-spacing: 0.5px;">ИСПРАВЕН</span>
+    <div id="res-hero" style="border-radius: 14px; padding: 18px; text-align: center;">
+      <div id="res-badge" style="display: inline-flex; align-items: center; gap: 8px; padding: 4px 10px; border-radius: 20px; margin-bottom: 10px;">
+        <div id="res-badge-dot" style="width: 5px; height: 5px; border-radius: 50%;"></div>
+        <span id="res-badge-text" style="font-size: 10px; font-weight: 500; letter-spacing: 0.5px;"></span>
       </div>
-      <div style="font-size: 46px; font-weight: 500; color: #fafafa; line-height: 1; font-variant-numeric: tabular-nums;">92<span style="font-size: 18px; color: #888;"> / 100</span></div>
-      <div style="font-size: 11px; color: #888; margin-top: 8px;">XLR · 3-pin · 18.4 с</div>
+      <div style="font-size: 46px; font-weight: 500; color: #fafafa; line-height: 1; font-variant-numeric: tabular-nums;"><span id="res-score"></span><span style="font-size: 18px; color: #888;"> / 100</span></div>
+      <div id="res-sub" style="font-size: 11px; color: #888; margin-top: 8px;"></div>
+      <div id="res-partial" style="display: none; font-size: 10px; color: #EF9F27; margin-top: 6px;"></div>
     </div>
   </div>
 
   <div style="padding: 14px 24px 6px;">
     <div style="font-size: 10px; color: #666; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 10px;">Измерения</div>
     <div style="display: flex; flex-direction: column; gap: 6px;">
-      <div style="padding: 12px; background: #111; border: 0.5px solid #1f1f1f; border-radius: 10px;">
+      <div id="res-cont-card" style="padding: 12px; background: #111; border: 0.5px solid #1f1f1f; border-radius: 10px;">
         <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
           <div style="width: 24px; height: 24px; border-radius: 50%; background: rgba(99,153,34,0.12); border: 0.5px solid rgba(151,196,89,0.5); display: flex; align-items: center; justify-content: center;">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#97C459" stroke-width="3" stroke-linecap="round"><path d="M5 12l5 5L20 7"/></svg>
@@ -248,39 +229,23 @@
           <div style="font-size: 12px; font-weight: 500; color: #fafafa; flex: 1;">Целостность</div>
           <div style="font-size: 10px; color: #555;">все OK</div>
         </div>
-        <div style="display: flex; flex-direction: column; gap: 5px;">
-          <div style="display: flex; align-items: center; gap: 8px;">
-            <div style="width: 8px; height: 8px; border-radius: 50%; background: #97C459; flex-shrink: 0;"></div>
-            <div style="font-size: 10px; color: #888; flex: 1;">Pin 1 · ⏚</div>
-            <div style="font-size: 10px; color: #fafafa; font-variant-numeric: tabular-nums;">0.9 Ом</div>
-          </div>
-          <div style="display: flex; align-items: center; gap: 8px;">
-            <div style="width: 8px; height: 8px; border-radius: 50%; background: #97C459; flex-shrink: 0;"></div>
-            <div style="font-size: 10px; color: #888; flex: 1;">Pin 2 · +</div>
-            <div style="font-size: 10px; color: #fafafa; font-variant-numeric: tabular-nums;">1.2 Ом</div>
-          </div>
-          <div style="display: flex; align-items: center; gap: 8px;">
-            <div style="width: 8px; height: 8px; border-radius: 50%; background: #97C459; flex-shrink: 0;"></div>
-            <div style="font-size: 10px; color: #888; flex: 1;">Pin 3 · −</div>
-            <div style="font-size: 10px; color: #fafafa; font-variant-numeric: tabular-nums;">1.4 Ом</div>
-          </div>
-        </div>
+        <div id="res-pins" style="display: flex; flex-direction: column; gap: 5px;"></div>
       </div>
-      <div style="display: flex; align-items: center; gap: 10px; padding: 12px; background: #111; border: 0.5px solid #1f1f1f; border-radius: 10px;">
+      <div id="res-cmrr-card" style="display: flex; align-items: center; gap: 10px; padding: 12px; background: #111; border: 0.5px solid #1f1f1f; border-radius: 10px;">
         <div style="width: 24px; height: 24px; border-radius: 50%; background: rgba(99,153,34,0.12); border: 0.5px solid rgba(151,196,89,0.5); display: flex; align-items: center; justify-content: center;">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#97C459" stroke-width="3" stroke-linecap="round"><path d="M5 12l5 5L20 7"/></svg>
         </div>
         <div style="flex: 1; font-size: 12px; font-weight: 500; color: #fafafa;">CMRR</div>
-        <div style="text-align: right;"><div style="font-size: 14px; font-weight: 500; color: #97C459; font-variant-numeric: tabular-nums;">68 <span style="font-size: 10px; color: #888;">дБ</span></div></div>
+        <div style="text-align: right;"><div style="font-size: 14px; font-weight: 500; color: #97C459; font-variant-numeric: tabular-nums;"><span id="res-cmrr-val">68</span> <span style="font-size: 10px; color: #888;">дБ</span></div></div>
       </div>
-      <div style="padding: 12px; background: #111; border: 0.5px solid #1f1f1f; border-radius: 10px;">
+      <div id="res-ach-card" style="padding: 12px; background: #111; border: 0.5px solid #1f1f1f; border-radius: 10px;">
         <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
           <div style="width: 24px; height: 24px; border-radius: 50%; background: rgba(239,159,39,0.12); border: 0.5px solid rgba(239,159,39,0.5); display: flex; align-items: center; justify-content: center;">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#EF9F27" stroke-width="2.6" stroke-linecap="round"><path d="M12 8v5"/><circle cx="12" cy="16.5" r="0.5" fill="#EF9F27" stroke="none"/></svg>
           </div>
           <div style="flex: 1;">
             <div style="font-size: 12px; font-weight: 500; color: #fafafa;">АЧХ</div>
-            <div style="font-size: 10px; color: #666;">Спад −2.1 дБ на 20 кГц</div>
+            <div style="font-size: 10px; color: #666;">Спад <span id="res-ach-val">−2.1</span> дБ на 20 кГц</div>
           </div>
           <button onclick="openFrModal()" style="background: transparent; border: 0.5px solid #2a2a2a; color: #aaa; font-size: 10px; font-family: var(--font-sans); padding: 4px 9px; border-radius: 6px; cursor: pointer;">детали</button>
         </div>
@@ -297,17 +262,21 @@
   <div style="padding: 10px 24px 14px;">
     <div style="background: rgba(239,159,39,0.06); border: 0.5px solid rgba(239,159,39,0.25); border-radius: 10px; padding: 10px 12px; display: flex; gap: 8px; align-items: flex-start;">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#EF9F27" stroke-width="1.8" stroke-linecap="round" style="flex-shrink: 0; margin-top: 1px;"><circle cx="12" cy="12" r="9"/><path d="M12 8v4M12 16h.01"/></svg>
-      <div style="font-size: 10px; color: #aaa; line-height: 1.5;">Лёгкий завал на верхах — нормально для длинных кабелей.</div>
+      <div style="flex: 1; min-width: 0;">
+        <div style="font-size: 9px; color: #888; text-transform: uppercase; letter-spacing: 1.2px; margin-bottom: 3px;">ИИ-комментарий</div>
+        <div id="res-insight" style="font-size: 10px; color: #aaa; line-height: 1.5;"></div>
+      </div>
     </div>
   </div>
 
-  <div style="padding: 0 24px 80px;">
+  <div id="res-actions" style="padding: 0 24px 80px;">
     <button onclick="openSaveSheet()" style="width: 100%; background: #EF9F27; color: #2a1a00; border: none; border-radius: 12px; padding: 14px; font-size: 13px; font-weight: 500; font-family: var(--font-sans); cursor: pointer; margin-bottom: 6px;">Сохранить в коллекцию</button>
     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px;">
       <button onclick="openRepeatDialog()" style="background: transparent; color: #aaa; border: 0.5px solid #2a2a2a; border-radius: 12px; padding: 11px; font-size: 11px; font-weight: 500; font-family: var(--font-sans); cursor: pointer;">Повторить</button>
       <button onclick="discardResult()" style="background: transparent; color: #888; border: 0.5px solid #2a2a2a; border-radius: 12px; padding: 11px; font-size: 11px; font-weight: 500; font-family: var(--font-sans); cursor: pointer;">Отбросить</button>
     </div>
   </div>
+  <div id="res-archive-pad" style="display: none; height: 80px;"></div>
 </div>
 
 <div id="screen-collection" class="screen" style="display: none; position: absolute; inset: 0; overflow-y: auto;">
@@ -345,7 +314,7 @@
   <div style="padding: 0 24px 10px;">
     <div style="position: relative;">
       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#666" stroke-width="2" stroke-linecap="round" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%);"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
-      <input type="text" placeholder="Поиск по названию" style="width: 100%; background: #111; border: 0.5px solid #1f1f1f; border-radius: 10px; padding: 10px 12px 10px 32px; font-size: 12px; color: #fafafa; font-family: var(--font-sans); box-sizing: border-box; outline: none;"/>
+      <input type="text" placeholder="Поиск по имени" style="width: 100%; background: #111; border: 0.5px solid #1f1f1f; border-radius: 10px; padding: 10px 12px 10px 32px; font-size: 12px; color: #fafafa; font-family: var(--font-sans); box-sizing: border-box; outline: none;"/>
     </div>
   </div>
 
@@ -358,14 +327,23 @@
     <button style="background: #111; border: 0.5px solid #1f1f1f; border-radius: 14px; padding: 5px 10px; font-size: 10px; color: #aaa; font-family: var(--font-sans); cursor: pointer; white-space: nowrap;">Jack TS</button>
     <button style="background: #111; border: 0.5px solid #1f1f1f; border-radius: 14px; padding: 5px 10px; font-size: 10px; color: #aaa; font-family: var(--font-sans); cursor: pointer; white-space: nowrap;">Jack TRS</button>
   </div>
+  <div class="himo-chips" style="padding: 0 24px 10px; display: flex; gap: 8px; align-items: center; overflow-x: auto;">
+    <span style="font-size: 9px; color: #666; text-transform: uppercase; letter-spacing: 1px;">Метка</span>
+    <button class="color-chip" style="background: #639922;"></button>
+    <button class="color-chip" style="background: #EF9F27;"></button>
+    <button class="color-chip" style="background: #E24B4A;"></button>
+    <button class="color-chip" style="background: #378ADD;"></button>
+    <button class="color-chip" style="background: #9B59B6;"></button>
+    <button class="color-chip" style="background: #1ABC9C;"></button>
+  </div>
 
   <div style="padding: 0 24px 80px; display: flex; flex-direction: column; gap: 6px;">
-    <button onclick="goto('cableDetail')" class="cable-row" data-score="639922" data-val="94"><div class="strip" style="background: #639922;"></div><div class="main"><div class="ttl">Mogami #1 <span class="tag">XLR</span></div><div class="sub">5 проверок · 2 ч назад</div></div><div class="score">94<div>/100</div></div></button>
-    <button onclick="goto('cableDetail')" class="cable-row"><div class="strip" style="background: #639922;"></div><div class="main"><div class="ttl">Klotz патч <span class="tag">TRS</span></div><div class="sub">3 проверки · вчера</div></div><div class="score">91<div>/100</div></div></button>
-    <button onclick="goto('cableDetail')" class="cable-row"><div class="strip" style="background: #EF9F27;"></div><div class="main"><div class="ttl">Гитарный длинный <span class="tag">JACK</span></div><div class="sub" style="color: #EF9F27;">сопр. растёт · 7 проверок · вчера</div></div><div class="score">68<div>/100</div></div></button>
-    <button onclick="goto('cableDetail')" class="cable-row"><div class="strip" style="background: #639922;"></div><div class="main"><div class="ttl">Sommer микрофон <span class="tag">XLR</span></div><div class="sub">2 проверки · 3 дня назад</div></div><div class="score">96<div>/100</div></div></button>
-    <button onclick="goto('cableDetail')" class="cable-row"><div class="strip" style="background: #E24B4A;"></div><div class="main"><div class="ttl">XLR #07 <span class="tag">XLR</span></div><div class="sub" style="color: #E24B4A;">обрыв pin 3 · 3 дня назад</div></div><div class="score">12<div>/100</div></div></button>
-    <button onclick="goto('cableDetail')" class="cable-row"><div class="strip" style="background: #639922;"></div><div class="main"><div class="ttl">Бас короткий <span class="tag">JACK</span></div><div class="sub">2 проверки · неделю назад</div></div><div class="score">88<div>/100</div></div></button>
+    <button onclick="goto('cableDetail')" class="cable-row"><div class="strip" style="background: #378ADD;"></div><div class="main"><div class="ttl">Mogami #1 <span class="tag">XLR</span></div><div class="sub">5 проверок · 2 ч назад</div></div><div class="score" style="color: #97C459;">84<div>/100</div></div></button>
+    <button onclick="goto('cableDetail')" class="cable-row"><div class="strip" style="background: #639922;"></div><div class="main"><div class="ttl">Klotz патч <span class="tag">TRS</span></div><div class="sub">3 проверки · вчера</div></div><div class="score" style="color: #97C459;">91<div>/100</div></div></button>
+    <button onclick="goto('cableDetail')" class="cable-row"><div class="strip" style="background: #9B59B6;"></div><div class="main"><div class="ttl">Гитарный длинный <span class="tag">TS</span></div><div class="sub" style="color: #EF9F27;">сопр. 12 Ом · 7 проверок · вчера</div></div><div class="score" style="color: #EF9F27;">68<div>/100</div></div></button>
+    <button onclick="goto('cableDetail')" class="cable-row"><div class="strip" style="background: #EF9F27;"></div><div class="main"><div class="ttl">Sommer микрофон <span class="tag">XLR</span></div><div class="sub">2 проверки · 3 дня назад</div></div><div class="score" style="color: #97C459;">96<div>/100</div></div></button>
+    <button onclick="goto('cableDetail')" class="cable-row"><div class="strip" style="background: #1ABC9C;"></div><div class="main"><div class="ttl">XLR #07 <span class="tag">XLR</span></div><div class="sub" style="color: #E24B4A;">обрыв pin 3 · 3 дня назад</div></div><div class="score" style="color: #E24B4A;">0<div>/100</div></div></button>
+    <button onclick="goto('cableDetail')" class="cable-row"><div class="strip" style="background: #E24B4A;"></div><div class="main"><div class="ttl">Бас короткий <span class="tag">TS</span></div><div class="sub">2 проверки · неделю назад</div></div><div class="score" style="color: #97C459;">88<div>/100</div></div></button>
   </div>
 </div>
 
@@ -394,7 +372,7 @@
 
   <div style="padding: 12px 24px 6px;">
     <div style="display: flex; align-items: flex-start; gap: 12px; margin-bottom: 12px;">
-      <div style="width: 4px; align-self: stretch; background: #639922; border-radius: 2px; min-height: 50px;"></div>
+      <div style="width: 4px; align-self: stretch; background: #378ADD; border-radius: 2px; min-height: 50px;"></div>
       <div style="flex: 1; min-width: 0;">
         <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 4px;">
           <div id="cable-name" style="font-size: 17px; font-weight: 500; color: #fafafa; line-height: 1.2;">Mogami #1</div>
@@ -404,17 +382,20 @@
         <div id="cable-note" style="font-size: 10px; color: #888; font-style: italic; margin-top: 2px;">«Купил в 2024, для вокала»</div>
       </div>
       <div style="text-align: right;">
-        <div style="font-size: 24px; font-weight: 500; color: #fafafa; line-height: 1;">94</div>
+        <div style="font-size: 24px; font-weight: 500; color: #fafafa; line-height: 1;">84</div>
         <div style="font-size: 8px; color: #666; margin-top: 2px;">/100</div>
       </div>
     </div>
 
     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px;">
-      <button onclick="goto('testSetup')" style="background: #EF9F27; color: #2a1a00; border: none; border-radius: 10px; padding: 11px; font-size: 11px; font-weight: 500; font-family: var(--font-sans); cursor: pointer;">Перепроверить</button>
-      <button onclick="openSharePdf()" style="background: transparent; color: #aaa; border: 0.5px solid #2a2a2a; border-radius: 10px; padding: 11px; font-size: 11px; font-weight: 500; font-family: var(--font-sans); cursor: pointer;">Поделиться PDF</button>
+      <button onclick="retestCable()" style="background: #EF9F27; color: #2a1a00; border: none; border-radius: 10px; padding: 11px; font-size: 11px; font-weight: 500; font-family: var(--font-sans); cursor: pointer;">Перепроверить</button>
+      <button onclick="openShare()" style="background: transparent; color: #aaa; border: 0.5px solid #2a2a2a; border-radius: 10px; padding: 11px; font-size: 11px; font-weight: 500; font-family: var(--font-sans); cursor: pointer;">Поделиться</button>
     </div>
   </div>
 
+  <div style="padding: 12px 24px 0;">
+    <div id="cable-hub" style="background: #111; border: 0.5px solid #1f1f1f; border-radius: 10px; padding: 10px 12px; display: flex; align-items: center; gap: 10px;"></div>
+  </div>
   <div style="padding: 14px 24px 6px;">
     <div style="font-size: 10px; color: #666; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 8px;">Динамика Health Score</div>
     <div style="background: #111; border: 0.5px solid #1f1f1f; border-radius: 12px; padding: 12px;">
@@ -425,12 +406,12 @@
         <text x="22" y="24" font-size="8" fill="#555" text-anchor="end">100</text>
         <text x="22" y="54" font-size="8" fill="#555" text-anchor="end">80</text>
         <text x="22" y="84" font-size="8" fill="#555" text-anchor="end">60</text>
-        <path d="M 50 30 L 110 32 L 170 28 L 230 36 L 290 26" fill="none" stroke="#EF9F27" stroke-width="1.8" stroke-linecap="round"/>
-        <circle cx="50" cy="30" r="3.5" fill="#0a0a0a" stroke="#97C459" stroke-width="1.6"/>
-        <circle cx="110" cy="32" r="3.5" fill="#0a0a0a" stroke="#97C459" stroke-width="1.6"/>
-        <circle cx="170" cy="28" r="3.5" fill="#0a0a0a" stroke="#97C459" stroke-width="1.6"/>
-        <circle cx="230" cy="36" r="3.5" fill="#0a0a0a" stroke="#97C459" stroke-width="1.6"/>
-        <circle cx="290" cy="26" r="4" fill="#97C459"/>
+        <path d="M 50 47 L 110 45.5 L 170 42.5 L 230 45.5 L 290 44" fill="none" stroke="#EF9F27" stroke-width="1.8" stroke-linecap="round"/>
+        <circle cx="50" cy="47" r="3.5" fill="#0a0a0a" stroke="#97C459" stroke-width="1.6"/>
+        <circle cx="110" cy="45.5" r="3.5" fill="#0a0a0a" stroke="#97C459" stroke-width="1.6"/>
+        <circle cx="170" cy="42.5" r="3.5" fill="#0a0a0a" stroke="#97C459" stroke-width="1.6"/>
+        <circle cx="230" cy="45.5" r="3.5" fill="#0a0a0a" stroke="#97C459" stroke-width="1.6"/>
+        <circle cx="290" cy="44" r="4" fill="#97C459"/>
       </svg>
     </div>
   </div>
@@ -460,8 +441,8 @@
         <div style="font-size: 14px; font-weight: 500; color: #fafafa; margin-top: 2px;">68 <span style="font-size: 9px; color: #888;">дБ</span></div>
       </div>
       <div style="background: #111; border: 0.5px solid #1f1f1f; border-radius: 8px; padding: 10px;">
-        <div style="font-size: 8px; color: #666; text-transform: uppercase;">−3 дБ</div>
-        <div style="font-size: 14px; font-weight: 500; color: #fafafa; margin-top: 2px;">22.4 <span style="font-size: 9px; color: #888;">кГц</span></div>
+        <div style="font-size: 8px; color: #666; text-transform: uppercase;">АЧХ · 20 кГц</div>
+        <div style="font-size: 14px; font-weight: 500; color: #fafafa; margin-top: 2px;">−2.1 <span style="font-size: 9px; color: #888;">дБ</span></div>
       </div>
     </div>
   </div>
@@ -469,16 +450,23 @@
   <div style="padding: 14px 24px 80px;">
     <div style="font-size: 10px; color: #666; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 8px;">История проверок</div>
     <div style="display: flex; flex-direction: column; gap: 5px;">
-      <button onclick="goto('results')" style="background: #111; border: 0.5px solid #1f1f1f; border-radius: 8px; padding: 10px 12px; cursor: pointer; font-family: var(--font-sans); text-align: left; display: flex; align-items: center; gap: 10px;">
-        <div style="width: 28px; height: 28px; border-radius: 50%; background: rgba(99,153,34,0.12); border: 0.5px solid rgba(151,196,89,0.5); display: flex; align-items: center; justify-content: center; font-size: 10px; color: #97C459; font-weight: 500;">94</div>
+      <button onclick="openArchived(68, '−2.1', 67, 'Сегодня · 14:32')" style="background: #111; border: 0.5px solid #1f1f1f; border-radius: 8px; padding: 10px 12px; cursor: pointer; font-family: var(--font-sans); text-align: left; display: flex; align-items: center; gap: 10px;">
+        <div style="width: 28px; height: 28px; border-radius: 50%; background: rgba(99,153,34,0.12); border: 0.5px solid rgba(151,196,89,0.5); display: flex; align-items: center; justify-content: center; font-size: 10px; color: #97C459; font-weight: 500;">84</div>
         <div style="flex: 1; min-width: 0;">
           <div style="font-size: 11px; font-weight: 500; color: #fafafa;">Сегодня · 14:32</div>
           <div style="font-size: 9px; color: #666;">CMRR 68 дБ · −2.1 дБ</div>
         </div>
         <span style="font-size: 12px; color: #444;">›</span>
       </button>
-      <button onclick="goto('results')" style="background: #111; border: 0.5px solid #1f1f1f; border-radius: 8px; padding: 10px 12px; cursor: pointer; font-family: var(--font-sans); text-align: left; display: flex; align-items: center; gap: 10px;">
-        <div style="width: 28px; height: 28px; border-radius: 50%; background: rgba(99,153,34,0.12); border: 0.5px solid rgba(151,196,89,0.5); display: flex; align-items: center; justify-content: center; font-size: 10px; color: #97C459; font-weight: 500;">90</div>
+      <div id="hist-invalid" style="display: none; background: #0d0d0d; border: 0.5px solid #1f1f1f; border-radius: 8px; padding: 10px 12px; align-items: center; gap: 10px; opacity: 0.7;">
+        <div style="width: 28px; height: 28px; border-radius: 50%; background: #1a1a1a; border: 0.5px solid #2a2a2a; display: flex; align-items: center; justify-content: center; font-size: 10px; color: #666; font-weight: 500; text-decoration: line-through;">41</div>
+        <div style="flex: 1; min-width: 0;">
+          <div style="font-size: 11px; font-weight: 500; color: #aaa;">10 апреля · недействительный</div>
+          <div style="font-size: 9px; color: #666;">@ivan_s: «Не тот кабель» · не учитывается в Health Score</div>
+        </div>
+      </div>
+      <button onclick="openArchived(67, '−2.3', 64, '2 апреля')" style="background: #111; border: 0.5px solid #1f1f1f; border-radius: 8px; padding: 10px 12px; cursor: pointer; font-family: var(--font-sans); text-align: left; display: flex; align-items: center; gap: 10px;">
+        <div style="width: 28px; height: 28px; border-radius: 50%; background: rgba(99,153,34,0.12); border: 0.5px solid rgba(151,196,89,0.5); display: flex; align-items: center; justify-content: center; font-size: 10px; color: #97C459; font-weight: 500;">83</div>
         <div style="flex: 1; min-width: 0;">
           <div style="font-size: 11px; font-weight: 500; color: #fafafa;">2 апреля</div>
           <div style="font-size: 9px; color: #666;">CMRR 67 дБ · −2.3 дБ</div>
@@ -513,61 +501,17 @@
   </div>
 
   <div style="padding: 12px 24px 6px;">
-    <div style="background: #111; border: 0.5px solid #1f1f1f; border-radius: 12px; padding: 14px;">
-      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
-        <div style="font-size: 10px; color: #666; text-transform: uppercase; letter-spacing: 1.5px;">Батарея</div>
-      </div>
-      <div style="display: flex; align-items: baseline; gap: 10px; margin-bottom: 10px;">
-        <div style="font-size: 32px; font-weight: 500; color: #fafafa; line-height: 1;">78<span style="font-size: 16px; color: #888;">%</span></div>
-        <div style="font-size: 10px; color: #888;">~6 ч работы</div>
-      </div>
-      <div style="height: 5px; background: #1a1a1a; border-radius: 3px; overflow: hidden;">
-        <div style="width: 78%; height: 100%; background: #97C459; border-radius: 3px;"></div>
-      </div>
-    </div>
-  </div>
-
-  <div style="padding: 10px 24px 6px;">
-    <div style="background: rgba(55,138,221,0.08); border: 0.5px solid rgba(55,138,221,0.35); border-radius: 10px; padding: 12px; display: flex; align-items: center; gap: 12px;">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#378ADD" stroke-width="1.8" stroke-linecap="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
-      <div style="flex: 1; min-width: 0;">
-        <div style="font-size: 12px; font-weight: 500; color: #fafafa;">Доступно обновление</div>
-        <div style="font-size: 9px; color: #888; margin-top: 1px;">Прошивка 1.3.0</div>
-      </div>
-      <button style="background: #378ADD; color: #041c33; border: none; border-radius: 7px; padding: 6px 10px; font-size: 10px; font-weight: 500; font-family: var(--font-sans); cursor: pointer;">Обновить</button>
-    </div>
-  </div>
-
-  <div style="padding: 12px 24px 6px;">
-    <div style="font-size: 10px; color: #666; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 8px;">О приборе</div>
-    <div style="background: #111; border: 0.5px solid #1f1f1f; border-radius: 10px; overflow: hidden;">
-      <div style="padding: 10px 14px; display: flex; justify-content: space-between; font-size: 11px;"><span style="color: #888;">Модель</span><span style="color: #e8e8e8; font-weight: 500;">Himo MVP rev 1</span></div>
-      <div style="height: 0.5px; background: #1a1a1a; margin: 0 14px;"></div>
-      <div style="padding: 10px 14px; display: flex; justify-content: space-between; font-size: 11px;"><span style="color: #888;">Серийный</span><span style="color: #e8e8e8; font-weight: 500;">HM2025-00142</span></div>
-      <div style="height: 0.5px; background: #1a1a1a; margin: 0 14px;"></div>
-      <div style="padding: 10px 14px; display: flex; justify-content: space-between; font-size: 11px;"><span style="color: #888;">Прошивка</span><span style="color: #e8e8e8; font-weight: 500;">1.2.4 → <span style="color: #378ADD;">1.3.0</span></span></div>
-    </div>
-  </div>
-
-  <div style="padding: 12px 24px 6px;">
-    <div style="font-size: 10px; color: #666; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 8px;">Калибровка</div>
-    <div style="background: #111; border: 0.5px solid #1f1f1f; border-radius: 10px; padding: 12px;">
-      <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
-        <div style="width: 22px; height: 22px; border-radius: 50%; background: rgba(99,153,34,0.12); border: 0.5px solid rgba(151,196,89,0.5); display: flex; align-items: center; justify-content: center;">
-          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#97C459" stroke-width="3" stroke-linecap="round"><path d="M5 12l5 5L20 7"/></svg>
-        </div>
-        <div style="flex: 1;">
-          <div style="font-size: 12px; font-weight: 500; color: #fafafa;">Откалиброван</div>
-          <div style="font-size: 10px; color: #666;">28 марта · 16 дней назад</div>
-        </div>
-      </div>
-      <button style="width: 100%; background: transparent; color: #aaa; border: 0.5px solid #2a2a2a; border-radius: 8px; padding: 9px; font-size: 11px; font-weight: 500; font-family: var(--font-sans); cursor: pointer;">Откалибровать заново</button>
+    <div class="sec-title">О приборе</div>
+    <div class="card">
+      <div class="info-row"><span style="color: #888;">ID устройства</span><span style="color: #e8e8e8; font-weight: 500;">A4:CF:12:2A:4F:01</span></div>
+      <div class="sep"></div>
+      <div class="info-row"><span style="color: #888;">Версия протокола</span><span style="color: #e8e8e8; font-weight: 500;">pv 1</span></div>
     </div>
   </div>
 
   <div style="padding: 12px 24px 80px; display: grid; grid-template-columns: 1fr 1fr; gap: 6px;">
-    <button style="background: transparent; color: #aaa; border: 0.5px solid #2a2a2a; border-radius: 10px; padding: 11px; font-size: 11px; font-weight: 500; font-family: var(--font-sans); cursor: pointer;">Переподключить</button>
-    <button style="background: transparent; color: #E24B4A; border: 0.5px solid rgba(226,75,74,0.35); border-radius: 10px; padding: 11px; font-size: 11px; font-weight: 500; font-family: var(--font-sans); cursor: pointer;">Забыть</button>
+    <button onclick="reconnectBle()" style="background: transparent; color: #aaa; border: 0.5px solid #2a2a2a; border-radius: 10px; padding: 11px; font-size: 11px; font-weight: 500; font-family: var(--font-sans); cursor: pointer;">Переподключить</button>
+    <button onclick="showToast('Устройство забыто')" style="background: transparent; color: #E24B4A; border: 0.5px solid rgba(226,75,74,0.35); border-radius: 10px; padding: 11px; font-size: 11px; font-weight: 500; font-family: var(--font-sans); cursor: pointer;">Забыть</button>
   </div>
 </div>
 
@@ -577,54 +521,78 @@
   </div>
 
   <div style="padding: 14px 24px 6px;">
-    <div style="font-size: 10px; color: #666; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 8px;">Профиль</div>
-    <div style="background: #111; border: 0.5px solid #1f1f1f; border-radius: 12px; padding: 14px;">
-      <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
-        <div style="width: 42px; height: 42px; border-radius: 50%; background: rgba(239,159,39,0.12); border: 0.5px solid rgba(239,159,39,0.4); display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 500; color: #EF9F27;">АП</div>
-        <div style="flex: 1; min-width: 0;">
-          <div style="font-size: 13px; font-weight: 500; color: #fafafa;">Алексей Петров</div>
-          <div style="font-size: 10px; color: #888;">a.petrov@example.com</div>
-        </div>
-        <button style="background: transparent; color: #aaa; border: 0.5px solid #2a2a2a; border-radius: 8px; padding: 5px 10px; font-size: 10px; font-weight: 500; font-family: var(--font-sans); cursor: pointer;">Изменить</button>
-      </div>
-      <div style="background: rgba(239,159,39,0.06); border: 0.5px solid rgba(239,159,39,0.25); border-radius: 8px; padding: 11px;">
-        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
-          <div style="display: flex; align-items: center; gap: 6px;">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#EF9F27" stroke-width="2" stroke-linecap="round"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg>
-            <span style="font-size: 11px; font-weight: 500; color: #fafafa;">Free</span>
-          </div>
-          <span style="font-size: 9px; color: #888;">текущий план</span>
-        </div>
-        <button style="width: 100%; background: #EF9F27; color: #2a1a00; border: none; border-radius: 7px; padding: 9px; font-size: 11px; font-weight: 500; font-family: var(--font-sans); cursor: pointer; margin-top: 4px;">Премиум · 29 € / год</button>
-      </div>
+    <div class="sec-title">Учётная запись Himo Hub</div>
+    <div id="settings-account"></div>
+  </div>
+
+  <div style="padding: 12px 24px 6px;">
+    <div class="sec-title">Устройство</div>
+    <div class="card">
+      <button class="link-row" onclick="goto('device')"><span><span style="display: block; color: #e8e8e8;">Himo · HM-2A4F</span><span style="display: block; font-size: 10px; color: #97C459; margin-top: 2px;">Подключено</span></span><span style="font-size: 12px; color: #444;">›</span></button>
     </div>
   </div>
 
   <div style="padding: 12px 24px 6px;">
-    <div style="font-size: 10px; color: #666; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 8px;">О приложении</div>
-    <div style="background: #111; border: 0.5px solid #1f1f1f; border-radius: 10px; overflow: hidden;">
-      <div style="padding: 10px 14px; display: flex; justify-content: space-between; font-size: 11px;"><span style="color: #888;">Версия</span><span style="color: #e8e8e8; font-weight: 500;">0.9.2 (142)</span></div>
-      <div style="height: 0.5px; background: #1a1a1a; margin: 0 14px;"></div>
-      <button style="width: 100%; background: transparent; border: none; padding: 10px 14px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; font-family: var(--font-sans);"><span style="font-size: 11px; color: #e8e8e8;">Сайт проекта</span><span style="font-size: 10px; color: #666;">himo.app ↗</span></button>
-      <div style="height: 0.5px; background: #1a1a1a; margin: 0 14px;"></div>
-      <button style="width: 100%; background: transparent; border: none; padding: 10px 14px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; font-family: var(--font-sans);"><span style="font-size: 11px; color: #e8e8e8;">Политика приватности</span><span style="font-size: 12px; color: #444;">›</span></button>
+    <div class="sec-title">О приложении</div>
+    <div class="card">
+      <div class="info-row"><span style="color: #888;">Версия</span><span style="color: #e8e8e8; font-weight: 500;">1.0.0 (1)</span></div>
+      <div class="sep"></div>
+      <button class="link-row"><span style="color: #e8e8e8;">Сайт Himo Hub</span><span style="font-size: 10px; color: #666;">himo.hakoniwa.ru ↗</span></button>
     </div>
   </div>
 
   <div style="padding: 12px 24px 80px;">
-    <div style="font-size: 10px; color: #666; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 8px;">Обратная связь</div>
-    <div style="background: #111; border: 0.5px solid #1f1f1f; border-radius: 10px; overflow: hidden;">
-      <button style="width: 100%; background: transparent; border: none; padding: 12px 14px; cursor: pointer; display: flex; align-items: center; gap: 10px; font-family: var(--font-sans);">
-        <div style="width: 24px; height: 24px; border-radius: 7px; background: rgba(226,75,74,0.1); display: flex; align-items: center; justify-content: center;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#E24B4A" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v4M12 16h.01"/></svg></div>
-        <span style="flex: 1; font-size: 11px; color: #fafafa; text-align: left;">Сообщить об ошибке</span>
-        <span style="font-size: 12px; color: #444;">›</span>
-      </button>
-      <div style="height: 0.5px; background: #1a1a1a; margin: 0 14px;"></div>
-      <button style="width: 100%; background: transparent; border: none; padding: 12px 14px; cursor: pointer; display: flex; align-items: center; gap: 10px; font-family: var(--font-sans);">
-        <div style="width: 24px; height: 24px; border-radius: 7px; background: rgba(239,159,39,0.1); display: flex; align-items: center; justify-content: center;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#EF9F27" stroke-width="2" stroke-linecap="round"><path d="M9 18h6M10 22h4M12 2a7 7 0 00-4 12.7V18h8v-3.3A7 7 0 0012 2z"/></svg></div>
-        <span style="flex: 1; font-size: 11px; color: #fafafa; text-align: left;">Предложить идею</span>
-        <span style="font-size: 12px; color: #444;">›</span>
-      </button>
+    <div class="sec-title">Только в прототипе · состояния</div>
+    <div style="border: 0.5px dashed #2a2a2a; border-radius: 10px; padding: 10px; display: grid; grid-template-columns: 1fr 1fr; gap: 6px;">
+      <button id="demo-offline" class="demo-btn" style="grid-column: 1 / -1;" onclick="demoOffline()"></button>
+      <button class="demo-btn" onclick="demoSessionExpired()">Сеанс истёк</button>
+      <button class="demo-btn" onclick="demoOutdated()">Версия устарела</button>
+      <button class="demo-btn" onclick="demoNoAccess()">Нет доступа к команде</button>
+      <button class="demo-btn" onclick="demoArchived()">Кабель в архиве</button>
+      <button class="demo-btn" onclick="demoDeleted()">Кабель удалён в Hub</button>
+      <button class="demo-btn" onclick="openConflict()">Конфликт правок</button>
+    </div>
+  </div>
+</div>
+
+<div id="screen-hub" class="screen" style="display: none; position: absolute; inset: 0; overflow-y: auto;">
+  <div style="padding: 16px 24px 12px;">
+    <div style="font-size: 20px; font-weight: 500; color: #fafafa; line-height: 1;">Hub</div>
+    <div id="hub-subtitle" style="font-size: 10px; color: #666; margin-top: 4px;"></div>
+  </div>
+
+  <div id="hub-guest" style="padding: 6px 24px 80px;">
+    <div style="background: #111; border: 0.5px solid #1f1f1f; border-radius: 12px; padding: 20px 16px; text-align: center;">
+      <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#EF9F27" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom: 10px;"><path d="M7 18a4.5 4.5 0 01-.6-8.96A6 6 0 0118 10a4 4 0 01-1 8H7z"/></svg>
+      <div style="font-size: 13px; font-weight: 500; color: #fafafa; margin-bottom: 6px;">Общая история кабелей команды</div>
+      <div style="font-size: 11px; color: #888; line-height: 1.5; margin-bottom: 14px;">Выгружайте кабели и тесты в Hub, загружайте кабели команды. Без учётной записи приложение работает полностью.</div>
+      <button onclick="openLogin()" class="primary-btn">Войти в Hub</button>
+    </div>
+  </div>
+
+  <div id="hub-member" style="display: none;">
+    <div id="hub-offline" style="display: none; padding: 0 24px 10px;">
+      <div style="background: rgba(239,159,39,0.06); border: 0.5px solid rgba(239,159,39,0.25); border-radius: 10px; padding: 9px 12px; font-size: 10px; color: #aaa; line-height: 1.5;">Нет связи. Тесты копятся на телефоне и выгрузятся, когда связь появится.</div>
+    </div>
+
+    <div style="padding: 0 24px 10px;">
+      <div class="sec-title">Команда</div>
+      <div id="hub-teams" style="display: flex; flex-direction: column; gap: 6px;"></div>
+    </div>
+
+    <div style="padding: 4px 24px 10px;">
+      <div style="position: relative;">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#666" stroke-width="2" stroke-linecap="round" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%);"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+        <input id="hub-search" type="text" oninput="renderCatalog()" placeholder="Поиск в каталоге по имени" style="width: 100%; background: #111; border: 0.5px solid #1f1f1f; border-radius: 10px; padding: 10px 12px 10px 32px; font-size: 12px; color: #fafafa; font-family: var(--font-sans); box-sizing: border-box; outline: none;"/>
+      </div>
+    </div>
+
+    <div id="hub-filters" class="himo-chips" style="padding: 0 24px 10px; display: flex; gap: 6px; overflow-x: auto;"></div>
+
+    <div id="hub-catalog" style="padding: 0 24px 10px; display: flex; flex-direction: column; gap: 6px;"></div>
+
+    <div style="padding: 4px 24px 80px;">
+      <div style="font-size: 10px; color: #666; line-height: 1.5; text-align: center;">Команды, участники и приглашения — в веб-интерфейсе Hub ↗</div>
     </div>
   </div>
 </div>
@@ -639,6 +607,10 @@
   <button onclick="navTab('collection')" id="nav-collection" style="background: transparent; border: none; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 3px; font-family: var(--font-sans);">
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#555" stroke-width="1.8" stroke-linecap="round"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M4 10h16M10 4v16"/></svg>
     <span style="font-size: 9px; color: #555;">Коллекция</span>
+  </button>
+  <button onclick="navTab('hub')" id="nav-hub" style="background: transparent; border: none; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 3px; font-family: var(--font-sans);">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#555" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 18a4.5 4.5 0 01-.6-8.96A6 6 0 0118 10a4 4 0 01-1 8H7z"/></svg>
+    <span style="font-size: 9px; color: #555;">Hub</span>
   </button>
   <button onclick="navTab('settings')" id="nav-settings" style="background: transparent; border: none; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 3px; font-family: var(--font-sans);">
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#555" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/></svg>
@@ -673,9 +645,9 @@
   </div>
   <div style="padding: 12px 20px;">
     <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; margin-bottom: 14px;">
-      <div style="background: #111; border: 0.5px solid #1f1f1f; border-radius: 8px; padding: 10px;"><div style="font-size: 8px; color: #666; text-transform: uppercase;">Полоса −3 дБ</div><div style="font-size: 14px; font-weight: 500; color: #fafafa; margin-top: 3px;">22.4 <span style="font-size: 9px; color: #888;">кГц</span></div></div>
-      <div style="background: #111; border: 0.5px solid #1f1f1f; border-radius: 8px; padding: 10px;"><div style="font-size: 8px; color: #666; text-transform: uppercase;">На 20 кГц</div><div style="font-size: 14px; font-weight: 500; color: #97C459; margin-top: 3px;">−2.1 <span style="font-size: 9px; color: #888;">дБ</span></div></div>
-      <div style="background: #111; border: 0.5px solid #1f1f1f; border-radius: 8px; padding: 10px;"><div style="font-size: 8px; color: #666; text-transform: uppercase;">Неравн.</div><div style="font-size: 14px; font-weight: 500; color: #fafafa; margin-top: 3px;">±0.4 <span style="font-size: 9px; color: #888;">дБ</span></div></div>
+      <div style="background: #111; border: 0.5px solid #1f1f1f; border-radius: 8px; padding: 10px;"><div style="font-size: 8px; color: #666; text-transform: uppercase;">На 20 кГц</div><div style="font-size: 14px; font-weight: 500; color: #EF9F27; margin-top: 3px;">−2.1 <span style="font-size: 9px; color: #888;">дБ</span></div></div>
+      <div style="background: #111; border: 0.5px solid #1f1f1f; border-radius: 8px; padding: 10px;"><div style="font-size: 8px; color: #666; text-transform: uppercase;">На 40 кГц</div><div style="font-size: 14px; font-weight: 500; color: #fafafa; margin-top: 3px;">−2.8 <span style="font-size: 9px; color: #888;">дБ</span></div></div>
+      <div style="background: #111; border: 0.5px solid #1f1f1f; border-radius: 8px; padding: 10px;"><div style="font-size: 8px; color: #666; text-transform: uppercase;">Вердикт</div><div style="font-size: 14px; font-weight: 500; color: #EF9F27; margin-top: 3px;">Удовл.</div></div>
     </div>
     <div style="background: #111; border: 0.5px solid #1f1f1f; border-radius: 10px; padding: 14px;">
       <svg width="100%" height="230" viewBox="0 0 320 260">
@@ -690,14 +662,14 @@
         <text x="190" y="244" font-size="9" fill="#666" text-anchor="middle">1 кГц</text>
         <text x="318" y="244" font-size="9" fill="#666" text-anchor="end">40 кГц</text>
         <line x1="30" y1="100" x2="320" y2="100" stroke="#888" stroke-width="1.2" stroke-dasharray="4,4" opacity="0.55"/>
-        <path d="M 30 112 L 50 106 L 90 102 L 130 100 L 190 100 L 240 100 L 280 106 L 300 138 L 320 194" fill="none" stroke="#EF9F27" stroke-width="2" stroke-linecap="round"/>
-        <circle cx="300" cy="138" r="4" fill="#0a0a0a" stroke="#EF9F27" stroke-width="1.5"/>
-        <text x="300" y="260" font-size="9" fill="#EF9F27" text-anchor="middle" font-weight="500">20 кГц</text>
+        <path d="M 30 104 L 50 102 L 110 100 L 190 100 L 240 104 L 270 120 L 294 184 L 320 212" fill="none" stroke="#EF9F27" stroke-width="2" stroke-linecap="round"/>
+        <circle cx="294" cy="184" r="4" fill="#0a0a0a" stroke="#EF9F27" stroke-width="1.5"/>
+        <text x="294" y="260" font-size="9" fill="#EF9F27" text-anchor="middle" font-weight="500">20 кГц</text>
       </svg>
     </div>
     <div style="background: #111; border: 0.5px solid #1f1f1f; border-radius: 10px; padding: 12px; margin-top: 14px;">
-      <div style="font-size: 9px; color: #666; text-transform: uppercase; letter-spacing: 1.2px; margin-bottom: 6px;">Что это значит</div>
-      <div style="font-size: 11px; color: #ccc; line-height: 1.55;">Кабель ровно передаёт всю слышимую полосу до 20 кГц с минимальными потерями. Для гитары, вокала и большинства инструментов — отличный результат.</div>
+      <div style="font-size: 9px; color: #666; text-transform: uppercase; letter-spacing: 1.2px; margin-bottom: 6px;">ИИ-комментарий</div>
+      <div style="font-size: 11px; color: #ccc; line-height: 1.55;">Кабель ровно передаёт почти всю слышимую полосу, спад заметен только у 20 кГц. Для гитары, вокала и большинства инструментов это не критично.</div>
     </div>
   </div>
 </div>
@@ -737,35 +709,67 @@
 <div id="share-sheet" class="bottom-sheet" style="display: none; position: absolute; left: 0; right: 0; bottom: 0; background: #0f0f0f; border-top-left-radius: 20px; border-top-right-radius: 20px; border-top: 0.5px solid #2a2a2a; padding: 10px 20px 18px; z-index: 65;">
   <div style="width: 36px; height: 4px; background: #2a2a2a; border-radius: 2px; margin: 0 auto 12px;"></div>
   <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px;">
-    <div style="font-size: 14px; font-weight: 500; color: #fafafa;">Поделиться паспортом</div>
+    <div style="font-size: 14px; font-weight: 500; color: #fafafa;">Поделиться</div>
     <button onclick="closeAllModals()" style="background: transparent; border: none; color: #666; font-size: 20px; cursor: pointer; font-family: var(--font-sans);">×</button>
   </div>
-  <div style="background: #111; border: 0.5px solid #1f1f1f; border-radius: 10px; padding: 12px; display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
-    <div style="width: 38px; height: 46px; background: #1a1a1a; border: 0.5px solid #2a2a2a; border-radius: 3px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-      <div style="font-size: 7px; color: #EF9F27; font-weight: 500;">PDF</div>
-    </div>
-    <div style="flex: 1; min-width: 0;">
-      <div style="font-size: 12px; font-weight: 500; color: #fafafa;">Mogami-1_passport.pdf</div>
-      <div style="font-size: 10px; color: #666; margin-top: 2px;">3 страницы · 142 КБ</div>
-    </div>
+  <div style="display: flex; flex-direction: column; gap: 6px;">
+    <button onclick="shareVia()" class="option-row">
+      <div style="width: 38px; height: 38px; background: #1a1a1a; border: 0.5px solid #2a2a2a; border-radius: 6px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#EF9F27" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 16l5-5 4 4 3-3 6 6"/></svg></div>
+      <div style="flex: 1; min-width: 0;"><div style="font-size: 12px; font-weight: 500; color: #fafafa;">Карточка кабеля</div><div style="font-size: 10px; color: #666; margin-top: 2px;">Картинка</div></div>
+    </button>
+    <button onclick="shareVia()" class="option-row">
+      <div style="width: 38px; height: 38px; background: #1a1a1a; border: 0.5px solid #2a2a2a; border-radius: 6px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;"><div style="font-size: 9px; color: #EF9F27; font-weight: 500;">PDF</div></div>
+      <div style="flex: 1; min-width: 0;"><div style="font-size: 12px; font-weight: 500; color: #fafafa;">Паспорт кабеля</div><div style="font-size: 10px; color: #666; margin-top: 2px;">Mogami-1_passport.pdf</div></div>
+    </button>
   </div>
-  <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px;">
-    <button style="background: #111; border: 0.5px solid #1f1f1f; border-radius: 8px; padding: 10px 4px; cursor: pointer; font-family: var(--font-sans); display: flex; flex-direction: column; align-items: center; gap: 4px;">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#aaa" stroke-width="1.8" stroke-linecap="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M22 7l-10 5L2 7"/></svg>
-      <span style="font-size: 9px; color: #aaa;">Почта</span>
-    </button>
-    <button style="background: #111; border: 0.5px solid #1f1f1f; border-radius: 8px; padding: 10px 4px; cursor: pointer; font-family: var(--font-sans); display: flex; flex-direction: column; align-items: center; gap: 4px;">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#aaa" stroke-width="1.8" stroke-linecap="round"><path d="M21 3L3 10l6 3 3 7 9-17z"/></svg>
-      <span style="font-size: 9px; color: #aaa;">Telegram</span>
-    </button>
-    <button style="background: #111; border: 0.5px solid #1f1f1f; border-radius: 8px; padding: 10px 4px; cursor: pointer; font-family: var(--font-sans); display: flex; flex-direction: column; align-items: center; gap: 4px;">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#aaa" stroke-width="1.8" stroke-linecap="round"><path d="M3 7v13a1 1 0 001 1h16a1 1 0 001-1V9a1 1 0 00-1-1h-8l-2-3H4a1 1 0 00-1 1z"/></svg>
-      <span style="font-size: 9px; color: #aaa;">Файлы</span>
-    </button>
-    <button style="background: #111; border: 0.5px solid #1f1f1f; border-radius: 8px; padding: 10px 4px; cursor: pointer; font-family: var(--font-sans); display: flex; flex-direction: column; align-items: center; gap: 4px;">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#aaa"><circle cx="5" cy="12" r="1.5" fill="#aaa"/><circle cx="12" cy="12" r="1.5" fill="#aaa"/><circle cx="19" cy="12" r="1.5" fill="#aaa"/></svg>
-      <span style="font-size: 9px; color: #aaa;">Ещё</span>
-    </button>
+</div>
+
+<div id="login-sheet" class="bottom-sheet" style="display: none; position: absolute; left: 0; right: 0; bottom: 0; background: #0f0f0f; border-top-left-radius: 20px; border-top-right-radius: 20px; border-top: 0.5px solid #2a2a2a; padding: 10px 20px 18px; z-index: 65;">
+  <div style="width: 36px; height: 4px; background: #2a2a2a; border-radius: 2px; margin: 0 auto 12px;"></div>
+  <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px;">
+    <div style="font-size: 14px; font-weight: 500; color: #fafafa;">Вход в Himo Hub</div>
+    <button onclick="closeAllModals()" style="background: transparent; border: none; color: #666; font-size: 20px; cursor: pointer; font-family: var(--font-sans);">×</button>
+  </div>
+  <label style="font-size: 9px; color: #666; text-transform: uppercase; display: block; margin-bottom: 6px;">Ник</label>
+  <input id="login-nick" type="text" value="alex_petrov" autocomplete="off" style="width: 100%; background: #111; border: 0.5px solid #1f1f1f; border-radius: 8px; padding: 10px 12px; font-size: 12px; color: #fafafa; font-family: var(--font-sans); box-sizing: border-box; outline: none; margin-bottom: 12px;"/>
+  <label style="font-size: 9px; color: #666; text-transform: uppercase; display: block; margin-bottom: 6px;">Пароль</label>
+  <input id="login-password" type="password" autocomplete="off" style="width: 100%; background: #111; border: 0.5px solid #1f1f1f; border-radius: 8px; padding: 10px 12px; font-size: 12px; color: #fafafa; font-family: var(--font-sans); box-sizing: border-box; outline: none; margin-bottom: 8px;"/>
+  <div id="login-error" style="display: none; font-size: 10px; color: #E24B4A; margin-bottom: 8px;"></div>
+  <button onclick="submitLogin()" class="primary-btn" style="margin: 6px 0 12px;">Войти</button>
+  <div style="font-size: 10px; color: #666; line-height: 1.5; text-align: center;">Регистрация и вход через Telegram — на сайте<br/>himo.hakoniwa.ru ↗</div>
+</div>
+
+<div id="upload-sheet" class="bottom-sheet" style="display: none; position: absolute; left: 0; right: 0; bottom: 0; background: #0f0f0f; border-top-left-radius: 20px; border-top-right-radius: 20px; border-top: 0.5px solid #2a2a2a; padding: 10px 20px 18px; z-index: 65;">
+  <div style="width: 36px; height: 4px; background: #2a2a2a; border-radius: 2px; margin: 0 auto 12px;"></div>
+  <div style="font-size: 14px; font-weight: 500; color: #fafafa; margin-bottom: 4px;">Выгрузить в Hub</div>
+  <div style="font-size: 10px; color: #888; margin-bottom: 12px; line-height: 1.5;">Выберите команду. Кабель будет принадлежать ей, перенести его в другую команду нельзя.</div>
+  <div id="upload-teams" style="display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px;"></div>
+  <button onclick="confirmUpload()" class="primary-btn">Выгрузить</button>
+</div>
+
+<div id="download-sheet" class="bottom-sheet" style="display: none; position: absolute; left: 0; right: 0; bottom: 0; background: #0f0f0f; border-top-left-radius: 20px; border-top-right-radius: 20px; border-top: 0.5px solid #2a2a2a; padding: 10px 20px 18px; z-index: 65;">
+  <div style="width: 36px; height: 4px; background: #2a2a2a; border-radius: 2px; margin: 0 auto 12px;"></div>
+  <div id="download-title" style="font-size: 14px; font-weight: 500; color: #fafafa; margin-bottom: 4px;"></div>
+  <div id="download-text" style="font-size: 10px; color: #888; margin-bottom: 14px; line-height: 1.5;"></div>
+  <label style="display: flex; align-items: center; gap: 8px; font-size: 12px; color: #e8e8e8; margin-bottom: 14px; cursor: pointer;"><input id="download-assign" type="checkbox" style="accent-color: #EF9F27;"/>Назначить меня ответственным</label>
+  <button onclick="confirmDownload()" class="primary-btn">Загрузить на телефон</button>
+</div>
+
+<div id="conflict-sheet" class="bottom-sheet" style="display: none; position: absolute; left: 0; right: 0; bottom: 0; background: #0f0f0f; border-top-left-radius: 20px; border-top-right-radius: 20px; border-top: 0.5px solid #2a2a2a; padding: 10px 20px 18px; z-index: 65;">
+  <div style="width: 36px; height: 4px; background: #2a2a2a; border-radius: 2px; margin: 0 auto 12px;"></div>
+  <div style="font-size: 14px; font-weight: 500; color: #fafafa; margin-bottom: 4px;">Кабель изменён в Hub</div>
+  <div style="font-size: 10px; color: #888; margin-bottom: 12px; line-height: 1.5;">Выберите версию кабеля целиком. Тесты при этом не затрагиваются.</div>
+  <div style="background: #111; border: 0.5px solid #1f1f1f; border-radius: 10px; padding: 10px 12px; margin-bottom: 14px; font-size: 11px; line-height: 1.6;">
+    <div style="font-size: 9px; color: #666; text-transform: uppercase;">Имя</div>
+    <div style="color: #e8e8e8;">у вас — Mogami #1 (сцена)</div>
+    <div style="color: #EF9F27;">в Hub — Mogami #1 (студия)</div>
+    <div style="font-size: 9px; color: #666; text-transform: uppercase; margin-top: 8px;">Цветная метка</div>
+    <div style="color: #e8e8e8; display: flex; align-items: center; gap: 6px;">у вас — <span style="width: 9px; height: 9px; border-radius: 50%; background: #378ADD;"></span></div>
+    <div style="color: #EF9F27; display: flex; align-items: center; gap: 6px;">в Hub — <span style="width: 9px; height: 9px; border-radius: 50%; background: #9B59B6;"></span></div>
+  </div>
+  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px;">
+    <button onclick="resolveConflict('mine')" style="background: transparent; color: #aaa; border: 0.5px solid #2a2a2a; border-radius: 10px; padding: 13px; font-size: 12px; font-weight: 500; font-family: var(--font-sans); cursor: pointer;">Оставить мою</button>
+    <button onclick="resolveConflict('hub')" style="background: #EF9F27; color: #2a1a00; border: none; border-radius: 10px; padding: 13px; font-size: 12px; font-weight: 500; font-family: var(--font-sans); cursor: pointer;">Взять из Hub</button>
   </div>
 </div>
 
@@ -817,6 +821,19 @@
 #screens > .screen { scrollbar-width: thin; scrollbar-color: #2a2a2a transparent; }
 @keyframes himo-spin { to { transform: rotate(360deg); } }
 .spin { animation: himo-spin 0.9s linear infinite; }
+.color-chip { width: 18px; height: 18px; border-radius: 50%; border: 2px solid transparent; padding: 0; cursor: pointer; flex-shrink: 0; }
+.sec-title { font-size: 10px; color: #666; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 8px; }
+.card { background: #111; border: 0.5px solid #1f1f1f; border-radius: 10px; overflow: hidden; }
+.sep { height: 0.5px; background: #1a1a1a; margin: 0 14px; }
+.info-row { padding: 10px 14px; display: flex; justify-content: space-between; gap: 10px; font-size: 11px; }
+.link-row { width: 100%; background: transparent; border: none; padding: 10px 14px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; gap: 10px; font-family: var(--font-sans); font-size: 11px; text-align: left; }
+.primary-btn { width: 100%; background: #EF9F27; color: #2a1a00; border: none; border-radius: 10px; padding: 12px; font-size: 12px; font-weight: 500; font-family: var(--font-sans); cursor: pointer; }
+.secondary-btn { width: 100%; background: transparent; color: #aaa; border: 0.5px solid #2a2a2a; border-radius: 8px; padding: 9px; font-size: 11px; font-weight: 500; font-family: var(--font-sans); cursor: pointer; }
+.mini-btn { background: rgba(239,159,39,0.1); color: #EF9F27; border: 0.5px solid rgba(239,159,39,0.45); border-radius: 6px; padding: 4px 8px; font-size: 10px; font-weight: 500; font-family: var(--font-sans); cursor: pointer; flex-shrink: 0; }
+.demo-btn { background: transparent; color: #888; border: 0.5px solid #2a2a2a; border-radius: 7px; padding: 8px 6px; font-size: 10px; font-family: var(--font-sans); cursor: pointer; }
+.option-row { width: 100%; background: #111; border: 0.5px solid #1f1f1f; border-radius: 10px; padding: 10px 12px; cursor: pointer; font-family: var(--font-sans); text-align: left; display: flex; align-items: center; gap: 12px; }
+.hub-chip { background: #111; border: 0.5px solid #1f1f1f; border-radius: 14px; padding: 5px 10px; font-size: 10px; color: #aaa; font-family: var(--font-sans); cursor: pointer; white-space: nowrap; }
+.hub-chip.active { background: rgba(239,159,39,0.1); border-color: rgba(239,159,39,0.45); color: #EF9F27; font-weight: 500; }
 </style>
 
 <script>
@@ -840,6 +857,7 @@ function goto(screen) {
   current = screen;
   updateNav(screen);
   closeAllDropdowns();
+  renderScreen(screen);
   if (screen === 'testRunning') startRunAnimation();
   else stopRunAnimation();
 }
@@ -853,6 +871,7 @@ function goBack() {
     document.getElementById('screen-' + prev).style.display = 'block';
     current = prev;
     updateNav(prev);
+    renderScreen(prev);
     closeAllDropdowns();
   }
 }
@@ -864,7 +883,7 @@ function navTab(screen) {
 }
 
 function updateNav(screen) {
-  const tabs = ['dashboard', 'collection', 'settings'];
+  const tabs = ['dashboard', 'collection', 'hub', 'settings'];
   const active = tabs.includes(screen) ? screen : null;
   tabs.forEach(t => {
     const btn = document.getElementById('nav-' + t);
@@ -913,6 +932,7 @@ function reconnectBle() {
 }
 
 function selectType(type) {
+  if (typeLocked && type !== selectedType) return;
   selectedType = type;
   ['ts', 'trs', 'xlr'].forEach(t => {
     const btn = document.getElementById('type-' + t);
@@ -953,10 +973,13 @@ function startRunAnimation() {
   stopRunAnimation();
   let step = 0;
   const stages = [
-    { label: 'Целостность', time: 2500 },
-    { label: 'CMRR', time: 2500 },
-    { label: 'АЧХ', time: 3000 }
-  ];
+    { key: 'cont', label: 'Целостность', time: 2500 },
+    { key: 'cmrr', label: 'CMRR', time: 2500 },
+    { key: 'ach', label: 'АЧХ', time: 3000 }
+  ].filter(s => selectedTests[s.key]);
+  resultCfg = { type: selectedType, tests: { ...selectedTests }, cmrr: 68, ach: '−2.1', sf: 67, archive: null };
+  document.getElementById('run-type').textContent = TYPE_NAMES[selectedType];
+  document.getElementById('run-total').textContent = stages.length;
   const stagesEl = document.getElementById('run-stages');
   function render() {
     stagesEl.innerHTML = '';
@@ -1091,7 +1114,7 @@ function openRepeatDialog() {
   showDialog({
     icon: '<div style="width: 44px; height: 44px; border-radius: 50%; background: rgba(239,159,39,0.1); border: 0.5px solid rgba(239,159,39,0.4); display: flex; align-items: center; justify-content: center;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#EF9F27" stroke-width="2" stroke-linecap="round"><path d="M21 12a9 9 0 11-3-6.7M21 3v6h-6"/></svg></div>',
     title: 'Повторить тест?',
-    text: 'Текущий результат (Health Score 92) будет отброшен.',
+    text: 'Текущий результат (Health Score ' + currentScore() + ') будет отброшен.',
     cancelText: 'Отмена',
     confirmText: 'Повторить',
     onConfirm: () => { closeAllModals(); goto('testRunning'); }
@@ -1103,7 +1126,9 @@ function openDelete() {
   showDialog({
     icon: '<div style="width: 44px; height: 44px; border-radius: 50%; background: rgba(226,75,74,0.1); border: 0.5px solid rgba(226,75,74,0.4); display: flex; align-items: center; justify-content: center;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#E24B4A" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg></div>',
     title: 'Удалить «' + document.getElementById('cable-name').textContent + '»?',
-    text: 'Все 5 проверок и история динамики будут удалены.',
+    text: cableHub
+      ? 'Копия с историей удалится с телефона, в Hub кабель останется. Окончательно удалить его может владелец команды в вебе.'
+      : 'Все 5 проверок и история динамики будут удалены.',
     cancelText: 'Отмена',
     confirmText: 'Удалить',
     confirmStyle: 'danger',
@@ -1118,6 +1143,11 @@ function showDialog(opts) {
   document.getElementById('dialog-text').textContent = opts.text;
   const cancel = document.getElementById('dialog-cancel');
   const confirm = document.getElementById('dialog-confirm');
+  cancel.style.background = 'transparent';
+  cancel.style.color = '#aaa';
+  cancel.style.border = '0.5px solid #2a2a2a';
+  cancel.style.display = opts.single ? 'none' : 'block';
+  cancel.parentElement.style.gridTemplateColumns = opts.single ? '1fr' : '1fr 1fr';
   cancel.textContent = opts.cancelText || 'Отмена';
   confirm.textContent = opts.confirmText || 'OK';
   if (opts.confirmStyle === 'danger') {
@@ -1156,7 +1186,7 @@ function confirmSave() {
   setTimeout(() => goto('cableDetail'), 800);
 }
 
-function openSharePdf() {
+function openShare() {
   closeAllDropdowns();
   document.getElementById('backdrop').style.display = 'block';
   document.getElementById('share-sheet').style.display = 'block';
@@ -1224,6 +1254,407 @@ function undoToast() {
   clearTimeout(undoTimer);
   document.getElementById('toast').style.display = 'none';
   goto('results');
+}
+
+const TYPE_NAMES = { ts: 'Jack TS', trs: 'Jack TRS', xlr: 'XLR' };
+const CONDUCTORS = {
+  ts: [['Tip · +', 1.2], ['Sleeve · ⏚', 0.8]],
+  trs: [['Tip · +', 1.2], ['Ring · −', 1.5], ['Sleeve · ⏚', 0.8]],
+  xlr: [['Pin 1 · ⏚', 0.9], ['Pin 2 · +', 1.2], ['Pin 3 · −', 1.4]]
+};
+const WEIGHTS = {
+  ts: { cont: 0.6, ach: 0.4 },
+  trs: { cont: 0.35, cmrr: 0.35, ach: 0.3 },
+  xlr: { cont: 0.35, cmrr: 0.35, ach: 0.3 }
+};
+const TEST_NAMES = { cont: 'целостность', cmrr: 'CMRR', ach: 'АЧХ' };
+const INFO_ICON = '<div style="width: 44px; height: 44px; border-radius: 50%; background: rgba(239,159,39,0.1); border: 0.5px solid rgba(239,159,39,0.4); display: flex; align-items: center; justify-content: center;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#EF9F27" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v4M12 16h.01"/></svg></div>';
+
+let typeLocked = false;
+let resultCfg = { type: 'xlr', tests: { cont: true, cmrr: true, ach: true }, cmrr: 68, ach: '−2.1', sf: 67, archive: null };
+let insightTimer = null;
+
+let hubUser = null;
+let hubOffline = false;
+let hubPending = 3;
+let hubLastSync = 'ещё не было';
+let hubTeams = [
+  { id: 'personal', name: 'Личное пространство', role: 'владелец' },
+  { id: 'studio', name: 'Студия А', role: 'участник' }
+];
+let hubTeam = 'studio';
+let hubFilter = 'all';
+let cableHub = null;
+let uploadTeam = 'personal';
+let downloadItem = null;
+let afterLogin = null;
+let hubCatalog = {
+  personal: [],
+  studio: [
+    { name: 'Sennheiser вокал', type: 'xlr', color: '#378ADD', score: 92, tests: 12, last: '3 дня назад', assignee: 'ivan_s', archived: false, state: 'remote' },
+    { name: 'Патч пульт–рэк', type: 'jack_trs', color: '#1ABC9C', score: 71, tests: 8, last: 'вчера', assignee: null, archived: false, state: 'remote' },
+    { name: 'Гитара сцена', type: 'jack_ts', color: '#9B59B6', score: 35, tests: 21, last: 'неделю назад', assignee: 'ivan_s', archived: false, state: 'local' },
+    { name: 'Новый XLR 10 м', type: 'xlr', color: '#EF9F27', score: null, tests: 0, last: 'тестов нет', assignee: null, archived: false, state: 'remote' },
+    { name: 'XLR старый', type: 'xlr', color: '#639922', score: 12, tests: 30, last: 'в прошлом году', assignee: null, archived: true, state: 'remote' }
+  ]
+};
+const HUB_FILTERS = [['all', 'Все'], ['xlr', 'XLR'], ['jack_ts', 'Jack TS'], ['jack_trs', 'Jack TRS'], ['mine', 'Мои'], ['archive', 'Архив']];
+const CABLE_TAGS = { xlr: 'XLR', jack_ts: 'TS', jack_trs: 'TRS' };
+
+function esc(s) {
+  const d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
+}
+
+function scoreColor(v) {
+  if (v === null) return '#666';
+  return v >= 80 ? '#97C459' : v >= 40 ? '#EF9F27' : '#E24B4A';
+}
+
+function renderScreen(screen) {
+  if (screen === 'results') renderResults();
+  if (screen === 'hub') renderHub();
+  if (screen === 'settings') renderSettings();
+  if (screen === 'cableDetail') renderCableHub();
+}
+
+function newTest() {
+  typeLocked = false;
+  document.getElementById('type-locked').style.display = 'none';
+  goto('testSetup');
+}
+
+function retestCable() {
+  typeLocked = false;
+  selectType('xlr');
+  typeLocked = true;
+  document.getElementById('type-locked').style.display = 'block';
+  goto('testSetup');
+}
+
+function currentScore() {
+  const w = WEIGHTS[resultCfg.type];
+  const rs = CONDUCTORS[resultCfg.type].map(c => c[1]);
+  const scores = {
+    cont: rs.reduce((s, r) => s + (100 - 4 * r), 0) / rs.length,
+    cmrr: Math.min(100, 80 + (resultCfg.cmrr - 60)),
+    ach: resultCfg.sf
+  };
+  const run = Object.keys(w).filter(k => resultCfg.tests[k]);
+  const sum = run.reduce((s, k) => s + w[k], 0);
+  return Math.round(run.reduce((s, k) => s + w[k] / sum * scores[k], 0));
+}
+
+function renderResults() {
+  const cfg = resultCfg;
+  const score = currentScore();
+  const color = scoreColor(score);
+  const rgb = score >= 80 ? '99,153,34' : score >= 40 ? '239,159,39' : '226,75,74';
+  const hero = document.getElementById('res-hero');
+  hero.style.background = 'linear-gradient(180deg, rgba(' + rgb + ',0.12) 0%, rgba(' + rgb + ',0.02) 100%)';
+  hero.style.border = '0.5px solid rgba(' + rgb + ',0.35)';
+  document.getElementById('res-badge').style.background = 'rgba(' + rgb + ',0.18)';
+  document.getElementById('res-badge-dot').style.background = color;
+  const badge = document.getElementById('res-badge-text');
+  badge.style.color = color;
+  badge.textContent = score >= 80 ? 'В НОРМЕ' : score >= 40 ? 'ЕСТЬ ОТКЛОНЕНИЯ' : 'КРИТИЧНО';
+  document.getElementById('res-score').textContent = score;
+
+  const times = { cont: 3, cmrr: 5, ach: 12 };
+  const applicable = Object.keys(WEIGHTS[cfg.type]);
+  const run = applicable.filter(k => cfg.tests[k]);
+  const missing = applicable.filter(k => !cfg.tests[k]);
+  document.getElementById('res-sub').textContent = TYPE_NAMES[cfg.type] + ' · ' + (cfg.archive || '~' + run.reduce((s, k) => s + times[k], 0) + ' с');
+  const partial = document.getElementById('res-partial');
+  partial.style.display = missing.length ? 'block' : 'none';
+  partial.textContent = 'Неполный · не выполнено: ' + missing.map(k => TEST_NAMES[k]).join(', ');
+
+  document.getElementById('res-cont-card').style.display = cfg.tests.cont ? 'block' : 'none';
+  document.getElementById('res-cmrr-card').style.display = run.includes('cmrr') ? 'flex' : 'none';
+  document.getElementById('res-ach-card').style.display = cfg.tests.ach ? 'block' : 'none';
+  document.getElementById('res-cmrr-val').textContent = cfg.cmrr;
+  document.getElementById('res-ach-val').textContent = cfg.ach;
+  document.getElementById('res-pins').innerHTML = CONDUCTORS[cfg.type].map(c =>
+    '<div style="display: flex; align-items: center; gap: 8px;"><div style="width: 8px; height: 8px; border-radius: 50%; background: #97C459; flex-shrink: 0;"></div><div style="font-size: 10px; color: #888; flex: 1;">' + c[0] + '</div><div style="font-size: 10px; color: #fafafa; font-variant-numeric: tabular-nums;">' + c[1].toFixed(1) + ' Ом</div></div>'
+  ).join('');
+
+  document.getElementById('res-title').textContent = cfg.archive ? 'Проверка' : 'Результаты';
+  document.getElementById('res-actions').style.display = cfg.archive ? 'none' : 'block';
+  document.getElementById('res-archive-pad').style.display = cfg.archive ? 'block' : 'none';
+  renderInsight();
+}
+
+function renderInsight() {
+  clearTimeout(insightTimer);
+  const el = document.getElementById('res-insight');
+  const text = resultCfg.tests.ach ? 'Лёгкий завал на верхах — нормально для длинных кабелей.' : 'Проверенные параметры в норме.';
+  if (hubOffline) {
+    el.textContent = 'Нет связи. Комментарий появится, когда она вернётся.';
+    return;
+  }
+  el.textContent = 'Запрашиваем комментарий…';
+  insightTimer = setTimeout(() => { el.textContent = text; }, 1200);
+}
+
+function openArchived(cmrr, ach, sf, date) {
+  resultCfg = { type: 'xlr', tests: { cont: true, cmrr: true, ach: true }, cmrr: cmrr, ach: ach, sf: sf, archive: date };
+  goto('results');
+}
+
+function closeResults() {
+  if (resultCfg.archive) goBack();
+  else goto('dashboard');
+}
+
+function shareVia() {
+  closeAllModals();
+  showToast('Открыто системное меню «Поделиться»');
+}
+
+function showInfo(title, text) {
+  showDialog({
+    icon: INFO_ICON,
+    title: title,
+    text: text,
+    single: true,
+    confirmText: 'Понятно',
+    onConfirm: () => { closeAllModals(); renderScreen(current); }
+  });
+}
+
+function openLogin(then) {
+  afterLogin = then || null;
+  document.getElementById('login-error').style.display = 'none';
+  document.getElementById('login-password').value = '';
+  document.getElementById('backdrop').style.display = 'block';
+  document.getElementById('login-sheet').style.display = 'block';
+}
+
+function submitLogin() {
+  const nick = document.getElementById('login-nick').value.trim();
+  const password = document.getElementById('login-password').value;
+  const error = document.getElementById('login-error');
+  if (!nick || !password) {
+    error.textContent = 'Введите ник и пароль';
+    error.style.display = 'block';
+    return;
+  }
+  hubUser = nick;
+  closeAllModals();
+  showToast('Вход выполнен');
+  renderScreen(current);
+  if (afterLogin) { const next = afterLogin; afterLogin = null; next(); }
+}
+
+function logoutHub() {
+  hubUser = null;
+  showToast('Вы вышли. Данные на телефоне остались');
+  renderScreen(current);
+}
+
+function confirmLogoutAll() {
+  showDialog({
+    icon: INFO_ICON,
+    title: 'Завершить все сеансы?',
+    text: 'Выход на всех устройствах и в вебе, включая этот телефон. Подойдёт при утере телефона. Данные на телефоне останутся.',
+    confirmText: 'Завершить',
+    confirmStyle: 'danger',
+    onConfirm: () => { closeAllModals(); logoutHub(); }
+  });
+}
+
+function syncNow() {
+  if (hubOffline) { showToast('Нет связи. Выгрузим, когда она появится'); return; }
+  showToast('Синхронизация…', 'spin');
+  setTimeout(() => {
+    hubPending = 0;
+    hubLastSync = 'только что';
+    showToast('Синхронизировано');
+    renderScreen(current);
+  }, 1200);
+}
+
+function renderSettings() {
+  const el = document.getElementById('settings-account');
+  document.getElementById('demo-offline').textContent = hubOffline ? 'Связь: нет — включить' : 'Связь: есть — отключить';
+  if (!hubUser) {
+    el.innerHTML = '<div style="background: #111; border: 0.5px solid #1f1f1f; border-radius: 12px; padding: 14px;">'
+      + '<div style="font-size: 11px; color: #888; line-height: 1.5; margin-bottom: 12px;">Вход нужен только для работы с командой. Без учётной записи приложение работает полностью.</div>'
+      + '<button class="primary-btn" onclick="openLogin()">Войти в Hub</button>'
+      + '<div style="font-size: 10px; color: #666; text-align: center; margin-top: 10px;">Регистрация — на сайте himo.hakoniwa.ru ↗</div></div>';
+    return;
+  }
+  el.innerHTML = '<div class="card">'
+    + '<div style="padding: 12px 14px; display: flex; align-items: center; gap: 12px;">'
+    + '<div style="width: 38px; height: 38px; border-radius: 50%; background: rgba(239,159,39,0.12); border: 0.5px solid rgba(239,159,39,0.4); display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 500; color: #EF9F27; flex-shrink: 0;">' + esc(hubUser.slice(0, 2).toUpperCase()) + '</div>'
+    + '<div style="flex: 1; min-width: 0;"><div style="font-size: 13px; font-weight: 500; color: #fafafa; overflow: hidden; text-overflow: ellipsis;">@' + esc(hubUser) + '</div><div style="font-size: 10px; color: #888; margin-top: 2px;">himo.hakoniwa.ru</div></div></div>'
+    + '<div class="sep"></div>'
+    + '<div class="info-row"><span style="color: #888;">Последняя синхронизация</span><span style="color: #e8e8e8; font-weight: 500;">' + hubLastSync + '</span></div>'
+    + '<div class="sep"></div>'
+    + '<div class="info-row"><span style="color: #888;">Ждут выгрузки</span><span style="color: #e8e8e8; font-weight: 500;">' + (hubPending ? hubPending + ' теста' : 'ничего') + '</span></div>'
+    + '<div style="padding: 2px 14px 12px;"><button class="secondary-btn" onclick="syncNow()">Синхронизировать</button></div>'
+    + '<div class="sep"></div>'
+    + '<button class="link-row"><span style="color: #e8e8e8;">Профиль, пароль, Telegram</span><span style="font-size: 10px; color: #666;">в вебе ↗</span></button>'
+    + '<div class="sep"></div>'
+    + '<button class="link-row" onclick="logoutHub()"><span style="color: #e8e8e8;">Выйти</span></button>'
+    + '<div class="sep"></div>'
+    + '<button class="link-row" onclick="confirmLogoutAll()"><span style="color: #E24B4A;">Завершить все сеансы</span></button>'
+    + '</div>';
+}
+
+function renderHub() {
+  document.getElementById('hub-guest').style.display = hubUser ? 'none' : 'block';
+  document.getElementById('hub-member').style.display = hubUser ? 'block' : 'none';
+  document.getElementById('hub-offline').style.display = hubOffline ? 'block' : 'none';
+  document.getElementById('hub-subtitle').textContent = hubUser ? '@' + hubUser + ' · синхронизация: ' + hubLastSync : 'Учётная запись необязательна';
+  if (!hubUser) return;
+  document.getElementById('hub-teams').innerHTML = hubTeams.map(t =>
+    '<button class="option-row" style="padding: 9px 12px;' + (t.id === hubTeam ? ' border-color: #EF9F27; background: rgba(239,159,39,0.08);' : '') + '" onclick="selectHubTeam(\'' + t.id + '\')">'
+    + '<div style="flex: 1; font-size: 12px; font-weight: 500; color: #fafafa;">' + t.name + '</div><div style="font-size: 10px; color: #666;">' + t.role + '</div></button>'
+  ).join('');
+  document.getElementById('hub-filters').innerHTML = HUB_FILTERS.map(f =>
+    '<button class="hub-chip' + (f[0] === hubFilter ? ' active' : '') + '" onclick="selectHubFilter(\'' + f[0] + '\')">' + f[1] + '</button>'
+  ).join('');
+  renderCatalog();
+}
+
+function selectHubTeam(id) { hubTeam = id; renderHub(); }
+function selectHubFilter(f) { hubFilter = f; renderHub(); }
+
+function renderCatalog() {
+  const q = document.getElementById('hub-search').value.trim().toLowerCase();
+  const items = (hubCatalog[hubTeam] || []).filter(c => {
+    if (q && !c.name.toLowerCase().includes(q)) return false;
+    if (hubFilter === 'archive') return c.archived;
+    if (c.archived) return false;
+    if (hubFilter === 'mine') return c.assignee === hubUser;
+    return hubFilter === 'all' || c.type === hubFilter;
+  });
+  const el = document.getElementById('hub-catalog');
+  if (!items.length) {
+    el.innerHTML = '<div style="font-size: 11px; color: #666; text-align: center; padding: 18px 0; line-height: 1.5;">Здесь пока нет кабелей.<br/>Выгрузите кабель из его паспорта.</div>';
+    return;
+  }
+  el.innerHTML = items.map(c => {
+    const i = hubCatalog[hubTeam].indexOf(c);
+    let action;
+    if (c.state === 'local') action = '<span style="font-size: 9px; color: #97C459;">на телефоне</span>';
+    else if (c.state === 'loading') action = '<span style="font-size: 9px; color: #EF9F27;">загружается…</span>';
+    else action = '<button class="mini-btn" onclick="openDownload(' + i + ')">Загрузить</button>';
+    return '<div class="cable-row" style="cursor: default;' + (c.archived ? ' opacity: 0.6;' : '') + '"><div class="strip" style="background: ' + c.color + ';"></div>'
+      + '<div class="main"><div class="ttl">' + esc(c.name) + ' <span class="tag">' + CABLE_TAGS[c.type] + '</span>' + (c.archived ? ' <span class="tag">архив</span>' : '') + '</div>'
+      + '<div class="sub">' + (c.tests ? c.tests + ' тестов · ' : '') + c.last + '</div>'
+      + '<div class="sub" style="margin-top: 1px;">отв.: ' + (c.assignee ? '@' + esc(c.assignee) : 'не назначен') + '</div></div>'
+      + '<div style="display: flex; flex-direction: column; align-items: flex-end; gap: 5px; flex-shrink: 0;"><div class="score" style="color: ' + scoreColor(c.score) + ';">' + (c.score === null ? '—' : c.score) + '</div>' + action + '</div></div>';
+  }).join('');
+}
+
+function openDownload(i) {
+  downloadItem = hubCatalog[hubTeam][i];
+  document.getElementById('download-title').textContent = '«' + downloadItem.name + '»';
+  document.getElementById('download-text').textContent = downloadItem.archived
+    ? 'Кабель в архиве: история загрузится только для чтения.'
+    : 'На телефон загрузится кабель с полной историей: ' + (downloadItem.tests || 'нет') + ' тестов. Дальше приложение будет получать его обновления.';
+  document.getElementById('download-assign').checked = false;
+  document.getElementById('download-assign').parentElement.style.display = downloadItem.archived ? 'none' : 'flex';
+  document.getElementById('backdrop').style.display = 'block';
+  document.getElementById('download-sheet').style.display = 'block';
+}
+
+function confirmDownload() {
+  const item = downloadItem;
+  closeAllModals();
+  if (hubOffline) { showToast('Нет связи. Загрузка недоступна'); return; }
+  if (document.getElementById('download-assign').checked) item.assignee = hubUser;
+  item.state = 'loading';
+  renderCatalog();
+  setTimeout(() => {
+    item.state = 'local';
+    if (current === 'hub') renderCatalog();
+    showToast('Кабель загружен');
+  }, 1500);
+}
+
+function renderCableHub() {
+  const el = document.getElementById('cable-hub');
+  const team = hubTeams.find(t => t.id === cableHub);
+  document.getElementById('hist-invalid').style.display = team ? 'flex' : 'none';
+  const icon = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="' + (team ? '#97C459' : '#666') + '" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;"><path d="M7 18a4.5 4.5 0 01-.6-8.96A6 6 0 0118 10a4 4 0 01-1 8H7z"/></svg>';
+  if (team) {
+    el.innerHTML = icon + '<div style="flex: 1; min-width: 0;"><div style="font-size: 11px; font-weight: 500; color: #fafafa;">' + team.name + '</div><div style="font-size: 9px; color: #666; margin-top: 1px;">В Hub · ответственный: не назначен</div></div>';
+  } else {
+    el.innerHTML = icon + '<div style="flex: 1; min-width: 0;"><div style="font-size: 11px; font-weight: 500; color: #aaa;">Только на телефоне</div><div style="font-size: 9px; color: #666; margin-top: 1px;">В Hub не выгружен</div></div><button class="mini-btn" onclick="openUpload()">Выгрузить</button>';
+  }
+}
+
+function openUpload() {
+  if (!hubUser) { openLogin(openUpload); return; }
+  document.getElementById('upload-teams').innerHTML = hubTeams.map(t =>
+    '<button class="option-row" data-team="' + t.id + '" style="padding: 10px 12px;" onclick="selectUploadTeam(\'' + t.id + '\')"><div style="flex: 1; font-size: 12px; font-weight: 500; color: #fafafa;">' + t.name + '</div><div style="font-size: 10px; color: #666;">' + t.role + '</div></button>'
+  ).join('');
+  selectUploadTeam(uploadTeam);
+  document.getElementById('backdrop').style.display = 'block';
+  document.getElementById('upload-sheet').style.display = 'block';
+}
+
+function selectUploadTeam(id) {
+  uploadTeam = id;
+  document.querySelectorAll('#upload-teams .option-row').forEach(b => {
+    const on = b.dataset.team === id;
+    b.style.borderColor = on ? '#EF9F27' : '#1f1f1f';
+    b.style.background = on ? 'rgba(239,159,39,0.08)' : '#111';
+  });
+}
+
+function confirmUpload() {
+  closeAllModals();
+  cableHub = uploadTeam;
+  hubCatalog[uploadTeam].unshift({ name: document.getElementById('cable-name').textContent, type: 'xlr', color: '#378ADD', score: 84, tests: 5, last: '2 часа назад', assignee: null, archived: false, state: 'local' });
+  renderCableHub();
+  showToast(hubOffline ? 'Выгрузится, когда появится связь' : 'Кабель выгружен в Hub');
+}
+
+function openConflict() {
+  document.getElementById('backdrop').style.display = 'block';
+  document.getElementById('conflict-sheet').style.display = 'block';
+}
+
+function resolveConflict(choice) {
+  closeAllModals();
+  showToast(choice === 'hub' ? 'Записана версия из Hub' : 'Ваша версия уйдёт со следующей выгрузкой');
+}
+
+function demoOffline() {
+  hubOffline = !hubOffline;
+  renderSettings();
+  showToast(hubOffline ? 'Связи нет: тесты копятся на телефоне' : 'Связь есть');
+}
+
+function demoSessionExpired() {
+  hubUser = null;
+  showInfo('Сеанс завершён', 'Войдите в Hub заново. Несинхронизированные данные остались на телефоне.');
+}
+
+function demoOutdated() {
+  showInfo('Версия приложения устарела', 'Синхронизация остановлена. Обновите приложение. Всё остальное работает как обычно.');
+}
+
+function demoNoAccess() {
+  hubTeams = hubTeams.filter(t => t.id !== 'studio');
+  if (hubTeam === 'studio') hubTeam = 'personal';
+  if (uploadTeam === 'studio') uploadTeam = 'personal';
+  if (cableHub === 'studio') cableHub = null;
+  showInfo('Нет доступа к команде', 'Вы больше не участник команды «Студия А». Её синхронизация остановлена, копии кабелей остались на телефоне.');
+}
+
+function demoArchived() {
+  showInfo('Кабель в архиве', 'Hub не принимает изменений и тестов этого кабеля. Они останутся невыгруженными. Вернуть кабель из архива можно в вебе.');
+}
+
+function demoDeleted() {
+  cableHub = null;
+  showInfo('Кабель удалён в Hub', 'Приложение больше не отслеживает этот кабель. Копия с историей осталась на телефоне, её можно удалить самому.');
 }
 
 document.addEventListener('click', function(e) {
