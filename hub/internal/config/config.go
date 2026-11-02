@@ -2,6 +2,7 @@
 package config
 
 import (
+	"encoding/json"
 	"fmt"
 	"regexp"
 
@@ -21,12 +22,36 @@ type Config struct {
 	MinAppVersion string `env:"MIN_APP_VERSION"`
 	// TrustedProxies — адреса, от которых принимается X-Forwarded-For (ADR-017).
 	TrustedProxies []string `env:"TRUSTED_PROXIES" envSeparator:","`
+	// Plans — лимиты тарифов по ключу из teams.plan (HUB-3).
+	Plans Plans `env:"PLANS" envDefault:"{\"free\":{\"max_members\":5}}"`
+}
+
+// FreePlan — тариф по умолчанию; его лимиты применяются и к неизвестному ключу.
+const FreePlan = "free"
+
+type Plan struct {
+	MaxMembers int `json:"max_members"`
+}
+
+type Plans map[string]Plan
+
+func (p *Plans) UnmarshalText(text []byte) error {
+	// Через обычную карту: у Plans есть UnmarshalText, и json ждал бы строку, а не объект.
+	var plans map[string]Plan
+	if err := json.Unmarshal(text, &plans); err != nil {
+		return err
+	}
+	*p = plans
+	return nil
 }
 
 func Load() (Config, error) {
 	cfg, err := env.ParseAs[Config]()
 	if err != nil {
 		return Config{}, err
+	}
+	if _, ok := cfg.Plans[FreePlan]; !ok {
+		return Config{}, fmt.Errorf("PLANS: no %q plan", FreePlan)
 	}
 	if cfg.MinAppVersion != "" && !versionRe.MatchString(cfg.MinAppVersion) {
 		return Config{}, fmt.Errorf("MIN_APP_VERSION: invalid version %q", cfg.MinAppVersion)

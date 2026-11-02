@@ -9,4 +9,5 @@ output-options:
   include-tags:
     - auth
     - profile
+    - teams
     - service

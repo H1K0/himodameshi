@@ -67,7 +67,11 @@ func newEnv(t *testing.T, change ...func(*config.Config)) *testEnv {
 		t.Fatal(err)
 	}
 
-	cfg := config.Config{PublicURL: testPublicURL + "/", TelegramBotToken: testBotToken}
+	cfg := config.Config{
+		PublicURL:        testPublicURL + "/",
+		TelegramBotToken: testBotToken,
+		Plans:            config.Plans{config.FreePlan: {MaxMembers: 5}},
+	}
 	for _, f := range change {
 		f(&cfg)
 	}

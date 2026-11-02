@@ -7,6 +7,7 @@ package store
 
 import (
 	"context"
+	"time"
 
 	"github.com/google/uuid"
 )
@@ -95,6 +96,22 @@ func (q *Queries) CreatePersonalTeam(ctx context.Context, arg CreatePersonalTeam
 	return err
 }
 
+const createTeam = `-- name: CreateTeam :exec
+INSERT INTO teams (id, name, description)
+VALUES ($1, $2, $3)
+`
+
+type CreateTeamParams struct {
+	ID          uuid.UUID
+	Name        string
+	Description string
+}
+
+func (q *Queries) CreateTeam(ctx context.Context, arg CreateTeamParams) error {
+	_, err := q.db.Exec(ctx, createTeam, arg.ID, arg.Name, arg.Description)
+	return err
+}
+
 const deleteOwnedTeams = `-- name: DeleteOwnedTeams :exec
 DELETE FROM teams
 WHERE id IN (
@@ -106,6 +123,61 @@ WHERE id IN (
 func (q *Queries) DeleteOwnedTeams(ctx context.Context, userID uuid.UUID) error {
 	_, err := q.db.Exec(ctx, deleteOwnedTeams, userID)
 	return err
+}
+
+const getMemberRole = `-- name: GetMemberRole :one
+SELECT role FROM team_members
+WHERE team_id = $1 AND user_id = $2
+`
+
+type GetMemberRoleParams struct {
+	TeamID uuid.UUID
+	UserID uuid.UUID
+}
+
+func (q *Queries) GetMemberRole(ctx context.Context, arg GetMemberRoleParams) (string, error) {
+	row := q.db.QueryRow(ctx, getMemberRole, arg.TeamID, arg.UserID)
+	var role string
+	err := row.Scan(&role)
+	return role, err
+}
+
+const getMemberTeam = `-- name: GetMemberTeam :one
+SELECT t.id, t.name, t.description, t.is_personal, t.plan, t.change_seq, t.created_at, t.deleted_at, m.role,
+       (SELECT count(*) FROM team_members c WHERE c.team_id = t.id) AS member_count
+FROM teams t
+JOIN team_members m ON m.team_id = t.id
+WHERE t.id = $1 AND m.user_id = $2 AND t.deleted_at IS NULL
+`
+
+type GetMemberTeamParams struct {
+	ID     uuid.UUID
+	UserID uuid.UUID
+}
+
+type GetMemberTeamRow struct {
+	Team        Team
+	Role        string
+	MemberCount int64
+}
+
+// Удалённая команда не видна: для участника её как будто нет (data-model.md, раздел 3.2).
+func (q *Queries) GetMemberTeam(ctx context.Context, arg GetMemberTeamParams) (GetMemberTeamRow, error) {
+	row := q.db.QueryRow(ctx, getMemberTeam, arg.ID, arg.UserID)
+	var i GetMemberTeamRow
+	err := row.Scan(
+		&i.Team.ID,
+		&i.Team.Name,
+		&i.Team.Description,
+		&i.Team.IsPersonal,
+		&i.Team.Plan,
+		&i.Team.ChangeSeq,
+		&i.Team.CreatedAt,
+		&i.Team.DeletedAt,
+		&i.Role,
+		&i.MemberCount,
+	)
+	return i, err
 }
 
 const insertAuditEvent = `-- name: InsertAuditEvent :exec
@@ -166,6 +238,57 @@ func (q *Queries) ListAssignedCableIDs(ctx context.Context, arg ListAssignedCabl
 	return items, nil
 }
 
+const listDeletedOwnedTeams = `-- name: ListDeletedOwnedTeams :many
+SELECT t.id, t.name, t.description, t.is_personal, t.plan, t.change_seq, t.created_at, t.deleted_at, m.role,
+       (SELECT count(*) FROM team_members c WHERE c.team_id = t.id) AS member_count
+FROM teams t
+JOIN team_members m ON m.team_id = t.id
+WHERE m.user_id = $1 AND m.role = 'owner' AND t.deleted_at > $2::timestamptz
+ORDER BY t.deleted_at DESC
+`
+
+type ListDeletedOwnedTeamsParams struct {
+	UserID       uuid.UUID
+	DeletedAfter time.Time
+}
+
+type ListDeletedOwnedTeamsRow struct {
+	Team        Team
+	Role        string
+	MemberCount int64
+}
+
+func (q *Queries) ListDeletedOwnedTeams(ctx context.Context, arg ListDeletedOwnedTeamsParams) ([]ListDeletedOwnedTeamsRow, error) {
+	rows, err := q.db.Query(ctx, listDeletedOwnedTeams, arg.UserID, arg.DeletedAfter)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListDeletedOwnedTeamsRow
+	for rows.Next() {
+		var i ListDeletedOwnedTeamsRow
+		if err := rows.Scan(
+			&i.Team.ID,
+			&i.Team.Name,
+			&i.Team.Description,
+			&i.Team.IsPersonal,
+			&i.Team.Plan,
+			&i.Team.ChangeSeq,
+			&i.Team.CreatedAt,
+			&i.Team.DeletedAt,
+			&i.Role,
+			&i.MemberCount,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listMemberTeamIDs = `-- name: ListMemberTeamIDs :many
 SELECT team_id FROM team_members
 WHERE user_id = $1
@@ -193,6 +316,118 @@ func (q *Queries) ListMemberTeamIDs(ctx context.Context, userID uuid.UUID) ([]uu
 	return items, nil
 }
 
+const listMemberTeams = `-- name: ListMemberTeams :many
+SELECT t.id, t.name, t.description, t.is_personal, t.plan, t.change_seq, t.created_at, t.deleted_at, m.role,
+       (SELECT count(*) FROM team_members c WHERE c.team_id = t.id) AS member_count
+FROM teams t
+JOIN team_members m ON m.team_id = t.id
+WHERE m.user_id = $1 AND t.deleted_at IS NULL
+ORDER BY t.is_personal DESC, t.id
+`
+
+type ListMemberTeamsRow struct {
+	Team        Team
+	Role        string
+	MemberCount int64
+}
+
+func (q *Queries) ListMemberTeams(ctx context.Context, userID uuid.UUID) ([]ListMemberTeamsRow, error) {
+	rows, err := q.db.Query(ctx, listMemberTeams, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListMemberTeamsRow
+	for rows.Next() {
+		var i ListMemberTeamsRow
+		if err := rows.Scan(
+			&i.Team.ID,
+			&i.Team.Name,
+			&i.Team.Description,
+			&i.Team.IsPersonal,
+			&i.Team.Plan,
+			&i.Team.ChangeSeq,
+			&i.Team.CreatedAt,
+			&i.Team.DeletedAt,
+			&i.Role,
+			&i.MemberCount,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listTeamMembers = `-- name: ListTeamMembers :many
+SELECT u.id, u.nickname, u.deleted_at, m.role, m.joined_at
+FROM team_members m
+JOIN users u ON u.id = m.user_id
+WHERE m.team_id = $1
+ORDER BY m.role = 'owner' DESC, m.joined_at, u.id
+`
+
+type ListTeamMembersRow struct {
+	ID        uuid.UUID
+	Nickname  string
+	DeletedAt *time.Time
+	Role      string
+	JoinedAt  time.Time
+}
+
+func (q *Queries) ListTeamMembers(ctx context.Context, teamID uuid.UUID) ([]ListTeamMembersRow, error) {
+	rows, err := q.db.Query(ctx, listTeamMembers, teamID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListTeamMembersRow
+	for rows.Next() {
+		var i ListTeamMembersRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Nickname,
+			&i.DeletedAt,
+			&i.Role,
+			&i.JoinedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const lockTeam = `-- name: LockTeam :one
+SELECT id, name, description, is_personal, plan, change_seq, created_at, deleted_at FROM teams
+WHERE id = $1
+FOR UPDATE
+`
+
+// Изменения состава и настроек команды идут по очереди. Роль читается следующим запросом,
+// уже после получения блокировки: иначе она могла бы оказаться устаревшей.
+func (q *Queries) LockTeam(ctx context.Context, id uuid.UUID) (Team, error) {
+	row := q.db.QueryRow(ctx, lockTeam, id)
+	var i Team
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Description,
+		&i.IsPersonal,
+		&i.Plan,
+		&i.ChangeSeq,
+		&i.CreatedAt,
+		&i.DeletedAt,
+	)
+	return i, err
+}
+
 const removeTeamMember = `-- name: RemoveTeamMember :exec
 DELETE FROM team_members
 WHERE team_id = $1 AND user_id = $2
@@ -205,5 +440,59 @@ type RemoveTeamMemberParams struct {
 
 func (q *Queries) RemoveTeamMember(ctx context.Context, arg RemoveTeamMemberParams) error {
 	_, err := q.db.Exec(ctx, removeTeamMember, arg.TeamID, arg.UserID)
+	return err
+}
+
+const restoreTeam = `-- name: RestoreTeam :exec
+UPDATE teams SET deleted_at = NULL
+WHERE id = $1
+`
+
+func (q *Queries) RestoreTeam(ctx context.Context, id uuid.UUID) error {
+	_, err := q.db.Exec(ctx, restoreTeam, id)
+	return err
+}
+
+const setMemberRole = `-- name: SetMemberRole :exec
+UPDATE team_members SET role = $1
+WHERE team_id = $2 AND user_id = $3
+`
+
+type SetMemberRoleParams struct {
+	Role   string
+	TeamID uuid.UUID
+	UserID uuid.UUID
+}
+
+func (q *Queries) SetMemberRole(ctx context.Context, arg SetMemberRoleParams) error {
+	_, err := q.db.Exec(ctx, setMemberRole, arg.Role, arg.TeamID, arg.UserID)
+	return err
+}
+
+const softDeleteTeam = `-- name: SoftDeleteTeam :exec
+UPDATE teams SET deleted_at = now()
+WHERE id = $1
+`
+
+func (q *Queries) SoftDeleteTeam(ctx context.Context, id uuid.UUID) error {
+	_, err := q.db.Exec(ctx, softDeleteTeam, id)
+	return err
+}
+
+const updateTeam = `-- name: UpdateTeam :exec
+UPDATE teams
+SET name = coalesce($1, name),
+    description = coalesce($2, description)
+WHERE id = $3
+`
+
+type UpdateTeamParams struct {
+	Name        *string
+	Description *string
+	ID          uuid.UUID
+}
+
+func (q *Queries) UpdateTeam(ctx context.Context, arg UpdateTeamParams) error {
+	_, err := q.db.Exec(ctx, updateTeam, arg.Name, arg.Description, arg.ID)
 	return err
 }

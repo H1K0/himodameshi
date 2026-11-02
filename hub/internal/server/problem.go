@@ -33,6 +33,12 @@ var (
 	errNicknameTaken       = &problem{status: http.StatusConflict, code: "nickname_taken"}
 	errTelegramTaken       = &problem{status: http.StatusConflict, code: "telegram_taken"}
 	errOwnerWithMembers    = &problem{status: http.StatusConflict, code: "owner_with_members"}
+	errNoTeamAccess        = &problem{status: http.StatusForbidden, code: "no_team_access"}
+	errOwnerOnly           = &problem{status: http.StatusForbidden, code: "owner_only"}
+	errNotFound            = &problem{status: http.StatusNotFound, code: "not_found"}
+	errNotAMember          = &problem{status: http.StatusConflict, code: "not_a_member"}
+	errPersonalTeam        = &problem{status: http.StatusConflict, code: "personal_team"}
+	errOwnerCannotLeave    = &problem{status: http.StatusConflict, code: "owner_cannot_leave"}
 	errInternal            = &problem{status: http.StatusInternalServerError, code: "internal_error"}
 )
 

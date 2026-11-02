@@ -61,7 +61,7 @@ func (s *Server) DeleteMe(ctx context.Context, _ api.DeleteMeRequestObject) (api
 			return err
 		}
 		for _, teamID := range teamIDs {
-			if err := leaveTeam(ctx, q, teamID, userID); err != nil {
+			if err := dropMember(ctx, q, teamID, userID, userID, "member.left"); err != nil {
 				return err
 			}
 		}
@@ -79,9 +79,10 @@ func (s *Server) DeleteMe(ctx context.Context, _ api.DeleteMeRequestObject) (api
 	return noContentResponse{clearCookie: session.viaCookie}, nil
 }
 
-// leaveTeam убирает участника из команды и сбрасывает его как ответственного
-// (data-model.md, раздел 3.2). Вызывается внутри транзакции.
-func leaveTeam(ctx context.Context, q *store.Queries, teamID, userID uuid.UUID) error {
+// dropMember убирает участника из команды и сбрасывает его как ответственного
+// (data-model.md, раздел 3.2). Вызывается внутри транзакции; actorID и event — для журнала:
+// участник вышел сам или его исключил владелец.
+func dropMember(ctx context.Context, q *store.Queries, teamID, userID, actorID uuid.UUID, event string) error {
 	cableIDs, err := q.ListAssignedCableIDs(ctx, store.ListAssignedCableIDsParams{TeamID: teamID, UserID: &userID})
 	if err != nil {
 		return err
@@ -106,7 +107,7 @@ func leaveTeam(ctx context.Context, q *store.Queries, teamID, userID uuid.UUID) 
 			}
 			if err := q.InsertAuditEvent(ctx, store.InsertAuditEventParams{
 				TeamID:        teamID,
-				ActorID:       userID,
+				ActorID:       actorID,
 				Event:         "cable.assignee_changed",
 				CableID:       &cableID,
 				SubjectUserID: &userID,
@@ -122,8 +123,8 @@ func leaveTeam(ctx context.Context, q *store.Queries, teamID, userID uuid.UUID) 
 	}
 	return q.InsertAuditEvent(ctx, store.InsertAuditEventParams{
 		TeamID:        teamID,
-		ActorID:       userID,
-		Event:         "member.left",
+		ActorID:       actorID,
+		Event:         event,
 		SubjectUserID: &userID,
 		Details:       []byte("{}"),
 	})

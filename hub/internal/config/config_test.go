@@ -31,3 +31,32 @@ func TestLoad(t *testing.T) {
 		})
 	}
 }
+
+func TestLoadPlans(t *testing.T) {
+	t.Setenv("DATABASE_URL", "postgres://localhost/himo")
+	t.Setenv("PUBLIC_URL", "https://himo.example")
+
+	cfg, err := Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := cfg.Plans[FreePlan].MaxMembers; got != 5 {
+		t.Errorf("лимит по умолчанию = %d", got)
+	}
+
+	t.Setenv("PLANS", `{"free": {"max_members": 3}, "pro": {"max_members": 50}}`)
+	cfg, err = Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.Plans[FreePlan].MaxMembers != 3 || cfg.Plans["pro"].MaxMembers != 50 {
+		t.Errorf("Plans = %v", cfg.Plans)
+	}
+
+	for _, plans := range []string{`{"pro": {"max_members": 50}}`, "not json"} {
+		t.Setenv("PLANS", plans)
+		if _, err := Load(); err == nil {
+			t.Errorf("PLANS=%s принят", plans)
+		}
+	}
+}

@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/oapi-codegen/runtime"
 	strictgin "github.com/oapi-codegen/runtime/strictmiddleware/gin"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 )
@@ -30,6 +31,12 @@ const (
 const (
 	Ok          HealthStatus = "ok"
 	Unavailable HealthStatus = "unavailable"
+)
+
+// Defines values for TeamRole.
+const (
+	TeamRoleMember TeamRole = "member"
+	TeamRoleOwner  TeamRole = "owner"
 )
 
 // AppOutdatedProblem defines model for AppOutdatedProblem.
@@ -58,6 +65,12 @@ type ChangePasswordRequest struct {
 // ClientType `web` — токен в cookie, `app` — токен в теле ответа
 type ClientType string
 
+// CreateTeamRequest defines model for CreateTeamRequest.
+type CreateTeamRequest struct {
+	Description *string `json:"description,omitempty"`
+	Name        string  `json:"name"`
+}
+
 // FieldError defines model for FieldError.
 type FieldError struct {
 	// Field Путь к полю
@@ -81,11 +94,31 @@ type LoginRequest struct {
 	Password Password   `json:"password"`
 }
 
+// Member defines model for Member.
+type Member struct {
+	JoinedAt time.Time `json:"joined_at"`
+	Role     TeamRole  `json:"role"`
+
+	// User Ссылка на пользователя. `nickname = null` — учётная запись удалена («Удалённый пользователь»).
+	User UserRef `json:"user"`
+}
+
+// MemberList defines model for MemberList.
+type MemberList struct {
+	Items []Member `json:"items"`
+}
+
 // Nickname Латинские буквы, цифры и `_`; уникален без учёта регистра
 type Nickname = string
 
 // Password defines model for Password.
 type Password = string
+
+// Plan Тариф команды; лимиты задаются конфигурацией сервера
+type Plan struct {
+	Key        string `json:"key"`
+	MaxMembers int    `json:"max_members"`
+}
 
 // Problem Ошибка по RFC 9457 с машиночитаемым кодом
 type Problem struct {
@@ -123,6 +156,35 @@ type Session struct {
 	User  User    `json:"user"`
 }
 
+// Team defines model for Team.
+type Team struct {
+	CreatedAt time.Time `json:"created_at"`
+
+	// DeletedAt Только в списке удалённых команд
+	DeletedAt   *time.Time `json:"deleted_at"`
+	Description string     `json:"description"`
+
+	// Id UUIDv7 (RFC 9562)
+	Id Uuid `json:"id"`
+
+	// IsPersonal Личное пространство — команда из одного человека
+	IsPersonal  bool   `json:"is_personal"`
+	MemberCount int    `json:"member_count"`
+	Name        string `json:"name"`
+
+	// Plan Тариф команды; лимиты задаются конфигурацией сервера
+	Plan Plan     `json:"plan"`
+	Role TeamRole `json:"role"`
+}
+
+// TeamList defines model for TeamList.
+type TeamList struct {
+	Items []Team `json:"items"`
+}
+
+// TeamRole defines model for TeamRole.
+type TeamRole string
+
 // TelegramAccount defines model for TelegramAccount.
 type TelegramAccount struct {
 	Id       int64   `json:"id"`
@@ -143,10 +205,22 @@ type TelegramAuthData struct {
 	Username *string `json:"username,omitempty"`
 }
 
+// TransferOwnershipRequest defines model for TransferOwnershipRequest.
+type TransferOwnershipRequest struct {
+	// UserId UUIDv7 (RFC 9562)
+	UserId Uuid `json:"user_id"`
+}
+
 // UpdateProfileRequest defines model for UpdateProfileRequest.
 type UpdateProfileRequest struct {
 	// Nickname Латинские буквы, цифры и `_`; уникален без учёта регистра
 	Nickname Nickname `json:"nickname"`
+}
+
+// UpdateTeamRequest defines model for UpdateTeamRequest.
+type UpdateTeamRequest struct {
+	Description *string `json:"description,omitempty"`
+	Name        *string `json:"name,omitempty"`
 }
 
 // User defines model for User.
@@ -161,6 +235,13 @@ type User struct {
 
 	// Telegram Привязанный Telegram или `null`
 	Telegram *TelegramAccount `json:"telegram"`
+}
+
+// UserRef Ссылка на пользователя. `nickname = null` — учётная запись удалена («Удалённый пользователь»).
+type UserRef struct {
+	// Id UUIDv7 (RFC 9562)
+	Id       Uuid    `json:"id"`
+	Nickname *string `json:"nickname"`
 }
 
 // Uuid UUIDv7 (RFC 9562)
@@ -193,11 +274,22 @@ type BadRequest = Problem
 // Conflict Ошибка по RFC 9457 с машиночитаемым кодом
 type Conflict = Problem
 
+// Forbidden Ошибка по RFC 9457 с машиночитаемым кодом
+type Forbidden = Problem
+
+// NotFound Ошибка по RFC 9457 с машиночитаемым кодом
+type NotFound = Problem
+
 // TooManyRequests Ошибка по RFC 9457 с машиночитаемым кодом
 type TooManyRequests = Problem
 
 // Unauthorized Ошибка по RFC 9457 с машиночитаемым кодом
 type Unauthorized = Problem
+
+// ListTeamsParams defines parameters for ListTeams.
+type ListTeamsParams struct {
+	Deleted *bool `form:"deleted,omitempty" json:"deleted,omitempty"`
+}
 
 // LoginJSONRequestBody defines body for Login for application/json ContentType.
 type LoginJSONRequestBody = LoginRequest
@@ -216,6 +308,15 @@ type ChangePasswordJSONRequestBody = ChangePasswordRequest
 
 // LinkTelegramJSONRequestBody defines body for LinkTelegram for application/json ContentType.
 type LinkTelegramJSONRequestBody = TelegramAuthData
+
+// CreateTeamJSONRequestBody defines body for CreateTeam for application/json ContentType.
+type CreateTeamJSONRequestBody = CreateTeamRequest
+
+// UpdateTeamJSONRequestBody defines body for UpdateTeam for application/json ContentType.
+type UpdateTeamJSONRequestBody = UpdateTeamRequest
+
+// TransferOwnershipJSONRequestBody defines body for TransferOwnership for application/json ContentType.
+type TransferOwnershipJSONRequestBody = TransferOwnershipRequest
 
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
@@ -252,6 +353,36 @@ type ServerInterface interface {
 	// Привязка Telegram
 	// (PUT /api/v1/me/telegram)
 	LinkTelegram(c *gin.Context)
+	// Мои команды
+	// (GET /api/v1/teams)
+	ListTeams(c *gin.Context, params ListTeamsParams)
+	// Создать команду
+	// (POST /api/v1/teams)
+	CreateTeam(c *gin.Context)
+	// Удалить команду
+	// (DELETE /api/v1/teams/{teamId})
+	DeleteTeam(c *gin.Context, teamId TeamId)
+	// Команда
+	// (GET /api/v1/teams/{teamId})
+	GetTeam(c *gin.Context, teamId TeamId)
+	// Название и описание команды
+	// (PATCH /api/v1/teams/{teamId})
+	UpdateTeam(c *gin.Context, teamId TeamId)
+	// Выйти из команды
+	// (POST /api/v1/teams/{teamId}/leave)
+	LeaveTeam(c *gin.Context, teamId TeamId)
+	// Участники команды
+	// (GET /api/v1/teams/{teamId}/members)
+	ListMembers(c *gin.Context, teamId TeamId)
+	// Исключить участника
+	// (DELETE /api/v1/teams/{teamId}/members/{userId})
+	RemoveMember(c *gin.Context, teamId TeamId, userId UserId)
+	// Восстановить удалённую команду
+	// (POST /api/v1/teams/{teamId}/restore)
+	RestoreTeam(c *gin.Context, teamId TeamId)
+	// Передать владение
+	// (POST /api/v1/teams/{teamId}/transfer-ownership)
+	TransferOwnership(c *gin.Context, teamId TeamId)
 	// Проверка сервера и БД
 	// (GET /health)
 	Health(c *gin.Context)
@@ -441,6 +572,286 @@ func (siw *ServerInterfaceWrapper) LinkTelegram(c *gin.Context) {
 	siw.Handler.LinkTelegram(c)
 }
 
+// ListTeams operation middleware
+func (siw *ServerInterfaceWrapper) ListTeams(c *gin.Context) {
+
+	var err error
+
+	c.Set(BearerAuthScopes, []string{})
+
+	c.Set(CookieAuthScopes, []string{})
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListTeamsParams
+
+	// ------------- Optional query parameter "deleted" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "deleted", c.Request.URL.Query(), &params.Deleted)
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter deleted: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.ListTeams(c, params)
+}
+
+// CreateTeam operation middleware
+func (siw *ServerInterfaceWrapper) CreateTeam(c *gin.Context) {
+
+	c.Set(BearerAuthScopes, []string{})
+
+	c.Set(CookieAuthScopes, []string{})
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.CreateTeam(c)
+}
+
+// DeleteTeam operation middleware
+func (siw *ServerInterfaceWrapper) DeleteTeam(c *gin.Context) {
+
+	var err error
+
+	// ------------- Path parameter "teamId" -------------
+	var teamId TeamId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "teamId", c.Param("teamId"), &teamId, runtime.BindStyledParameterOptions{Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter teamId: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	c.Set(BearerAuthScopes, []string{})
+
+	c.Set(CookieAuthScopes, []string{})
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.DeleteTeam(c, teamId)
+}
+
+// GetTeam operation middleware
+func (siw *ServerInterfaceWrapper) GetTeam(c *gin.Context) {
+
+	var err error
+
+	// ------------- Path parameter "teamId" -------------
+	var teamId TeamId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "teamId", c.Param("teamId"), &teamId, runtime.BindStyledParameterOptions{Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter teamId: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	c.Set(BearerAuthScopes, []string{})
+
+	c.Set(CookieAuthScopes, []string{})
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.GetTeam(c, teamId)
+}
+
+// UpdateTeam operation middleware
+func (siw *ServerInterfaceWrapper) UpdateTeam(c *gin.Context) {
+
+	var err error
+
+	// ------------- Path parameter "teamId" -------------
+	var teamId TeamId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "teamId", c.Param("teamId"), &teamId, runtime.BindStyledParameterOptions{Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter teamId: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	c.Set(BearerAuthScopes, []string{})
+
+	c.Set(CookieAuthScopes, []string{})
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.UpdateTeam(c, teamId)
+}
+
+// LeaveTeam operation middleware
+func (siw *ServerInterfaceWrapper) LeaveTeam(c *gin.Context) {
+
+	var err error
+
+	// ------------- Path parameter "teamId" -------------
+	var teamId TeamId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "teamId", c.Param("teamId"), &teamId, runtime.BindStyledParameterOptions{Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter teamId: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	c.Set(BearerAuthScopes, []string{})
+
+	c.Set(CookieAuthScopes, []string{})
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.LeaveTeam(c, teamId)
+}
+
+// ListMembers operation middleware
+func (siw *ServerInterfaceWrapper) ListMembers(c *gin.Context) {
+
+	var err error
+
+	// ------------- Path parameter "teamId" -------------
+	var teamId TeamId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "teamId", c.Param("teamId"), &teamId, runtime.BindStyledParameterOptions{Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter teamId: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	c.Set(BearerAuthScopes, []string{})
+
+	c.Set(CookieAuthScopes, []string{})
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.ListMembers(c, teamId)
+}
+
+// RemoveMember operation middleware
+func (siw *ServerInterfaceWrapper) RemoveMember(c *gin.Context) {
+
+	var err error
+
+	// ------------- Path parameter "teamId" -------------
+	var teamId TeamId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "teamId", c.Param("teamId"), &teamId, runtime.BindStyledParameterOptions{Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter teamId: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	// ------------- Path parameter "userId" -------------
+	var userId UserId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "userId", c.Param("userId"), &userId, runtime.BindStyledParameterOptions{Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter userId: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	c.Set(BearerAuthScopes, []string{})
+
+	c.Set(CookieAuthScopes, []string{})
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.RemoveMember(c, teamId, userId)
+}
+
+// RestoreTeam operation middleware
+func (siw *ServerInterfaceWrapper) RestoreTeam(c *gin.Context) {
+
+	var err error
+
+	// ------------- Path parameter "teamId" -------------
+	var teamId TeamId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "teamId", c.Param("teamId"), &teamId, runtime.BindStyledParameterOptions{Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter teamId: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	c.Set(BearerAuthScopes, []string{})
+
+	c.Set(CookieAuthScopes, []string{})
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.RestoreTeam(c, teamId)
+}
+
+// TransferOwnership operation middleware
+func (siw *ServerInterfaceWrapper) TransferOwnership(c *gin.Context) {
+
+	var err error
+
+	// ------------- Path parameter "teamId" -------------
+	var teamId TeamId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "teamId", c.Param("teamId"), &teamId, runtime.BindStyledParameterOptions{Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter teamId: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	c.Set(BearerAuthScopes, []string{})
+
+	c.Set(CookieAuthScopes, []string{})
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.TransferOwnership(c, teamId)
+}
+
 // Health operation middleware
 func (siw *ServerInterfaceWrapper) Health(c *gin.Context) {
 
@@ -492,6 +903,16 @@ func RegisterHandlersWithOptions(router gin.IRouter, si ServerInterface, options
 	router.PUT(options.BaseURL+"/api/v1/me/password", wrapper.ChangePassword)
 	router.DELETE(options.BaseURL+"/api/v1/me/telegram", wrapper.UnlinkTelegram)
 	router.PUT(options.BaseURL+"/api/v1/me/telegram", wrapper.LinkTelegram)
+	router.GET(options.BaseURL+"/api/v1/teams", wrapper.ListTeams)
+	router.POST(options.BaseURL+"/api/v1/teams", wrapper.CreateTeam)
+	router.DELETE(options.BaseURL+"/api/v1/teams/:teamId", wrapper.DeleteTeam)
+	router.GET(options.BaseURL+"/api/v1/teams/:teamId", wrapper.GetTeam)
+	router.PATCH(options.BaseURL+"/api/v1/teams/:teamId", wrapper.UpdateTeam)
+	router.POST(options.BaseURL+"/api/v1/teams/:teamId/leave", wrapper.LeaveTeam)
+	router.GET(options.BaseURL+"/api/v1/teams/:teamId/members", wrapper.ListMembers)
+	router.DELETE(options.BaseURL+"/api/v1/teams/:teamId/members/:userId", wrapper.RemoveMember)
+	router.POST(options.BaseURL+"/api/v1/teams/:teamId/restore", wrapper.RestoreTeam)
+	router.POST(options.BaseURL+"/api/v1/teams/:teamId/transfer-ownership", wrapper.TransferOwnership)
 	router.GET(options.BaseURL+"/health", wrapper.Health)
 }
 
@@ -500,6 +921,10 @@ type AppOutdatedApplicationProblemPlusJSONResponse AppOutdatedProblem
 type BadRequestApplicationProblemPlusJSONResponse Problem
 
 type ConflictApplicationProblemPlusJSONResponse Problem
+
+type ForbiddenApplicationProblemPlusJSONResponse Problem
+
+type NotFoundApplicationProblemPlusJSONResponse Problem
 
 type TooManyRequestsResponseHeaders struct {
 	RetryAfter int
@@ -980,6 +1405,473 @@ func (response LinkTelegram409ApplicationProblemPlusJSONResponse) VisitLinkTeleg
 	return json.NewEncoder(w).Encode(response)
 }
 
+type ListTeamsRequestObject struct {
+	Params ListTeamsParams
+}
+
+type ListTeamsResponseObject interface {
+	VisitListTeamsResponse(w http.ResponseWriter) error
+}
+
+type ListTeams200JSONResponse TeamList
+
+func (response ListTeams200JSONResponse) VisitListTeamsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ListTeams401ApplicationProblemPlusJSONResponse struct {
+	UnauthorizedApplicationProblemPlusJSONResponse
+}
+
+func (response ListTeams401ApplicationProblemPlusJSONResponse) VisitListTeamsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CreateTeamRequestObject struct {
+	Body *CreateTeamJSONRequestBody
+}
+
+type CreateTeamResponseObject interface {
+	VisitCreateTeamResponse(w http.ResponseWriter) error
+}
+
+type CreateTeam201JSONResponse Team
+
+func (response CreateTeam201JSONResponse) VisitCreateTeamResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CreateTeam400ApplicationProblemPlusJSONResponse struct {
+	BadRequestApplicationProblemPlusJSONResponse
+}
+
+func (response CreateTeam400ApplicationProblemPlusJSONResponse) VisitCreateTeamResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CreateTeam401ApplicationProblemPlusJSONResponse struct {
+	UnauthorizedApplicationProblemPlusJSONResponse
+}
+
+func (response CreateTeam401ApplicationProblemPlusJSONResponse) VisitCreateTeamResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type DeleteTeamRequestObject struct {
+	TeamId TeamId `json:"teamId"`
+}
+
+type DeleteTeamResponseObject interface {
+	VisitDeleteTeamResponse(w http.ResponseWriter) error
+}
+
+type DeleteTeam204Response struct {
+}
+
+func (response DeleteTeam204Response) VisitDeleteTeamResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type DeleteTeam401ApplicationProblemPlusJSONResponse struct {
+	UnauthorizedApplicationProblemPlusJSONResponse
+}
+
+func (response DeleteTeam401ApplicationProblemPlusJSONResponse) VisitDeleteTeamResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type DeleteTeam403ApplicationProblemPlusJSONResponse struct {
+	ForbiddenApplicationProblemPlusJSONResponse
+}
+
+func (response DeleteTeam403ApplicationProblemPlusJSONResponse) VisitDeleteTeamResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type DeleteTeam409ApplicationProblemPlusJSONResponse struct {
+	ConflictApplicationProblemPlusJSONResponse
+}
+
+func (response DeleteTeam409ApplicationProblemPlusJSONResponse) VisitDeleteTeamResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(409)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetTeamRequestObject struct {
+	TeamId TeamId `json:"teamId"`
+}
+
+type GetTeamResponseObject interface {
+	VisitGetTeamResponse(w http.ResponseWriter) error
+}
+
+type GetTeam200JSONResponse Team
+
+func (response GetTeam200JSONResponse) VisitGetTeamResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetTeam401ApplicationProblemPlusJSONResponse struct {
+	UnauthorizedApplicationProblemPlusJSONResponse
+}
+
+func (response GetTeam401ApplicationProblemPlusJSONResponse) VisitGetTeamResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetTeam403ApplicationProblemPlusJSONResponse struct {
+	ForbiddenApplicationProblemPlusJSONResponse
+}
+
+func (response GetTeam403ApplicationProblemPlusJSONResponse) VisitGetTeamResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type UpdateTeamRequestObject struct {
+	TeamId TeamId `json:"teamId"`
+	Body   *UpdateTeamJSONRequestBody
+}
+
+type UpdateTeamResponseObject interface {
+	VisitUpdateTeamResponse(w http.ResponseWriter) error
+}
+
+type UpdateTeam200JSONResponse Team
+
+func (response UpdateTeam200JSONResponse) VisitUpdateTeamResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type UpdateTeam400ApplicationProblemPlusJSONResponse struct {
+	BadRequestApplicationProblemPlusJSONResponse
+}
+
+func (response UpdateTeam400ApplicationProblemPlusJSONResponse) VisitUpdateTeamResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type UpdateTeam401ApplicationProblemPlusJSONResponse struct {
+	UnauthorizedApplicationProblemPlusJSONResponse
+}
+
+func (response UpdateTeam401ApplicationProblemPlusJSONResponse) VisitUpdateTeamResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type UpdateTeam403ApplicationProblemPlusJSONResponse struct {
+	ForbiddenApplicationProblemPlusJSONResponse
+}
+
+func (response UpdateTeam403ApplicationProblemPlusJSONResponse) VisitUpdateTeamResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type LeaveTeamRequestObject struct {
+	TeamId TeamId `json:"teamId"`
+}
+
+type LeaveTeamResponseObject interface {
+	VisitLeaveTeamResponse(w http.ResponseWriter) error
+}
+
+type LeaveTeam204Response struct {
+}
+
+func (response LeaveTeam204Response) VisitLeaveTeamResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type LeaveTeam401ApplicationProblemPlusJSONResponse struct {
+	UnauthorizedApplicationProblemPlusJSONResponse
+}
+
+func (response LeaveTeam401ApplicationProblemPlusJSONResponse) VisitLeaveTeamResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type LeaveTeam403ApplicationProblemPlusJSONResponse struct {
+	ForbiddenApplicationProblemPlusJSONResponse
+}
+
+func (response LeaveTeam403ApplicationProblemPlusJSONResponse) VisitLeaveTeamResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type LeaveTeam409ApplicationProblemPlusJSONResponse struct {
+	ConflictApplicationProblemPlusJSONResponse
+}
+
+func (response LeaveTeam409ApplicationProblemPlusJSONResponse) VisitLeaveTeamResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(409)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ListMembersRequestObject struct {
+	TeamId TeamId `json:"teamId"`
+}
+
+type ListMembersResponseObject interface {
+	VisitListMembersResponse(w http.ResponseWriter) error
+}
+
+type ListMembers200JSONResponse MemberList
+
+func (response ListMembers200JSONResponse) VisitListMembersResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ListMembers401ApplicationProblemPlusJSONResponse struct {
+	UnauthorizedApplicationProblemPlusJSONResponse
+}
+
+func (response ListMembers401ApplicationProblemPlusJSONResponse) VisitListMembersResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ListMembers403ApplicationProblemPlusJSONResponse struct {
+	ForbiddenApplicationProblemPlusJSONResponse
+}
+
+func (response ListMembers403ApplicationProblemPlusJSONResponse) VisitListMembersResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type RemoveMemberRequestObject struct {
+	TeamId TeamId `json:"teamId"`
+	UserId UserId `json:"userId"`
+}
+
+type RemoveMemberResponseObject interface {
+	VisitRemoveMemberResponse(w http.ResponseWriter) error
+}
+
+type RemoveMember204Response struct {
+}
+
+func (response RemoveMember204Response) VisitRemoveMemberResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type RemoveMember401ApplicationProblemPlusJSONResponse struct {
+	UnauthorizedApplicationProblemPlusJSONResponse
+}
+
+func (response RemoveMember401ApplicationProblemPlusJSONResponse) VisitRemoveMemberResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type RemoveMember403ApplicationProblemPlusJSONResponse struct {
+	ForbiddenApplicationProblemPlusJSONResponse
+}
+
+func (response RemoveMember403ApplicationProblemPlusJSONResponse) VisitRemoveMemberResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type RemoveMember404ApplicationProblemPlusJSONResponse struct {
+	NotFoundApplicationProblemPlusJSONResponse
+}
+
+func (response RemoveMember404ApplicationProblemPlusJSONResponse) VisitRemoveMemberResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type RemoveMember409ApplicationProblemPlusJSONResponse struct {
+	ConflictApplicationProblemPlusJSONResponse
+}
+
+func (response RemoveMember409ApplicationProblemPlusJSONResponse) VisitRemoveMemberResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(409)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type RestoreTeamRequestObject struct {
+	TeamId TeamId `json:"teamId"`
+}
+
+type RestoreTeamResponseObject interface {
+	VisitRestoreTeamResponse(w http.ResponseWriter) error
+}
+
+type RestoreTeam200JSONResponse Team
+
+func (response RestoreTeam200JSONResponse) VisitRestoreTeamResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type RestoreTeam401ApplicationProblemPlusJSONResponse struct {
+	UnauthorizedApplicationProblemPlusJSONResponse
+}
+
+func (response RestoreTeam401ApplicationProblemPlusJSONResponse) VisitRestoreTeamResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type RestoreTeam403ApplicationProblemPlusJSONResponse struct {
+	ForbiddenApplicationProblemPlusJSONResponse
+}
+
+func (response RestoreTeam403ApplicationProblemPlusJSONResponse) VisitRestoreTeamResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type RestoreTeam404ApplicationProblemPlusJSONResponse struct {
+	NotFoundApplicationProblemPlusJSONResponse
+}
+
+func (response RestoreTeam404ApplicationProblemPlusJSONResponse) VisitRestoreTeamResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type TransferOwnershipRequestObject struct {
+	TeamId TeamId `json:"teamId"`
+	Body   *TransferOwnershipJSONRequestBody
+}
+
+type TransferOwnershipResponseObject interface {
+	VisitTransferOwnershipResponse(w http.ResponseWriter) error
+}
+
+type TransferOwnership200JSONResponse Team
+
+func (response TransferOwnership200JSONResponse) VisitTransferOwnershipResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type TransferOwnership400ApplicationProblemPlusJSONResponse struct {
+	BadRequestApplicationProblemPlusJSONResponse
+}
+
+func (response TransferOwnership400ApplicationProblemPlusJSONResponse) VisitTransferOwnershipResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type TransferOwnership401ApplicationProblemPlusJSONResponse struct {
+	UnauthorizedApplicationProblemPlusJSONResponse
+}
+
+func (response TransferOwnership401ApplicationProblemPlusJSONResponse) VisitTransferOwnershipResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type TransferOwnership403ApplicationProblemPlusJSONResponse struct {
+	ForbiddenApplicationProblemPlusJSONResponse
+}
+
+func (response TransferOwnership403ApplicationProblemPlusJSONResponse) VisitTransferOwnershipResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type TransferOwnership409ApplicationProblemPlusJSONResponse struct {
+	ConflictApplicationProblemPlusJSONResponse
+}
+
+func (response TransferOwnership409ApplicationProblemPlusJSONResponse) VisitTransferOwnershipResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(409)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
 type HealthRequestObject struct {
 }
 
@@ -1040,6 +1932,36 @@ type StrictServerInterface interface {
 	// Привязка Telegram
 	// (PUT /api/v1/me/telegram)
 	LinkTelegram(ctx context.Context, request LinkTelegramRequestObject) (LinkTelegramResponseObject, error)
+	// Мои команды
+	// (GET /api/v1/teams)
+	ListTeams(ctx context.Context, request ListTeamsRequestObject) (ListTeamsResponseObject, error)
+	// Создать команду
+	// (POST /api/v1/teams)
+	CreateTeam(ctx context.Context, request CreateTeamRequestObject) (CreateTeamResponseObject, error)
+	// Удалить команду
+	// (DELETE /api/v1/teams/{teamId})
+	DeleteTeam(ctx context.Context, request DeleteTeamRequestObject) (DeleteTeamResponseObject, error)
+	// Команда
+	// (GET /api/v1/teams/{teamId})
+	GetTeam(ctx context.Context, request GetTeamRequestObject) (GetTeamResponseObject, error)
+	// Название и описание команды
+	// (PATCH /api/v1/teams/{teamId})
+	UpdateTeam(ctx context.Context, request UpdateTeamRequestObject) (UpdateTeamResponseObject, error)
+	// Выйти из команды
+	// (POST /api/v1/teams/{teamId}/leave)
+	LeaveTeam(ctx context.Context, request LeaveTeamRequestObject) (LeaveTeamResponseObject, error)
+	// Участники команды
+	// (GET /api/v1/teams/{teamId}/members)
+	ListMembers(ctx context.Context, request ListMembersRequestObject) (ListMembersResponseObject, error)
+	// Исключить участника
+	// (DELETE /api/v1/teams/{teamId}/members/{userId})
+	RemoveMember(ctx context.Context, request RemoveMemberRequestObject) (RemoveMemberResponseObject, error)
+	// Восстановить удалённую команду
+	// (POST /api/v1/teams/{teamId}/restore)
+	RestoreTeam(ctx context.Context, request RestoreTeamRequestObject) (RestoreTeamResponseObject, error)
+	// Передать владение
+	// (POST /api/v1/teams/{teamId}/transfer-ownership)
+	TransferOwnership(ctx context.Context, request TransferOwnershipRequestObject) (TransferOwnershipResponseObject, error)
 	// Проверка сервера и БД
 	// (GET /health)
 	Health(ctx context.Context, request HealthRequestObject) (HealthResponseObject, error)
@@ -1373,6 +2295,299 @@ func (sh *strictHandler) LinkTelegram(ctx *gin.Context) {
 		ctx.Status(http.StatusInternalServerError)
 	} else if validResponse, ok := response.(LinkTelegramResponseObject); ok {
 		if err := validResponse.VisitLinkTelegramResponse(ctx.Writer); err != nil {
+			ctx.Error(err)
+		}
+	} else if response != nil {
+		ctx.Error(fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListTeams operation middleware
+func (sh *strictHandler) ListTeams(ctx *gin.Context, params ListTeamsParams) {
+	var request ListTeamsRequestObject
+
+	request.Params = params
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.ListTeams(ctx, request.(ListTeamsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListTeams")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		ctx.Error(err)
+		ctx.Status(http.StatusInternalServerError)
+	} else if validResponse, ok := response.(ListTeamsResponseObject); ok {
+		if err := validResponse.VisitListTeamsResponse(ctx.Writer); err != nil {
+			ctx.Error(err)
+		}
+	} else if response != nil {
+		ctx.Error(fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// CreateTeam operation middleware
+func (sh *strictHandler) CreateTeam(ctx *gin.Context) {
+	var request CreateTeamRequestObject
+
+	var body CreateTeamJSONRequestBody
+	if err := ctx.ShouldBindJSON(&body); err != nil {
+		ctx.Status(http.StatusBadRequest)
+		ctx.Error(err)
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.CreateTeam(ctx, request.(CreateTeamRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CreateTeam")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		ctx.Error(err)
+		ctx.Status(http.StatusInternalServerError)
+	} else if validResponse, ok := response.(CreateTeamResponseObject); ok {
+		if err := validResponse.VisitCreateTeamResponse(ctx.Writer); err != nil {
+			ctx.Error(err)
+		}
+	} else if response != nil {
+		ctx.Error(fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// DeleteTeam operation middleware
+func (sh *strictHandler) DeleteTeam(ctx *gin.Context, teamId TeamId) {
+	var request DeleteTeamRequestObject
+
+	request.TeamId = teamId
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.DeleteTeam(ctx, request.(DeleteTeamRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DeleteTeam")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		ctx.Error(err)
+		ctx.Status(http.StatusInternalServerError)
+	} else if validResponse, ok := response.(DeleteTeamResponseObject); ok {
+		if err := validResponse.VisitDeleteTeamResponse(ctx.Writer); err != nil {
+			ctx.Error(err)
+		}
+	} else if response != nil {
+		ctx.Error(fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetTeam operation middleware
+func (sh *strictHandler) GetTeam(ctx *gin.Context, teamId TeamId) {
+	var request GetTeamRequestObject
+
+	request.TeamId = teamId
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.GetTeam(ctx, request.(GetTeamRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetTeam")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		ctx.Error(err)
+		ctx.Status(http.StatusInternalServerError)
+	} else if validResponse, ok := response.(GetTeamResponseObject); ok {
+		if err := validResponse.VisitGetTeamResponse(ctx.Writer); err != nil {
+			ctx.Error(err)
+		}
+	} else if response != nil {
+		ctx.Error(fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UpdateTeam operation middleware
+func (sh *strictHandler) UpdateTeam(ctx *gin.Context, teamId TeamId) {
+	var request UpdateTeamRequestObject
+
+	request.TeamId = teamId
+
+	var body UpdateTeamJSONRequestBody
+	if err := ctx.ShouldBindJSON(&body); err != nil {
+		ctx.Status(http.StatusBadRequest)
+		ctx.Error(err)
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.UpdateTeam(ctx, request.(UpdateTeamRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UpdateTeam")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		ctx.Error(err)
+		ctx.Status(http.StatusInternalServerError)
+	} else if validResponse, ok := response.(UpdateTeamResponseObject); ok {
+		if err := validResponse.VisitUpdateTeamResponse(ctx.Writer); err != nil {
+			ctx.Error(err)
+		}
+	} else if response != nil {
+		ctx.Error(fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// LeaveTeam operation middleware
+func (sh *strictHandler) LeaveTeam(ctx *gin.Context, teamId TeamId) {
+	var request LeaveTeamRequestObject
+
+	request.TeamId = teamId
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.LeaveTeam(ctx, request.(LeaveTeamRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "LeaveTeam")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		ctx.Error(err)
+		ctx.Status(http.StatusInternalServerError)
+	} else if validResponse, ok := response.(LeaveTeamResponseObject); ok {
+		if err := validResponse.VisitLeaveTeamResponse(ctx.Writer); err != nil {
+			ctx.Error(err)
+		}
+	} else if response != nil {
+		ctx.Error(fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListMembers operation middleware
+func (sh *strictHandler) ListMembers(ctx *gin.Context, teamId TeamId) {
+	var request ListMembersRequestObject
+
+	request.TeamId = teamId
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.ListMembers(ctx, request.(ListMembersRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListMembers")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		ctx.Error(err)
+		ctx.Status(http.StatusInternalServerError)
+	} else if validResponse, ok := response.(ListMembersResponseObject); ok {
+		if err := validResponse.VisitListMembersResponse(ctx.Writer); err != nil {
+			ctx.Error(err)
+		}
+	} else if response != nil {
+		ctx.Error(fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// RemoveMember operation middleware
+func (sh *strictHandler) RemoveMember(ctx *gin.Context, teamId TeamId, userId UserId) {
+	var request RemoveMemberRequestObject
+
+	request.TeamId = teamId
+	request.UserId = userId
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.RemoveMember(ctx, request.(RemoveMemberRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "RemoveMember")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		ctx.Error(err)
+		ctx.Status(http.StatusInternalServerError)
+	} else if validResponse, ok := response.(RemoveMemberResponseObject); ok {
+		if err := validResponse.VisitRemoveMemberResponse(ctx.Writer); err != nil {
+			ctx.Error(err)
+		}
+	} else if response != nil {
+		ctx.Error(fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// RestoreTeam operation middleware
+func (sh *strictHandler) RestoreTeam(ctx *gin.Context, teamId TeamId) {
+	var request RestoreTeamRequestObject
+
+	request.TeamId = teamId
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.RestoreTeam(ctx, request.(RestoreTeamRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "RestoreTeam")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		ctx.Error(err)
+		ctx.Status(http.StatusInternalServerError)
+	} else if validResponse, ok := response.(RestoreTeamResponseObject); ok {
+		if err := validResponse.VisitRestoreTeamResponse(ctx.Writer); err != nil {
+			ctx.Error(err)
+		}
+	} else if response != nil {
+		ctx.Error(fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// TransferOwnership operation middleware
+func (sh *strictHandler) TransferOwnership(ctx *gin.Context, teamId TeamId) {
+	var request TransferOwnershipRequestObject
+
+	request.TeamId = teamId
+
+	var body TransferOwnershipJSONRequestBody
+	if err := ctx.ShouldBindJSON(&body); err != nil {
+		ctx.Status(http.StatusBadRequest)
+		ctx.Error(err)
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.TransferOwnership(ctx, request.(TransferOwnershipRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "TransferOwnership")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		ctx.Error(err)
+		ctx.Status(http.StatusInternalServerError)
+	} else if validResponse, ok := response.(TransferOwnershipResponseObject); ok {
+		if err := validResponse.VisitTransferOwnershipResponse(ctx.Writer); err != nil {
 			ctx.Error(err)
 		}
 	} else if response != nil {

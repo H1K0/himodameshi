@@ -67,6 +67,10 @@ func (s *Server) Handler() (http.Handler, error) {
 	strict := api.NewStrictHandler(s, []api.StrictMiddlewareFunc{s.limitAuthAttempts})
 	api.RegisterHandlersWithOptions(r, strict, api.GinServerOptions{
 		Middlewares: []api.MiddlewareFunc{s.authenticate},
+		// Параметры адреса разбирает сгенерированный код; без этого ошибка уйдёт не в формате RFC 9457.
+		ErrorHandler: func(c *gin.Context, _ error, _ int) {
+			abortWithProblem(c, validationError(api.FieldError{Field: "params", Message: "некорректное значение параметра"}))
+		},
 	})
 	return r, nil
 }
