@@ -19,6 +19,7 @@ type problem struct {
 	detail     string
 	fields     []api.FieldError
 	retryAfter int
+	cable      *api.Cable
 }
 
 func (p *problem) Error() string { return p.code }
@@ -39,6 +40,8 @@ var (
 	errNotAMember          = &problem{status: http.StatusConflict, code: "not_a_member"}
 	errPersonalTeam        = &problem{status: http.StatusConflict, code: "personal_team"}
 	errOwnerCannotLeave    = &problem{status: http.StatusConflict, code: "owner_cannot_leave"}
+	errCableArchived       = &problem{status: http.StatusConflict, code: "cable_archived"}
+	errCableTypeLocked     = &problem{status: http.StatusConflict, code: "cable_type_locked"}
 	errInternal            = &problem{status: http.StatusInternalServerError, code: "internal_error"}
 )
 
@@ -49,6 +52,11 @@ func validationError(fields ...api.FieldError) *problem {
 		detail: "Запрос не прошёл проверку",
 		fields: fields,
 	}
+}
+
+// versionConflict — отказ в правке устаревшей версии кабеля; актуальный кабель уходит в теле ответа.
+func versionConflict(cable api.Cable) *problem {
+	return &problem{status: http.StatusConflict, code: "version_conflict", cable: &cable}
 }
 
 func (p *problem) body() api.Problem {
@@ -79,6 +87,17 @@ func writeProblemBody(c *gin.Context, status int, body any) {
 func writeProblem(c *gin.Context, p *problem) {
 	if p.retryAfter > 0 {
 		c.Header("Retry-After", strconv.Itoa(p.retryAfter))
+	}
+	if p.cable != nil {
+		body := p.body()
+		writeProblemBody(c, p.status, api.VersionConflictProblem{
+			Type:   body.Type,
+			Title:  body.Title,
+			Status: body.Status,
+			Code:   body.Code,
+			Cable:  p.cable,
+		})
+		return
 	}
 	writeProblemBody(c, p.status, p.body())
 }
