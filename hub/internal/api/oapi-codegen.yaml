@@ -1,0 +1,10 @@
+package: api
+output: api.gen.go
+generate:
+  models: true
+  gin-server: true
+  strict-server: true
+output-options:
+  # Генерируются только реализованные разделы контракта; новый раздел добавляется сюда
+  include-tags:
+    - service
