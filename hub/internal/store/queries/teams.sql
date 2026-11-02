@@ -116,5 +116,5 @@ SET assignee_id = NULL, version = version + 1, updated_at = now(), change_seq = 
 WHERE id = @id;
 
 -- name: InsertAuditEvent :exec
-INSERT INTO audit_events (team_id, actor_id, event, cable_id, subject_user_id, details)
-VALUES (@team_id, @actor_id, @event, @cable_id, @subject_user_id, @details);
+INSERT INTO audit_events (team_id, actor_id, event, cable_id, test_id, subject_user_id, details)
+VALUES (@team_id, @actor_id, @event, @cable_id, @test_id, @subject_user_id, @details);

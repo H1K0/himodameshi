@@ -63,7 +63,7 @@ func newEnv(t *testing.T, change ...func(*config.Config)) *testEnv {
 			t.Fatal(err)
 		}
 	})
-	if _, err := db.Exec(ctx, "TRUNCATE users, teams CASCADE"); err != nil {
+	if _, err := db.Exec(ctx, "TRUNCATE users, teams, insights CASCADE"); err != nil {
 		t.Fatal(err)
 	}
 

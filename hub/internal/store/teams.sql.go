@@ -181,8 +181,8 @@ func (q *Queries) GetMemberTeam(ctx context.Context, arg GetMemberTeamParams) (G
 }
 
 const insertAuditEvent = `-- name: InsertAuditEvent :exec
-INSERT INTO audit_events (team_id, actor_id, event, cable_id, subject_user_id, details)
-VALUES ($1, $2, $3, $4, $5, $6)
+INSERT INTO audit_events (team_id, actor_id, event, cable_id, test_id, subject_user_id, details)
+VALUES ($1, $2, $3, $4, $5, $6, $7)
 `
 
 type InsertAuditEventParams struct {
@@ -190,6 +190,7 @@ type InsertAuditEventParams struct {
 	ActorID       uuid.UUID
 	Event         string
 	CableID       *uuid.UUID
+	TestID        *uuid.UUID
 	SubjectUserID *uuid.UUID
 	Details       []byte
 }
@@ -200,6 +201,7 @@ func (q *Queries) InsertAuditEvent(ctx context.Context, arg InsertAuditEventPara
 		arg.ActorID,
 		arg.Event,
 		arg.CableID,
+		arg.TestID,
 		arg.SubjectUserID,
 		arg.Details,
 	)

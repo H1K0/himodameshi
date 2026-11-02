@@ -11,4 +11,5 @@ output-options:
     - profile
     - teams
     - cables
+    - tests
     - service

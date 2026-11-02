@@ -34,6 +34,35 @@ const (
 	Web ClientType = "web"
 )
 
+// Defines values for CmrrStatus.
+const (
+	CmrrStatusExcellent CmrrStatus = "excellent"
+	CmrrStatusFail      CmrrStatus = "fail"
+	CmrrStatusOk        CmrrStatus = "ok"
+)
+
+// Defines values for ConductorStatus.
+const (
+	ConductorStatusOk      ConductorStatus = "ok"
+	ConductorStatusOpen    ConductorStatus = "open"
+	ConductorStatusShort   ConductorStatus = "short"
+	ConductorStatusWarning ConductorStatus = "warning"
+)
+
+// Defines values for ContinuityStatus.
+const (
+	ContinuityStatusFail    ContinuityStatus = "fail"
+	ContinuityStatusOk      ContinuityStatus = "ok"
+	ContinuityStatusWarning ContinuityStatus = "warning"
+)
+
+// Defines values for FreqResponseStatus.
+const (
+	FreqResponseStatusExcellent FreqResponseStatus = "excellent"
+	FreqResponseStatusFail      FreqResponseStatus = "fail"
+	FreqResponseStatusOk        FreqResponseStatus = "ok"
+)
+
 // Defines values for HealthStatus.
 const (
 	Ok          HealthStatus = "ok"
@@ -159,8 +188,51 @@ type ChangePasswordRequest struct {
 // ClientType `web` — токен в cookie, `app` — токен в теле ответа
 type ClientType string
 
+// Cmrr CMRR — только для `jack_trs` и `xlr`
+type Cmrr struct {
+	CmrrDb float32 `json:"cmrr_db"`
+
+	// Status `excellent` — более 60 дБ, `ok` — 40–60 дБ, `fail` — менее 40 дБ
+	Status               CmrrStatus             `json:"status"`
+	AdditionalProperties map[string]interface{} `json:"-"`
+}
+
+// CmrrStatus `excellent` — более 60 дБ, `ok` — 40–60 дБ, `fail` — менее 40 дБ
+type CmrrStatus string
+
 // Color Цветная метка — hex без `#` в нижнем регистре
 type Color = string
+
+// Conductor defines model for Conductor.
+type Conductor struct {
+	// R Сопротивление, Ом
+	R float32 `json:"r"`
+
+	// S `ok` — менее 5 Ом, `warning` — 5–50 Ом, `open` — обрыв, `short` — короткое замыкание
+	S                    ConductorStatus        `json:"s"`
+	AdditionalProperties map[string]interface{} `json:"-"`
+}
+
+// ConductorStatus `ok` — менее 5 Ом, `warning` — 5–50 Ом, `open` — обрыв, `short` — короткое замыкание
+type ConductorStatus string
+
+// Continuity Целостность. Состав проводников зависит от типа кабеля:
+// `jack_ts` — tip, sleeve; `jack_trs` — tip, ring, sleeve; `xlr` — pin1, pin2, pin3.
+type Continuity struct {
+	Conductors struct {
+		Pin1   *Conductor `json:"pin1,omitempty"`
+		Pin2   *Conductor `json:"pin2,omitempty"`
+		Pin3   *Conductor `json:"pin3,omitempty"`
+		Ring   *Conductor `json:"ring,omitempty"`
+		Sleeve *Conductor `json:"sleeve,omitempty"`
+		Tip    *Conductor `json:"tip,omitempty"`
+	} `json:"conductors"`
+	Status               ContinuityStatus       `json:"status"`
+	AdditionalProperties map[string]interface{} `json:"-"`
+}
+
+// ContinuityStatus defines model for Continuity.Status.
+type ContinuityStatus string
 
 // CreateTeamRequest defines model for CreateTeamRequest.
 type CreateTeamRequest struct {
@@ -175,6 +247,20 @@ type FieldError struct {
 	Message string `json:"message"`
 }
 
+// FreqResponse АЧХ — отклонения относительно 1 кГц в точках таблицы частот версии протокола `pv`
+type FreqResponse struct {
+	// F Частоты, Гц, в том же порядке, что `v`; добавляет сервер по `pv` теста
+	F      *[]int             `json:"f,omitempty"`
+	Status FreqResponseStatus `json:"status"`
+
+	// V Отклонения, дБ; для `pv = 1` — 30 точек
+	V                    []float32              `json:"v"`
+	AdditionalProperties map[string]interface{} `json:"-"`
+}
+
+// FreqResponseStatus defines model for FreqResponse.Status.
+type FreqResponseStatus string
+
 // Health defines model for Health.
 type Health struct {
 	Status HealthStatus `json:"status"`
@@ -182,6 +268,31 @@ type Health struct {
 
 // HealthStatus defines model for Health.Status.
 type HealthStatus string
+
+// Insight defines model for Insight.
+type Insight struct {
+	// Body Текст комментария
+	Body      string    `json:"body"`
+	CreatedAt time.Time `json:"created_at"`
+
+	// Id UUIDv7 (RFC 9562)
+	Id    Uuid   `json:"id"`
+	Model string `json:"model"`
+}
+
+// Invalidation defines model for Invalidation.
+type Invalidation struct {
+	At time.Time `json:"at"`
+
+	// By Ссылка на пользователя. `nickname = null` — учётная запись удалена («Удалённый пользователь»).
+	By     UserRef `json:"by"`
+	Reason string  `json:"reason"`
+}
+
+// InvalidationRequest defines model for InvalidationRequest.
+type InvalidationRequest struct {
+	Reason string `json:"reason"`
+}
 
 // LoginRequest defines model for LoginRequest.
 type LoginRequest struct {
@@ -305,6 +416,150 @@ type TelegramAuthData struct {
 	Username *string `json:"username,omitempty"`
 }
 
+// Test defines model for Test.
+type Test struct {
+	AppVersion string `json:"app_version"`
+
+	// Author Ссылка на пользователя. `nickname = null` — учётная запись удалена («Удалённый пользователь»).
+	Author UserRef `json:"author"`
+
+	// CableId UUIDv7 (RFC 9562)
+	CableId Uuid `json:"cable_id"`
+
+	// DeviceId ID прибора (MAC или UUID BLE-устройства)
+	DeviceId        string  `json:"device_id"`
+	FirmwareVersion *string `json:"firmware_version"`
+
+	// HealthIncomplete Health Score неполный — выполнены не все применимые измерения (ADR-011)
+	HealthIncomplete bool `json:"health_incomplete"`
+	HealthScore      *int `json:"health_score"`
+
+	// Id UUIDv7 (RFC 9562)
+	Id Uuid `json:"id"`
+
+	// Insight Привязанный ИИ-комментарий или `null`
+	Insight *Insight `json:"insight"`
+
+	// Invalidation Пометка «недействительный» или `null`
+	Invalidation *Invalidation `json:"invalidation"`
+
+	// MeasuredAt Время измерения по часам приложения
+	MeasuredAt time.Time `json:"measured_at"`
+	Note       *string   `json:"note"`
+
+	// Pv Версия BLE-протокола
+	Pv int `json:"pv"`
+
+	// ReceivedAt Время приёма сервером
+	ReceivedAt time.Time `json:"received_at"`
+
+	// Results Результаты в формате BLE-протокола; ключ есть, только если измерение выполнено,
+	// хотя бы одно обязательно. Незнакомые поля внутри измерений сохраняются без изменений.
+	Results TestResults `json:"results"`
+
+	// RulesVersion Версия правил расчёта вердиктов и Health Score
+	RulesVersion string `json:"rules_version"`
+}
+
+// TestDetail defines model for TestDetail.
+type TestDetail struct {
+	AppVersion string `json:"app_version"`
+
+	// Author Ссылка на пользователя. `nickname = null` — учётная запись удалена («Удалённый пользователь»).
+	Author UserRef `json:"author"`
+
+	// CableId UUIDv7 (RFC 9562)
+	CableId Uuid `json:"cable_id"`
+
+	// DeviceId ID прибора (MAC или UUID BLE-устройства)
+	DeviceId        string  `json:"device_id"`
+	FirmwareVersion *string `json:"firmware_version"`
+
+	// HealthIncomplete Health Score неполный — выполнены не все применимые измерения (ADR-011)
+	HealthIncomplete bool `json:"health_incomplete"`
+	HealthScore      *int `json:"health_score"`
+
+	// Id UUIDv7 (RFC 9562)
+	Id Uuid `json:"id"`
+
+	// Insight Привязанный ИИ-комментарий или `null`
+	Insight *Insight `json:"insight"`
+
+	// Invalidation Пометка «недействительный» или `null`
+	Invalidation *Invalidation `json:"invalidation"`
+
+	// MeasuredAt Время измерения по часам приложения
+	MeasuredAt time.Time `json:"measured_at"`
+	Note       *string   `json:"note"`
+
+	// PreviousTestId Предыдущий действительный тест кабеля или `null`
+	PreviousTestId *Uuid `json:"previous_test_id"`
+
+	// Pv Версия BLE-протокола
+	Pv int `json:"pv"`
+
+	// ReceivedAt Время приёма сервером
+	ReceivedAt time.Time `json:"received_at"`
+
+	// ReferenceTestId Эталонный — первый действительный тест кабеля; `null`, если это он сам
+	// или действительных тестов нет
+	ReferenceTestId *Uuid `json:"reference_test_id"`
+
+	// Results Результаты в формате BLE-протокола; ключ есть, только если измерение выполнено,
+	// хотя бы одно обязательно. Незнакомые поля внутри измерений сохраняются без изменений.
+	Results TestResults `json:"results"`
+
+	// RulesVersion Версия правил расчёта вердиктов и Health Score
+	RulesVersion string `json:"rules_version"`
+}
+
+// TestMeta Данные теста, которые передаёт приложение
+type TestMeta struct {
+	AppVersion string `json:"app_version"`
+
+	// DeviceId ID прибора (MAC или UUID BLE-устройства)
+	DeviceId        string  `json:"device_id"`
+	FirmwareVersion *string `json:"firmware_version"`
+
+	// HealthIncomplete Health Score неполный — выполнены не все применимые измерения (ADR-011)
+	HealthIncomplete bool `json:"health_incomplete"`
+	HealthScore      *int `json:"health_score"`
+
+	// MeasuredAt Время измерения по часам приложения
+	MeasuredAt time.Time `json:"measured_at"`
+	Note       *string   `json:"note"`
+
+	// Pv Версия BLE-протокола
+	Pv int `json:"pv"`
+
+	// Results Результаты в формате BLE-протокола; ключ есть, только если измерение выполнено,
+	// хотя бы одно обязательно. Незнакомые поля внутри измерений сохраняются без изменений.
+	Results TestResults `json:"results"`
+
+	// RulesVersion Версия правил расчёта вердиктов и Health Score
+	RulesVersion string `json:"rules_version"`
+}
+
+// TestPage defines model for TestPage.
+type TestPage struct {
+	Items []Test `json:"items"`
+	Total int    `json:"total"`
+}
+
+// TestResults Результаты в формате BLE-протокола; ключ есть, только если измерение выполнено,
+// хотя бы одно обязательно. Незнакомые поля внутри измерений сохраняются без изменений.
+type TestResults struct {
+	// Cmrr CMRR — только для `jack_trs` и `xlr`
+	Cmrr *Cmrr `json:"cmrr,omitempty"`
+
+	// Continuity Целостность. Состав проводников зависит от типа кабеля:
+	// `jack_ts` — tip, sleeve; `jack_trs` — tip, ring, sleeve; `xlr` — pin1, pin2, pin3.
+	Continuity *Continuity `json:"continuity,omitempty"`
+
+	// FreqResponse АЧХ — отклонения относительно 1 кГц в точках таблицы частот версии протокола `pv`
+	FreqResponse *FreqResponse `json:"freq_response,omitempty"`
+}
+
 // TransferOwnershipRequest defines model for TransferOwnershipRequest.
 type TransferOwnershipRequest struct {
 	// UserId UUIDv7 (RFC 9562)
@@ -410,6 +665,13 @@ type TooManyRequests = Problem
 // Unauthorized Ошибка по RFC 9457 с машиночитаемым кодом
 type Unauthorized = Problem
 
+// ListCableTestsParams defines parameters for ListCableTests.
+type ListCableTestsParams struct {
+	Order  *SortOrder `form:"order,omitempty" json:"order,omitempty"`
+	Limit  *Limit     `form:"limit,omitempty" json:"limit,omitempty"`
+	Offset *Offset    `form:"offset,omitempty" json:"offset,omitempty"`
+}
+
 // ListTeamsParams defines parameters for ListTeams.
 type ListTeamsParams struct {
 	Deleted *bool `form:"deleted,omitempty" json:"deleted,omitempty"`
@@ -473,6 +735,340 @@ type UpdateTeamJSONRequestBody = UpdateTeamRequest
 // TransferOwnershipJSONRequestBody defines body for TransferOwnership for application/json ContentType.
 type TransferOwnershipJSONRequestBody = TransferOwnershipRequest
 
+// InvalidateTestJSONRequestBody defines body for InvalidateTest for application/json ContentType.
+type InvalidateTestJSONRequestBody = InvalidationRequest
+
+// Getter for additional properties for Cmrr. Returns the specified
+// element and whether it was found
+func (a Cmrr) Get(fieldName string) (value interface{}, found bool) {
+	if a.AdditionalProperties != nil {
+		value, found = a.AdditionalProperties[fieldName]
+	}
+	return
+}
+
+// Setter for additional properties for Cmrr
+func (a *Cmrr) Set(fieldName string, value interface{}) {
+	if a.AdditionalProperties == nil {
+		a.AdditionalProperties = make(map[string]interface{})
+	}
+	a.AdditionalProperties[fieldName] = value
+}
+
+// Override default JSON handling for Cmrr to handle AdditionalProperties
+func (a *Cmrr) UnmarshalJSON(b []byte) error {
+	object := make(map[string]json.RawMessage)
+	err := json.Unmarshal(b, &object)
+	if err != nil {
+		return err
+	}
+
+	if raw, found := object["cmrr_db"]; found {
+		err = json.Unmarshal(raw, &a.CmrrDb)
+		if err != nil {
+			return fmt.Errorf("error reading 'cmrr_db': %w", err)
+		}
+		delete(object, "cmrr_db")
+	}
+
+	if raw, found := object["status"]; found {
+		err = json.Unmarshal(raw, &a.Status)
+		if err != nil {
+			return fmt.Errorf("error reading 'status': %w", err)
+		}
+		delete(object, "status")
+	}
+
+	if len(object) != 0 {
+		a.AdditionalProperties = make(map[string]interface{})
+		for fieldName, fieldBuf := range object {
+			var fieldVal interface{}
+			err := json.Unmarshal(fieldBuf, &fieldVal)
+			if err != nil {
+				return fmt.Errorf("error unmarshaling field %s: %w", fieldName, err)
+			}
+			a.AdditionalProperties[fieldName] = fieldVal
+		}
+	}
+	return nil
+}
+
+// Override default JSON handling for Cmrr to handle AdditionalProperties
+func (a Cmrr) MarshalJSON() ([]byte, error) {
+	var err error
+	object := make(map[string]json.RawMessage)
+
+	object["cmrr_db"], err = json.Marshal(a.CmrrDb)
+	if err != nil {
+		return nil, fmt.Errorf("error marshaling 'cmrr_db': %w", err)
+	}
+
+	object["status"], err = json.Marshal(a.Status)
+	if err != nil {
+		return nil, fmt.Errorf("error marshaling 'status': %w", err)
+	}
+
+	for fieldName, field := range a.AdditionalProperties {
+		object[fieldName], err = json.Marshal(field)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling '%s': %w", fieldName, err)
+		}
+	}
+	return json.Marshal(object)
+}
+
+// Getter for additional properties for Conductor. Returns the specified
+// element and whether it was found
+func (a Conductor) Get(fieldName string) (value interface{}, found bool) {
+	if a.AdditionalProperties != nil {
+		value, found = a.AdditionalProperties[fieldName]
+	}
+	return
+}
+
+// Setter for additional properties for Conductor
+func (a *Conductor) Set(fieldName string, value interface{}) {
+	if a.AdditionalProperties == nil {
+		a.AdditionalProperties = make(map[string]interface{})
+	}
+	a.AdditionalProperties[fieldName] = value
+}
+
+// Override default JSON handling for Conductor to handle AdditionalProperties
+func (a *Conductor) UnmarshalJSON(b []byte) error {
+	object := make(map[string]json.RawMessage)
+	err := json.Unmarshal(b, &object)
+	if err != nil {
+		return err
+	}
+
+	if raw, found := object["r"]; found {
+		err = json.Unmarshal(raw, &a.R)
+		if err != nil {
+			return fmt.Errorf("error reading 'r': %w", err)
+		}
+		delete(object, "r")
+	}
+
+	if raw, found := object["s"]; found {
+		err = json.Unmarshal(raw, &a.S)
+		if err != nil {
+			return fmt.Errorf("error reading 's': %w", err)
+		}
+		delete(object, "s")
+	}
+
+	if len(object) != 0 {
+		a.AdditionalProperties = make(map[string]interface{})
+		for fieldName, fieldBuf := range object {
+			var fieldVal interface{}
+			err := json.Unmarshal(fieldBuf, &fieldVal)
+			if err != nil {
+				return fmt.Errorf("error unmarshaling field %s: %w", fieldName, err)
+			}
+			a.AdditionalProperties[fieldName] = fieldVal
+		}
+	}
+	return nil
+}
+
+// Override default JSON handling for Conductor to handle AdditionalProperties
+func (a Conductor) MarshalJSON() ([]byte, error) {
+	var err error
+	object := make(map[string]json.RawMessage)
+
+	object["r"], err = json.Marshal(a.R)
+	if err != nil {
+		return nil, fmt.Errorf("error marshaling 'r': %w", err)
+	}
+
+	object["s"], err = json.Marshal(a.S)
+	if err != nil {
+		return nil, fmt.Errorf("error marshaling 's': %w", err)
+	}
+
+	for fieldName, field := range a.AdditionalProperties {
+		object[fieldName], err = json.Marshal(field)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling '%s': %w", fieldName, err)
+		}
+	}
+	return json.Marshal(object)
+}
+
+// Getter for additional properties for Continuity. Returns the specified
+// element and whether it was found
+func (a Continuity) Get(fieldName string) (value interface{}, found bool) {
+	if a.AdditionalProperties != nil {
+		value, found = a.AdditionalProperties[fieldName]
+	}
+	return
+}
+
+// Setter for additional properties for Continuity
+func (a *Continuity) Set(fieldName string, value interface{}) {
+	if a.AdditionalProperties == nil {
+		a.AdditionalProperties = make(map[string]interface{})
+	}
+	a.AdditionalProperties[fieldName] = value
+}
+
+// Override default JSON handling for Continuity to handle AdditionalProperties
+func (a *Continuity) UnmarshalJSON(b []byte) error {
+	object := make(map[string]json.RawMessage)
+	err := json.Unmarshal(b, &object)
+	if err != nil {
+		return err
+	}
+
+	if raw, found := object["conductors"]; found {
+		err = json.Unmarshal(raw, &a.Conductors)
+		if err != nil {
+			return fmt.Errorf("error reading 'conductors': %w", err)
+		}
+		delete(object, "conductors")
+	}
+
+	if raw, found := object["status"]; found {
+		err = json.Unmarshal(raw, &a.Status)
+		if err != nil {
+			return fmt.Errorf("error reading 'status': %w", err)
+		}
+		delete(object, "status")
+	}
+
+	if len(object) != 0 {
+		a.AdditionalProperties = make(map[string]interface{})
+		for fieldName, fieldBuf := range object {
+			var fieldVal interface{}
+			err := json.Unmarshal(fieldBuf, &fieldVal)
+			if err != nil {
+				return fmt.Errorf("error unmarshaling field %s: %w", fieldName, err)
+			}
+			a.AdditionalProperties[fieldName] = fieldVal
+		}
+	}
+	return nil
+}
+
+// Override default JSON handling for Continuity to handle AdditionalProperties
+func (a Continuity) MarshalJSON() ([]byte, error) {
+	var err error
+	object := make(map[string]json.RawMessage)
+
+	object["conductors"], err = json.Marshal(a.Conductors)
+	if err != nil {
+		return nil, fmt.Errorf("error marshaling 'conductors': %w", err)
+	}
+
+	object["status"], err = json.Marshal(a.Status)
+	if err != nil {
+		return nil, fmt.Errorf("error marshaling 'status': %w", err)
+	}
+
+	for fieldName, field := range a.AdditionalProperties {
+		object[fieldName], err = json.Marshal(field)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling '%s': %w", fieldName, err)
+		}
+	}
+	return json.Marshal(object)
+}
+
+// Getter for additional properties for FreqResponse. Returns the specified
+// element and whether it was found
+func (a FreqResponse) Get(fieldName string) (value interface{}, found bool) {
+	if a.AdditionalProperties != nil {
+		value, found = a.AdditionalProperties[fieldName]
+	}
+	return
+}
+
+// Setter for additional properties for FreqResponse
+func (a *FreqResponse) Set(fieldName string, value interface{}) {
+	if a.AdditionalProperties == nil {
+		a.AdditionalProperties = make(map[string]interface{})
+	}
+	a.AdditionalProperties[fieldName] = value
+}
+
+// Override default JSON handling for FreqResponse to handle AdditionalProperties
+func (a *FreqResponse) UnmarshalJSON(b []byte) error {
+	object := make(map[string]json.RawMessage)
+	err := json.Unmarshal(b, &object)
+	if err != nil {
+		return err
+	}
+
+	if raw, found := object["f"]; found {
+		err = json.Unmarshal(raw, &a.F)
+		if err != nil {
+			return fmt.Errorf("error reading 'f': %w", err)
+		}
+		delete(object, "f")
+	}
+
+	if raw, found := object["status"]; found {
+		err = json.Unmarshal(raw, &a.Status)
+		if err != nil {
+			return fmt.Errorf("error reading 'status': %w", err)
+		}
+		delete(object, "status")
+	}
+
+	if raw, found := object["v"]; found {
+		err = json.Unmarshal(raw, &a.V)
+		if err != nil {
+			return fmt.Errorf("error reading 'v': %w", err)
+		}
+		delete(object, "v")
+	}
+
+	if len(object) != 0 {
+		a.AdditionalProperties = make(map[string]interface{})
+		for fieldName, fieldBuf := range object {
+			var fieldVal interface{}
+			err := json.Unmarshal(fieldBuf, &fieldVal)
+			if err != nil {
+				return fmt.Errorf("error unmarshaling field %s: %w", fieldName, err)
+			}
+			a.AdditionalProperties[fieldName] = fieldVal
+		}
+	}
+	return nil
+}
+
+// Override default JSON handling for FreqResponse to handle AdditionalProperties
+func (a FreqResponse) MarshalJSON() ([]byte, error) {
+	var err error
+	object := make(map[string]json.RawMessage)
+
+	if a.F != nil {
+		object["f"], err = json.Marshal(a.F)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'f': %w", err)
+		}
+	}
+
+	object["status"], err = json.Marshal(a.Status)
+	if err != nil {
+		return nil, fmt.Errorf("error marshaling 'status': %w", err)
+	}
+
+	object["v"], err = json.Marshal(a.V)
+	if err != nil {
+		return nil, fmt.Errorf("error marshaling 'v': %w", err)
+	}
+
+	for fieldName, field := range a.AdditionalProperties {
+		object[fieldName], err = json.Marshal(field)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling '%s': %w", fieldName, err)
+		}
+	}
+	return json.Marshal(object)
+}
+
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
 	// Вход по нику и паролю
@@ -502,6 +1098,9 @@ type ServerInterface interface {
 	// Отправить кабель в архив
 	// (POST /api/v1/cables/{cableId}/archive)
 	ArchiveCable(c *gin.Context, cableId CableId)
+	// История тестов кабеля
+	// (GET /api/v1/cables/{cableId}/tests)
+	ListCableTests(c *gin.Context, cableId CableId, params ListCableTestsParams)
 	// Вернуть кабель из архива
 	// (POST /api/v1/cables/{cableId}/unarchive)
 	UnarchiveCable(c *gin.Context, cableId CableId)
@@ -556,6 +1155,15 @@ type ServerInterface interface {
 	// Передать владение
 	// (POST /api/v1/teams/{teamId}/transfer-ownership)
 	TransferOwnership(c *gin.Context, teamId TeamId)
+	// Тест
+	// (GET /api/v1/tests/{testId})
+	GetTest(c *gin.Context, testId TestId)
+	// Снять пометку «недействительный»
+	// (DELETE /api/v1/tests/{testId}/invalidation)
+	RevalidateTest(c *gin.Context, testId TestId)
+	// Пометить тест недействительным
+	// (PUT /api/v1/tests/{testId}/invalidation)
+	InvalidateTest(c *gin.Context, testId TestId)
 	// Проверка сервера и БД
 	// (GET /health)
 	Health(c *gin.Context)
@@ -753,6 +1361,61 @@ func (siw *ServerInterfaceWrapper) ArchiveCable(c *gin.Context) {
 	}
 
 	siw.Handler.ArchiveCable(c, cableId)
+}
+
+// ListCableTests operation middleware
+func (siw *ServerInterfaceWrapper) ListCableTests(c *gin.Context) {
+
+	var err error
+
+	// ------------- Path parameter "cableId" -------------
+	var cableId CableId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "cableId", c.Param("cableId"), &cableId, runtime.BindStyledParameterOptions{Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter cableId: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	c.Set(BearerAuthScopes, []string{})
+
+	c.Set(CookieAuthScopes, []string{})
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListCableTestsParams
+
+	// ------------- Optional query parameter "order" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "order", c.Request.URL.Query(), &params.Order)
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter order: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "limit", c.Request.URL.Query(), &params.Limit)
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter limit: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	// ------------- Optional query parameter "offset" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "offset", c.Request.URL.Query(), &params.Offset)
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter offset: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.ListCableTests(c, cableId, params)
 }
 
 // UnarchiveCable operation middleware
@@ -1276,6 +1939,90 @@ func (siw *ServerInterfaceWrapper) TransferOwnership(c *gin.Context) {
 	siw.Handler.TransferOwnership(c, teamId)
 }
 
+// GetTest operation middleware
+func (siw *ServerInterfaceWrapper) GetTest(c *gin.Context) {
+
+	var err error
+
+	// ------------- Path parameter "testId" -------------
+	var testId TestId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "testId", c.Param("testId"), &testId, runtime.BindStyledParameterOptions{Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter testId: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	c.Set(BearerAuthScopes, []string{})
+
+	c.Set(CookieAuthScopes, []string{})
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.GetTest(c, testId)
+}
+
+// RevalidateTest operation middleware
+func (siw *ServerInterfaceWrapper) RevalidateTest(c *gin.Context) {
+
+	var err error
+
+	// ------------- Path parameter "testId" -------------
+	var testId TestId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "testId", c.Param("testId"), &testId, runtime.BindStyledParameterOptions{Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter testId: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	c.Set(BearerAuthScopes, []string{})
+
+	c.Set(CookieAuthScopes, []string{})
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.RevalidateTest(c, testId)
+}
+
+// InvalidateTest operation middleware
+func (siw *ServerInterfaceWrapper) InvalidateTest(c *gin.Context) {
+
+	var err error
+
+	// ------------- Path parameter "testId" -------------
+	var testId TestId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "testId", c.Param("testId"), &testId, runtime.BindStyledParameterOptions{Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter testId: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	c.Set(BearerAuthScopes, []string{})
+
+	c.Set(CookieAuthScopes, []string{})
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.InvalidateTest(c, testId)
+}
+
 // Health operation middleware
 func (siw *ServerInterfaceWrapper) Health(c *gin.Context) {
 
@@ -1325,6 +2072,7 @@ func RegisterHandlersWithOptions(router gin.IRouter, si ServerInterface, options
 	router.GET(options.BaseURL+"/api/v1/cables/:cableId", wrapper.GetCable)
 	router.PUT(options.BaseURL+"/api/v1/cables/:cableId", wrapper.UpdateCable)
 	router.POST(options.BaseURL+"/api/v1/cables/:cableId/archive", wrapper.ArchiveCable)
+	router.GET(options.BaseURL+"/api/v1/cables/:cableId/tests", wrapper.ListCableTests)
 	router.POST(options.BaseURL+"/api/v1/cables/:cableId/unarchive", wrapper.UnarchiveCable)
 	router.DELETE(options.BaseURL+"/api/v1/me", wrapper.DeleteMe)
 	router.GET(options.BaseURL+"/api/v1/me", wrapper.GetMe)
@@ -1343,6 +2091,9 @@ func RegisterHandlersWithOptions(router gin.IRouter, si ServerInterface, options
 	router.DELETE(options.BaseURL+"/api/v1/teams/:teamId/members/:userId", wrapper.RemoveMember)
 	router.POST(options.BaseURL+"/api/v1/teams/:teamId/restore", wrapper.RestoreTeam)
 	router.POST(options.BaseURL+"/api/v1/teams/:teamId/transfer-ownership", wrapper.TransferOwnership)
+	router.GET(options.BaseURL+"/api/v1/tests/:testId", wrapper.GetTest)
+	router.DELETE(options.BaseURL+"/api/v1/tests/:testId/invalidation", wrapper.RevalidateTest)
+	router.PUT(options.BaseURL+"/api/v1/tests/:testId/invalidation", wrapper.InvalidateTest)
 	router.GET(options.BaseURL+"/health", wrapper.Health)
 }
 
@@ -1788,6 +2539,57 @@ type ArchiveCable404ApplicationProblemPlusJSONResponse struct {
 }
 
 func (response ArchiveCable404ApplicationProblemPlusJSONResponse) VisitArchiveCableResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ListCableTestsRequestObject struct {
+	CableId CableId `json:"cableId"`
+	Params  ListCableTestsParams
+}
+
+type ListCableTestsResponseObject interface {
+	VisitListCableTestsResponse(w http.ResponseWriter) error
+}
+
+type ListCableTests200JSONResponse TestPage
+
+func (response ListCableTests200JSONResponse) VisitListCableTestsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ListCableTests400ApplicationProblemPlusJSONResponse struct {
+	BadRequestApplicationProblemPlusJSONResponse
+}
+
+func (response ListCableTests400ApplicationProblemPlusJSONResponse) VisitListCableTestsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ListCableTests401ApplicationProblemPlusJSONResponse struct {
+	UnauthorizedApplicationProblemPlusJSONResponse
+}
+
+func (response ListCableTests401ApplicationProblemPlusJSONResponse) VisitListCableTestsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ListCableTests404ApplicationProblemPlusJSONResponse struct {
+	NotFoundApplicationProblemPlusJSONResponse
+}
+
+func (response ListCableTests404ApplicationProblemPlusJSONResponse) VisitListCableTestsResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/problem+json")
 	w.WriteHeader(404)
 
@@ -2579,6 +3381,157 @@ func (response TransferOwnership409ApplicationProblemPlusJSONResponse) VisitTran
 	return json.NewEncoder(w).Encode(response)
 }
 
+type GetTestRequestObject struct {
+	TestId TestId `json:"testId"`
+}
+
+type GetTestResponseObject interface {
+	VisitGetTestResponse(w http.ResponseWriter) error
+}
+
+type GetTest200JSONResponse TestDetail
+
+func (response GetTest200JSONResponse) VisitGetTestResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetTest401ApplicationProblemPlusJSONResponse struct {
+	UnauthorizedApplicationProblemPlusJSONResponse
+}
+
+func (response GetTest401ApplicationProblemPlusJSONResponse) VisitGetTestResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetTest404ApplicationProblemPlusJSONResponse struct {
+	NotFoundApplicationProblemPlusJSONResponse
+}
+
+func (response GetTest404ApplicationProblemPlusJSONResponse) VisitGetTestResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type RevalidateTestRequestObject struct {
+	TestId TestId `json:"testId"`
+}
+
+type RevalidateTestResponseObject interface {
+	VisitRevalidateTestResponse(w http.ResponseWriter) error
+}
+
+type RevalidateTest200JSONResponse Test
+
+func (response RevalidateTest200JSONResponse) VisitRevalidateTestResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type RevalidateTest401ApplicationProblemPlusJSONResponse struct {
+	UnauthorizedApplicationProblemPlusJSONResponse
+}
+
+func (response RevalidateTest401ApplicationProblemPlusJSONResponse) VisitRevalidateTestResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type RevalidateTest404ApplicationProblemPlusJSONResponse struct {
+	NotFoundApplicationProblemPlusJSONResponse
+}
+
+func (response RevalidateTest404ApplicationProblemPlusJSONResponse) VisitRevalidateTestResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type RevalidateTest409ApplicationProblemPlusJSONResponse struct {
+	ConflictApplicationProblemPlusJSONResponse
+}
+
+func (response RevalidateTest409ApplicationProblemPlusJSONResponse) VisitRevalidateTestResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(409)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type InvalidateTestRequestObject struct {
+	TestId TestId `json:"testId"`
+	Body   *InvalidateTestJSONRequestBody
+}
+
+type InvalidateTestResponseObject interface {
+	VisitInvalidateTestResponse(w http.ResponseWriter) error
+}
+
+type InvalidateTest200JSONResponse Test
+
+func (response InvalidateTest200JSONResponse) VisitInvalidateTestResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type InvalidateTest400ApplicationProblemPlusJSONResponse struct {
+	BadRequestApplicationProblemPlusJSONResponse
+}
+
+func (response InvalidateTest400ApplicationProblemPlusJSONResponse) VisitInvalidateTestResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type InvalidateTest401ApplicationProblemPlusJSONResponse struct {
+	UnauthorizedApplicationProblemPlusJSONResponse
+}
+
+func (response InvalidateTest401ApplicationProblemPlusJSONResponse) VisitInvalidateTestResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type InvalidateTest404ApplicationProblemPlusJSONResponse struct {
+	NotFoundApplicationProblemPlusJSONResponse
+}
+
+func (response InvalidateTest404ApplicationProblemPlusJSONResponse) VisitInvalidateTestResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type InvalidateTest409ApplicationProblemPlusJSONResponse struct {
+	ConflictApplicationProblemPlusJSONResponse
+}
+
+func (response InvalidateTest409ApplicationProblemPlusJSONResponse) VisitInvalidateTestResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(409)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
 type HealthRequestObject struct {
 }
 
@@ -2633,6 +3586,9 @@ type StrictServerInterface interface {
 	// Отправить кабель в архив
 	// (POST /api/v1/cables/{cableId}/archive)
 	ArchiveCable(ctx context.Context, request ArchiveCableRequestObject) (ArchiveCableResponseObject, error)
+	// История тестов кабеля
+	// (GET /api/v1/cables/{cableId}/tests)
+	ListCableTests(ctx context.Context, request ListCableTestsRequestObject) (ListCableTestsResponseObject, error)
 	// Вернуть кабель из архива
 	// (POST /api/v1/cables/{cableId}/unarchive)
 	UnarchiveCable(ctx context.Context, request UnarchiveCableRequestObject) (UnarchiveCableResponseObject, error)
@@ -2687,6 +3643,15 @@ type StrictServerInterface interface {
 	// Передать владение
 	// (POST /api/v1/teams/{teamId}/transfer-ownership)
 	TransferOwnership(ctx context.Context, request TransferOwnershipRequestObject) (TransferOwnershipResponseObject, error)
+	// Тест
+	// (GET /api/v1/tests/{testId})
+	GetTest(ctx context.Context, request GetTestRequestObject) (GetTestResponseObject, error)
+	// Снять пометку «недействительный»
+	// (DELETE /api/v1/tests/{testId}/invalidation)
+	RevalidateTest(ctx context.Context, request RevalidateTestRequestObject) (RevalidateTestResponseObject, error)
+	// Пометить тест недействительным
+	// (PUT /api/v1/tests/{testId}/invalidation)
+	InvalidateTest(ctx context.Context, request InvalidateTestRequestObject) (InvalidateTestResponseObject, error)
 	// Проверка сервера и БД
 	// (GET /health)
 	Health(ctx context.Context, request HealthRequestObject) (HealthResponseObject, error)
@@ -2962,6 +3927,34 @@ func (sh *strictHandler) ArchiveCable(ctx *gin.Context, cableId CableId) {
 		ctx.Status(http.StatusInternalServerError)
 	} else if validResponse, ok := response.(ArchiveCableResponseObject); ok {
 		if err := validResponse.VisitArchiveCableResponse(ctx.Writer); err != nil {
+			ctx.Error(err)
+		}
+	} else if response != nil {
+		ctx.Error(fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListCableTests operation middleware
+func (sh *strictHandler) ListCableTests(ctx *gin.Context, cableId CableId, params ListCableTestsParams) {
+	var request ListCableTestsRequestObject
+
+	request.CableId = cableId
+	request.Params = params
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.ListCableTests(ctx, request.(ListCableTestsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListCableTests")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		ctx.Error(err)
+		ctx.Status(http.StatusInternalServerError)
+	} else if validResponse, ok := response.(ListCableTestsResponseObject); ok {
+		if err := validResponse.VisitListCableTestsResponse(ctx.Writer); err != nil {
 			ctx.Error(err)
 		}
 	} else if response != nil {
@@ -3484,6 +4477,95 @@ func (sh *strictHandler) TransferOwnership(ctx *gin.Context, teamId TeamId) {
 		ctx.Status(http.StatusInternalServerError)
 	} else if validResponse, ok := response.(TransferOwnershipResponseObject); ok {
 		if err := validResponse.VisitTransferOwnershipResponse(ctx.Writer); err != nil {
+			ctx.Error(err)
+		}
+	} else if response != nil {
+		ctx.Error(fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetTest operation middleware
+func (sh *strictHandler) GetTest(ctx *gin.Context, testId TestId) {
+	var request GetTestRequestObject
+
+	request.TestId = testId
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.GetTest(ctx, request.(GetTestRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetTest")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		ctx.Error(err)
+		ctx.Status(http.StatusInternalServerError)
+	} else if validResponse, ok := response.(GetTestResponseObject); ok {
+		if err := validResponse.VisitGetTestResponse(ctx.Writer); err != nil {
+			ctx.Error(err)
+		}
+	} else if response != nil {
+		ctx.Error(fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// RevalidateTest operation middleware
+func (sh *strictHandler) RevalidateTest(ctx *gin.Context, testId TestId) {
+	var request RevalidateTestRequestObject
+
+	request.TestId = testId
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.RevalidateTest(ctx, request.(RevalidateTestRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "RevalidateTest")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		ctx.Error(err)
+		ctx.Status(http.StatusInternalServerError)
+	} else if validResponse, ok := response.(RevalidateTestResponseObject); ok {
+		if err := validResponse.VisitRevalidateTestResponse(ctx.Writer); err != nil {
+			ctx.Error(err)
+		}
+	} else if response != nil {
+		ctx.Error(fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// InvalidateTest operation middleware
+func (sh *strictHandler) InvalidateTest(ctx *gin.Context, testId TestId) {
+	var request InvalidateTestRequestObject
+
+	request.TestId = testId
+
+	var body InvalidateTestJSONRequestBody
+	if err := ctx.ShouldBindJSON(&body); err != nil {
+		ctx.Status(http.StatusBadRequest)
+		ctx.Error(err)
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.InvalidateTest(ctx, request.(InvalidateTestRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "InvalidateTest")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		ctx.Error(err)
+		ctx.Status(http.StatusInternalServerError)
+	} else if validResponse, ok := response.(InvalidateTestResponseObject); ok {
+		if err := validResponse.VisitInvalidateTestResponse(ctx.Writer); err != nil {
 			ctx.Error(err)
 		}
 	} else if response != nil {

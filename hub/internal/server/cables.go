@@ -439,9 +439,24 @@ func cableListParams(params api.ListCablesParams) (filter store.CountCablesParam
 		}
 		sort = string(*params.Sort)
 	}
+	descending, limit, offset, pageFields := pageParams(params.Order, params.Limit, params.Offset)
+	fields = append(fields, pageFields...)
+
+	if len(fields) > 0 {
+		err = validationError(fields...)
+	}
+	return filter, limit, offset, sort, descending, err
+}
+
+// pageParams проверяет порядок и параметры страницы и подставляет значения по умолчанию.
+func pageParams(order *api.SortOrder, limit, offset *int) (descending bool, pageLimit, pageOffset int64, fields []api.FieldError) {
+	invalid := func(field, message string) {
+		fields = append(fields, api.FieldError{Field: field, Message: message})
+	}
+
 	descending = true
-	if params.Order != nil {
-		switch *params.Order {
+	if order != nil {
+		switch *order {
 		case api.Asc:
 			descending = false
 		case api.Desc:
@@ -450,24 +465,20 @@ func cableListParams(params api.ListCablesParams) (filter store.CountCablesParam
 		}
 	}
 
-	limit = defaultPageLimit
-	if params.Limit != nil {
-		if *params.Limit < 1 || *params.Limit > maxPageLimit {
+	pageLimit = defaultPageLimit
+	if limit != nil {
+		if *limit < 1 || *limit > maxPageLimit {
 			invalid("limit", "от 1 до 100")
 		}
-		limit = int64(*params.Limit)
+		pageLimit = int64(*limit)
 	}
-	if params.Offset != nil {
-		if *params.Offset < 0 {
+	if offset != nil {
+		if *offset < 0 {
 			invalid("offset", "не меньше 0")
 		}
-		offset = int64(*params.Offset)
+		pageOffset = int64(*offset)
 	}
-
-	if len(fields) > 0 {
-		err = validationError(fields...)
-	}
-	return filter, limit, offset, sort, descending, err
+	return descending, pageLimit, pageOffset, fields
 }
 
 func validCableType(cableType api.CableType) bool {
