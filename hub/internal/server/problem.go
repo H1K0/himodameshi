@@ -1,0 +1,100 @@
+package server
+
+import (
+	"encoding/json"
+	"errors"
+	"net/http"
+	"strconv"
+
+	"github.com/gin-gonic/gin"
+
+	"git.hakoniwa.ru/tech/himodameshi/hub/internal/api"
+)
+
+// problem — ошибка API по RFC 9457. Обработчики возвращают её как обычную ошибку,
+// а ответ формирует handleErrors, поэтому формат один для всех маршрутов.
+type problem struct {
+	status     int
+	code       string
+	detail     string
+	fields     []api.FieldError
+	retryAfter int
+}
+
+func (p *problem) Error() string { return p.code }
+
+var (
+	errUnauthorized        = &problem{status: http.StatusUnauthorized, code: "unauthorized"}
+	errInvalidCredentials  = &problem{status: http.StatusUnauthorized, code: "invalid_credentials"}
+	errTelegramAuthInvalid = &problem{status: http.StatusUnauthorized, code: "telegram_auth_invalid"}
+	errTelegramNotLinked   = &problem{status: http.StatusUnauthorized, code: "telegram_not_linked"}
+	errWrongPassword       = &problem{status: http.StatusBadRequest, code: "wrong_password"}
+	errOriginMismatch      = &problem{status: http.StatusForbidden, code: "origin_mismatch"}
+	errNicknameTaken       = &problem{status: http.StatusConflict, code: "nickname_taken"}
+	errTelegramTaken       = &problem{status: http.StatusConflict, code: "telegram_taken"}
+	errOwnerWithMembers    = &problem{status: http.StatusConflict, code: "owner_with_members"}
+	errInternal            = &problem{status: http.StatusInternalServerError, code: "internal_error"}
+)
+
+func validationError(fields ...api.FieldError) *problem {
+	return &problem{
+		status: http.StatusBadRequest,
+		code:   "validation_error",
+		detail: "Запрос не прошёл проверку",
+		fields: fields,
+	}
+}
+
+func (p *problem) body() api.Problem {
+	body := api.Problem{
+		Type:   "about:blank",
+		Title:  http.StatusText(p.status),
+		Status: p.status,
+		Code:   p.code,
+	}
+	if p.detail != "" {
+		body.Detail = &p.detail
+	}
+	if len(p.fields) > 0 {
+		body.Errors = &p.fields
+	}
+	return body
+}
+
+func writeProblemBody(c *gin.Context, status int, body any) {
+	data, err := json.Marshal(body)
+	if err != nil {
+		c.Status(http.StatusInternalServerError)
+		return
+	}
+	c.Data(status, "application/problem+json", data)
+}
+
+func writeProblem(c *gin.Context, p *problem) {
+	if p.retryAfter > 0 {
+		c.Header("Retry-After", strconv.Itoa(p.retryAfter))
+	}
+	writeProblemBody(c, p.status, p.body())
+}
+
+// handleErrors превращает ошибки обработчиков в ответы application/problem+json.
+func (s *Server) handleErrors(c *gin.Context) {
+	c.Next()
+
+	if len(c.Errors) == 0 || c.Writer.Written() {
+		return
+	}
+	err := c.Errors.Last().Err
+
+	var p *problem
+	switch {
+	case errors.As(err, &p):
+	case c.Writer.Status() == http.StatusBadRequest:
+		// Сгенерированный код не смог разобрать тело запроса.
+		p = validationError(api.FieldError{Field: "body", Message: "некорректный JSON"})
+	default:
+		s.log.ErrorContext(c, "request failed", "method", c.Request.Method, "path", c.FullPath(), "error", err)
+		p = errInternal
+	}
+	writeProblem(c, p)
+}

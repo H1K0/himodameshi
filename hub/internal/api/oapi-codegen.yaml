@@ -7,4 +7,6 @@ generate:
 output-options:
   # Генерируются только реализованные разделы контракта; новый раздел добавляется сюда
   include-tags:
+    - auth
+    - profile
     - service

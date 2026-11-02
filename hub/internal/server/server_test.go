@@ -11,11 +11,21 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+
+	"git.hakoniwa.ru/tech/himodameshi/hub/internal/config"
 )
 
+// pingerFunc — БД, у которой работает только Ping: /health не обращается к ней иначе.
 type pingerFunc func(ctx context.Context) error
 
 func (f pingerFunc) Ping(ctx context.Context) error { return f(ctx) }
+
+type pingOnlyDB struct {
+	DB
+	pingerFunc
+}
+
+func (db pingOnlyDB) Ping(ctx context.Context) error { return db.pingerFunc(ctx) }
 
 func TestHealth(t *testing.T) {
 	gin.SetMode(gin.TestMode)
@@ -51,11 +61,15 @@ func TestHealth(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			s := New(tt.ping, slog.New(slog.NewJSONHandler(io.Discard, nil)))
+			s := New(pingOnlyDB{pingerFunc: tt.ping}, config.Config{}, slog.New(slog.NewJSONHandler(io.Discard, nil)))
 			s.pingTimeout = 10 * time.Millisecond
 
+			handler, err := s.Handler()
+			if err != nil {
+				t.Fatal(err)
+			}
 			rec := httptest.NewRecorder()
-			s.Handler().ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/health", nil))
+			handler.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/health", nil))
 
 			if rec.Code != tt.wantCode {
 				t.Errorf("код ответа = %d, ожидался %d", rec.Code, tt.wantCode)

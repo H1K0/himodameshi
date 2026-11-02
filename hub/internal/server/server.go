@@ -5,11 +5,15 @@ import (
 	"context"
 	"log/slog"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/jackc/pgx/v5"
 
 	"git.hakoniwa.ru/tech/himodameshi/hub/internal/api"
+	"git.hakoniwa.ru/tech/himodameshi/hub/internal/config"
+	"git.hakoniwa.ru/tech/himodameshi/hub/internal/store"
 )
 
 const defaultPingTimeout = 2 * time.Second
@@ -19,22 +23,52 @@ type Pinger interface {
 	Ping(ctx context.Context) error
 }
 
-type Server struct {
-	db          Pinger
-	log         *slog.Logger
-	pingTimeout time.Duration
+// DB — то, что сервер использует от пула соединений.
+type DB interface {
+	Pinger
+	store.DBTX
+	Begin(ctx context.Context) (pgx.Tx, error)
 }
 
-func New(db Pinger, log *slog.Logger) *Server {
-	return &Server{db: db, log: log, pingTimeout: defaultPingTimeout}
+type Server struct {
+	db          DB
+	q           *store.Queries
+	cfg         config.Config
+	publicURL   string
+	log         *slog.Logger
+	pingTimeout time.Duration
+	limiter     *rateLimiter
+	now         func() time.Time
+}
+
+func New(db DB, cfg config.Config, log *slog.Logger) *Server {
+	return &Server{
+		db:          db,
+		q:           store.New(db),
+		cfg:         cfg,
+		publicURL:   strings.TrimRight(cfg.PublicURL, "/"),
+		log:         log,
+		pingTimeout: defaultPingTimeout,
+		limiter:     newRateLimiter(authAttemptsLimit, authAttemptsPeriod),
+		now:         time.Now,
+	}
 }
 
 // Handler возвращает маршруты API.
-func (s *Server) Handler() http.Handler {
+func (s *Server) Handler() (http.Handler, error) {
 	r := gin.New()
-	r.Use(gin.Recovery())
-	api.RegisterHandlers(r, api.NewStrictHandler(s, nil))
-	return r
+	// Обработчики получают *gin.Context как context.Context; без этого он не отменяется с запросом.
+	r.ContextWithFallback = true
+	if err := r.SetTrustedProxies(s.cfg.TrustedProxies); err != nil {
+		return nil, err
+	}
+	r.Use(gin.Recovery(), s.handleErrors, s.checkAppVersion)
+
+	strict := api.NewStrictHandler(s, []api.StrictMiddlewareFunc{s.limitAuthAttempts})
+	api.RegisterHandlersWithOptions(r, strict, api.GinServerOptions{
+		Middlewares: []api.MiddlewareFunc{s.authenticate},
+	})
+	return r, nil
 }
 
 // Health отвечает 200, если БД доступна, и 503, если нет.

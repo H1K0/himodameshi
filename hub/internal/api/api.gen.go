@@ -8,10 +8,22 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	strictgin "github.com/oapi-codegen/runtime/strictmiddleware/gin"
 	openapi_types "github.com/oapi-codegen/runtime/types"
+)
+
+const (
+	BearerAuthScopes = "bearerAuth.Scopes"
+	CookieAuthScopes = "cookieAuth.Scopes"
+)
+
+// Defines values for ClientType.
+const (
+	App ClientType = "app"
+	Web ClientType = "web"
 )
 
 // Defines values for HealthStatus.
@@ -20,6 +32,39 @@ const (
 	Unavailable HealthStatus = "unavailable"
 )
 
+// AppOutdatedProblem defines model for AppOutdatedProblem.
+type AppOutdatedProblem struct {
+	// Code Машиночитаемый код ошибки, таблица — в описании API
+	Code string `json:"code"`
+
+	// Detail Пояснение для человека; не предназначено для разбора
+	Detail *string `json:"detail,omitempty"`
+
+	// Errors Ошибки проверки по полям — только для `validation_error`
+	Errors        *[]FieldError `json:"errors,omitempty"`
+	Instance      *string       `json:"instance,omitempty"`
+	MinAppVersion string        `json:"min_app_version"`
+	Status        int           `json:"status"`
+	Title         string        `json:"title"`
+	Type          string        `json:"type"`
+}
+
+// ChangePasswordRequest defines model for ChangePasswordRequest.
+type ChangePasswordRequest struct {
+	CurrentPassword string   `json:"current_password"`
+	NewPassword     Password `json:"new_password"`
+}
+
+// ClientType `web` — токен в cookie, `app` — токен в теле ответа
+type ClientType string
+
+// FieldError defines model for FieldError.
+type FieldError struct {
+	// Field Путь к полю
+	Field   string `json:"field"`
+	Message string `json:"message"`
+}
+
 // Health defines model for Health.
 type Health struct {
 	Status HealthStatus `json:"status"`
@@ -27,6 +72,96 @@ type Health struct {
 
 // HealthStatus defines model for Health.Status.
 type HealthStatus string
+
+// LoginRequest defines model for LoginRequest.
+type LoginRequest struct {
+	// Client `web` — токен в cookie, `app` — токен в теле ответа
+	Client   ClientType `json:"client"`
+	Nickname string     `json:"nickname"`
+	Password Password   `json:"password"`
+}
+
+// Nickname Латинские буквы, цифры и `_`; уникален без учёта регистра
+type Nickname = string
+
+// Password defines model for Password.
+type Password = string
+
+// Problem Ошибка по RFC 9457 с машиночитаемым кодом
+type Problem struct {
+	// Code Машиночитаемый код ошибки, таблица — в описании API
+	Code string `json:"code"`
+
+	// Detail Пояснение для человека; не предназначено для разбора
+	Detail *string `json:"detail,omitempty"`
+
+	// Errors Ошибки проверки по полям — только для `validation_error`
+	Errors   *[]FieldError `json:"errors,omitempty"`
+	Instance *string       `json:"instance,omitempty"`
+	Status   int           `json:"status"`
+	Title    string        `json:"title"`
+	Type     string        `json:"type"`
+}
+
+// RegisterRequest defines model for RegisterRequest.
+type RegisterRequest struct {
+	// Client `web` — токен в cookie, `app` — токен в теле ответа
+	Client ClientType `json:"client"`
+
+	// Nickname Латинские буквы, цифры и `_`; уникален без учёта регистра
+	Nickname Nickname `json:"nickname"`
+	Password Password `json:"password"`
+}
+
+// Session defines model for Session.
+type Session struct {
+	// ExpiresAt Срок действия; продлевается при использовании
+	ExpiresAt time.Time `json:"expires_at"`
+
+	// Token Токен сеанса — только для `client: app`
+	Token *string `json:"token,omitempty"`
+	User  User    `json:"user"`
+}
+
+// TelegramAccount defines model for TelegramAccount.
+type TelegramAccount struct {
+	Id       int64   `json:"id"`
+	Username *string `json:"username"`
+}
+
+// TelegramAuthData Объект от Telegram Login Widget — передаётся без изменений
+type TelegramAuthData struct {
+	// AuthDate Unix-время авторизации в Telegram
+	AuthDate  int64  `json:"auth_date"`
+	FirstName string `json:"first_name"`
+
+	// Hash Подпись данных
+	Hash     string  `json:"hash"`
+	Id       int64   `json:"id"`
+	LastName *string `json:"last_name,omitempty"`
+	PhotoUrl *string `json:"photo_url,omitempty"`
+	Username *string `json:"username,omitempty"`
+}
+
+// UpdateProfileRequest defines model for UpdateProfileRequest.
+type UpdateProfileRequest struct {
+	// Nickname Латинские буквы, цифры и `_`; уникален без учёта регистра
+	Nickname Nickname `json:"nickname"`
+}
+
+// User defines model for User.
+type User struct {
+	CreatedAt time.Time `json:"created_at"`
+
+	// Id UUIDv7 (RFC 9562)
+	Id Uuid `json:"id"`
+
+	// Nickname Латинские буквы, цифры и `_`; уникален без учёта регистра
+	Nickname Nickname `json:"nickname"`
+
+	// Telegram Привязанный Telegram или `null`
+	Telegram *TelegramAccount `json:"telegram"`
+}
 
 // Uuid UUIDv7 (RFC 9562)
 type Uuid = openapi_types.UUID
@@ -49,8 +184,74 @@ type TestId = Uuid
 // UserId UUIDv7 (RFC 9562)
 type UserId = Uuid
 
+// AppOutdated defines model for AppOutdated.
+type AppOutdated = AppOutdatedProblem
+
+// BadRequest Ошибка по RFC 9457 с машиночитаемым кодом
+type BadRequest = Problem
+
+// Conflict Ошибка по RFC 9457 с машиночитаемым кодом
+type Conflict = Problem
+
+// TooManyRequests Ошибка по RFC 9457 с машиночитаемым кодом
+type TooManyRequests = Problem
+
+// Unauthorized Ошибка по RFC 9457 с машиночитаемым кодом
+type Unauthorized = Problem
+
+// LoginJSONRequestBody defines body for Login for application/json ContentType.
+type LoginJSONRequestBody = LoginRequest
+
+// RegisterJSONRequestBody defines body for Register for application/json ContentType.
+type RegisterJSONRequestBody = RegisterRequest
+
+// LoginTelegramJSONRequestBody defines body for LoginTelegram for application/json ContentType.
+type LoginTelegramJSONRequestBody = TelegramAuthData
+
+// UpdateMeJSONRequestBody defines body for UpdateMe for application/json ContentType.
+type UpdateMeJSONRequestBody = UpdateProfileRequest
+
+// ChangePasswordJSONRequestBody defines body for ChangePassword for application/json ContentType.
+type ChangePasswordJSONRequestBody = ChangePasswordRequest
+
+// LinkTelegramJSONRequestBody defines body for LinkTelegram for application/json ContentType.
+type LinkTelegramJSONRequestBody = TelegramAuthData
+
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
+	// Вход по нику и паролю
+	// (POST /api/v1/auth/login)
+	Login(c *gin.Context)
+	// Завершить текущий сеанс
+	// (POST /api/v1/auth/logout)
+	Logout(c *gin.Context)
+	// Завершить все сеансы
+	// (POST /api/v1/auth/logout-all)
+	LogoutAll(c *gin.Context)
+	// Регистрация
+	// (POST /api/v1/auth/register)
+	Register(c *gin.Context)
+	// Вход через Telegram Login Widget
+	// (POST /api/v1/auth/telegram)
+	LoginTelegram(c *gin.Context)
+	// Удаление учётной записи
+	// (DELETE /api/v1/me)
+	DeleteMe(c *gin.Context)
+	// Профиль текущего пользователя
+	// (GET /api/v1/me)
+	GetMe(c *gin.Context)
+	// Смена ника
+	// (PATCH /api/v1/me)
+	UpdateMe(c *gin.Context)
+	// Смена пароля
+	// (PUT /api/v1/me/password)
+	ChangePassword(c *gin.Context)
+	// Отвязка Telegram
+	// (DELETE /api/v1/me/telegram)
+	UnlinkTelegram(c *gin.Context)
+	// Привязка Telegram
+	// (PUT /api/v1/me/telegram)
+	LinkTelegram(c *gin.Context)
 	// Проверка сервера и БД
 	// (GET /health)
 	Health(c *gin.Context)
@@ -64,6 +265,181 @@ type ServerInterfaceWrapper struct {
 }
 
 type MiddlewareFunc func(c *gin.Context)
+
+// Login operation middleware
+func (siw *ServerInterfaceWrapper) Login(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.Login(c)
+}
+
+// Logout operation middleware
+func (siw *ServerInterfaceWrapper) Logout(c *gin.Context) {
+
+	c.Set(BearerAuthScopes, []string{})
+
+	c.Set(CookieAuthScopes, []string{})
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.Logout(c)
+}
+
+// LogoutAll operation middleware
+func (siw *ServerInterfaceWrapper) LogoutAll(c *gin.Context) {
+
+	c.Set(BearerAuthScopes, []string{})
+
+	c.Set(CookieAuthScopes, []string{})
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.LogoutAll(c)
+}
+
+// Register operation middleware
+func (siw *ServerInterfaceWrapper) Register(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.Register(c)
+}
+
+// LoginTelegram operation middleware
+func (siw *ServerInterfaceWrapper) LoginTelegram(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.LoginTelegram(c)
+}
+
+// DeleteMe operation middleware
+func (siw *ServerInterfaceWrapper) DeleteMe(c *gin.Context) {
+
+	c.Set(BearerAuthScopes, []string{})
+
+	c.Set(CookieAuthScopes, []string{})
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.DeleteMe(c)
+}
+
+// GetMe operation middleware
+func (siw *ServerInterfaceWrapper) GetMe(c *gin.Context) {
+
+	c.Set(BearerAuthScopes, []string{})
+
+	c.Set(CookieAuthScopes, []string{})
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.GetMe(c)
+}
+
+// UpdateMe operation middleware
+func (siw *ServerInterfaceWrapper) UpdateMe(c *gin.Context) {
+
+	c.Set(BearerAuthScopes, []string{})
+
+	c.Set(CookieAuthScopes, []string{})
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.UpdateMe(c)
+}
+
+// ChangePassword operation middleware
+func (siw *ServerInterfaceWrapper) ChangePassword(c *gin.Context) {
+
+	c.Set(BearerAuthScopes, []string{})
+
+	c.Set(CookieAuthScopes, []string{})
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.ChangePassword(c)
+}
+
+// UnlinkTelegram operation middleware
+func (siw *ServerInterfaceWrapper) UnlinkTelegram(c *gin.Context) {
+
+	c.Set(BearerAuthScopes, []string{})
+
+	c.Set(CookieAuthScopes, []string{})
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.UnlinkTelegram(c)
+}
+
+// LinkTelegram operation middleware
+func (siw *ServerInterfaceWrapper) LinkTelegram(c *gin.Context) {
+
+	c.Set(BearerAuthScopes, []string{})
+
+	c.Set(CookieAuthScopes, []string{})
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.LinkTelegram(c)
+}
 
 // Health operation middleware
 func (siw *ServerInterfaceWrapper) Health(c *gin.Context) {
@@ -105,7 +481,503 @@ func RegisterHandlersWithOptions(router gin.IRouter, si ServerInterface, options
 		ErrorHandler:       errorHandler,
 	}
 
+	router.POST(options.BaseURL+"/api/v1/auth/login", wrapper.Login)
+	router.POST(options.BaseURL+"/api/v1/auth/logout", wrapper.Logout)
+	router.POST(options.BaseURL+"/api/v1/auth/logout-all", wrapper.LogoutAll)
+	router.POST(options.BaseURL+"/api/v1/auth/register", wrapper.Register)
+	router.POST(options.BaseURL+"/api/v1/auth/telegram", wrapper.LoginTelegram)
+	router.DELETE(options.BaseURL+"/api/v1/me", wrapper.DeleteMe)
+	router.GET(options.BaseURL+"/api/v1/me", wrapper.GetMe)
+	router.PATCH(options.BaseURL+"/api/v1/me", wrapper.UpdateMe)
+	router.PUT(options.BaseURL+"/api/v1/me/password", wrapper.ChangePassword)
+	router.DELETE(options.BaseURL+"/api/v1/me/telegram", wrapper.UnlinkTelegram)
+	router.PUT(options.BaseURL+"/api/v1/me/telegram", wrapper.LinkTelegram)
 	router.GET(options.BaseURL+"/health", wrapper.Health)
+}
+
+type AppOutdatedApplicationProblemPlusJSONResponse AppOutdatedProblem
+
+type BadRequestApplicationProblemPlusJSONResponse Problem
+
+type ConflictApplicationProblemPlusJSONResponse Problem
+
+type TooManyRequestsResponseHeaders struct {
+	RetryAfter int
+}
+type TooManyRequestsApplicationProblemPlusJSONResponse struct {
+	Body Problem
+
+	Headers TooManyRequestsResponseHeaders
+}
+
+type UnauthorizedApplicationProblemPlusJSONResponse Problem
+
+type LoginRequestObject struct {
+	Body *LoginJSONRequestBody
+}
+
+type LoginResponseObject interface {
+	VisitLoginResponse(w http.ResponseWriter) error
+}
+
+type Login200ResponseHeaders struct {
+	SetCookie string
+}
+
+type Login200JSONResponse struct {
+	Body    Session
+	Headers Login200ResponseHeaders
+}
+
+func (response Login200JSONResponse) VisitLoginResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Set-Cookie", fmt.Sprint(response.Headers.SetCookie))
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response.Body)
+}
+
+type Login400ApplicationProblemPlusJSONResponse struct {
+	BadRequestApplicationProblemPlusJSONResponse
+}
+
+func (response Login400ApplicationProblemPlusJSONResponse) VisitLoginResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type Login401ApplicationProblemPlusJSONResponse struct {
+	UnauthorizedApplicationProblemPlusJSONResponse
+}
+
+func (response Login401ApplicationProblemPlusJSONResponse) VisitLoginResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type Login426ApplicationProblemPlusJSONResponse struct {
+	AppOutdatedApplicationProblemPlusJSONResponse
+}
+
+func (response Login426ApplicationProblemPlusJSONResponse) VisitLoginResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(426)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type Login429ApplicationProblemPlusJSONResponse struct {
+	TooManyRequestsApplicationProblemPlusJSONResponse
+}
+
+func (response Login429ApplicationProblemPlusJSONResponse) VisitLoginResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.Header().Set("Retry-After", fmt.Sprint(response.Headers.RetryAfter))
+	w.WriteHeader(429)
+
+	return json.NewEncoder(w).Encode(response.Body)
+}
+
+type LogoutRequestObject struct {
+}
+
+type LogoutResponseObject interface {
+	VisitLogoutResponse(w http.ResponseWriter) error
+}
+
+type Logout204Response struct {
+}
+
+func (response Logout204Response) VisitLogoutResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type Logout401ApplicationProblemPlusJSONResponse struct {
+	UnauthorizedApplicationProblemPlusJSONResponse
+}
+
+func (response Logout401ApplicationProblemPlusJSONResponse) VisitLogoutResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type LogoutAllRequestObject struct {
+}
+
+type LogoutAllResponseObject interface {
+	VisitLogoutAllResponse(w http.ResponseWriter) error
+}
+
+type LogoutAll204Response struct {
+}
+
+func (response LogoutAll204Response) VisitLogoutAllResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type LogoutAll401ApplicationProblemPlusJSONResponse struct {
+	UnauthorizedApplicationProblemPlusJSONResponse
+}
+
+func (response LogoutAll401ApplicationProblemPlusJSONResponse) VisitLogoutAllResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type RegisterRequestObject struct {
+	Body *RegisterJSONRequestBody
+}
+
+type RegisterResponseObject interface {
+	VisitRegisterResponse(w http.ResponseWriter) error
+}
+
+type Register201ResponseHeaders struct {
+	SetCookie string
+}
+
+type Register201JSONResponse struct {
+	Body    Session
+	Headers Register201ResponseHeaders
+}
+
+func (response Register201JSONResponse) VisitRegisterResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Set-Cookie", fmt.Sprint(response.Headers.SetCookie))
+	w.WriteHeader(201)
+
+	return json.NewEncoder(w).Encode(response.Body)
+}
+
+type Register400ApplicationProblemPlusJSONResponse struct {
+	BadRequestApplicationProblemPlusJSONResponse
+}
+
+func (response Register400ApplicationProblemPlusJSONResponse) VisitRegisterResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type Register409ApplicationProblemPlusJSONResponse struct {
+	ConflictApplicationProblemPlusJSONResponse
+}
+
+func (response Register409ApplicationProblemPlusJSONResponse) VisitRegisterResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(409)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type Register429ApplicationProblemPlusJSONResponse struct {
+	TooManyRequestsApplicationProblemPlusJSONResponse
+}
+
+func (response Register429ApplicationProblemPlusJSONResponse) VisitRegisterResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.Header().Set("Retry-After", fmt.Sprint(response.Headers.RetryAfter))
+	w.WriteHeader(429)
+
+	return json.NewEncoder(w).Encode(response.Body)
+}
+
+type LoginTelegramRequestObject struct {
+	Body *LoginTelegramJSONRequestBody
+}
+
+type LoginTelegramResponseObject interface {
+	VisitLoginTelegramResponse(w http.ResponseWriter) error
+}
+
+type LoginTelegram200ResponseHeaders struct {
+	SetCookie string
+}
+
+type LoginTelegram200JSONResponse struct {
+	Body    Session
+	Headers LoginTelegram200ResponseHeaders
+}
+
+func (response LoginTelegram200JSONResponse) VisitLoginTelegramResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Set-Cookie", fmt.Sprint(response.Headers.SetCookie))
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response.Body)
+}
+
+type LoginTelegram400ApplicationProblemPlusJSONResponse struct {
+	BadRequestApplicationProblemPlusJSONResponse
+}
+
+func (response LoginTelegram400ApplicationProblemPlusJSONResponse) VisitLoginTelegramResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type LoginTelegram401ApplicationProblemPlusJSONResponse struct {
+	UnauthorizedApplicationProblemPlusJSONResponse
+}
+
+func (response LoginTelegram401ApplicationProblemPlusJSONResponse) VisitLoginTelegramResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type LoginTelegram429ApplicationProblemPlusJSONResponse struct {
+	TooManyRequestsApplicationProblemPlusJSONResponse
+}
+
+func (response LoginTelegram429ApplicationProblemPlusJSONResponse) VisitLoginTelegramResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.Header().Set("Retry-After", fmt.Sprint(response.Headers.RetryAfter))
+	w.WriteHeader(429)
+
+	return json.NewEncoder(w).Encode(response.Body)
+}
+
+type DeleteMeRequestObject struct {
+}
+
+type DeleteMeResponseObject interface {
+	VisitDeleteMeResponse(w http.ResponseWriter) error
+}
+
+type DeleteMe204Response struct {
+}
+
+func (response DeleteMe204Response) VisitDeleteMeResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type DeleteMe401ApplicationProblemPlusJSONResponse struct {
+	UnauthorizedApplicationProblemPlusJSONResponse
+}
+
+func (response DeleteMe401ApplicationProblemPlusJSONResponse) VisitDeleteMeResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type DeleteMe409ApplicationProblemPlusJSONResponse struct {
+	ConflictApplicationProblemPlusJSONResponse
+}
+
+func (response DeleteMe409ApplicationProblemPlusJSONResponse) VisitDeleteMeResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(409)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetMeRequestObject struct {
+}
+
+type GetMeResponseObject interface {
+	VisitGetMeResponse(w http.ResponseWriter) error
+}
+
+type GetMe200JSONResponse User
+
+func (response GetMe200JSONResponse) VisitGetMeResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetMe401ApplicationProblemPlusJSONResponse struct {
+	UnauthorizedApplicationProblemPlusJSONResponse
+}
+
+func (response GetMe401ApplicationProblemPlusJSONResponse) VisitGetMeResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type UpdateMeRequestObject struct {
+	Body *UpdateMeJSONRequestBody
+}
+
+type UpdateMeResponseObject interface {
+	VisitUpdateMeResponse(w http.ResponseWriter) error
+}
+
+type UpdateMe200JSONResponse User
+
+func (response UpdateMe200JSONResponse) VisitUpdateMeResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type UpdateMe400ApplicationProblemPlusJSONResponse struct {
+	BadRequestApplicationProblemPlusJSONResponse
+}
+
+func (response UpdateMe400ApplicationProblemPlusJSONResponse) VisitUpdateMeResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type UpdateMe401ApplicationProblemPlusJSONResponse struct {
+	UnauthorizedApplicationProblemPlusJSONResponse
+}
+
+func (response UpdateMe401ApplicationProblemPlusJSONResponse) VisitUpdateMeResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type UpdateMe409ApplicationProblemPlusJSONResponse struct {
+	ConflictApplicationProblemPlusJSONResponse
+}
+
+func (response UpdateMe409ApplicationProblemPlusJSONResponse) VisitUpdateMeResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(409)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ChangePasswordRequestObject struct {
+	Body *ChangePasswordJSONRequestBody
+}
+
+type ChangePasswordResponseObject interface {
+	VisitChangePasswordResponse(w http.ResponseWriter) error
+}
+
+type ChangePassword204Response struct {
+}
+
+func (response ChangePassword204Response) VisitChangePasswordResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type ChangePassword400ApplicationProblemPlusJSONResponse struct {
+	BadRequestApplicationProblemPlusJSONResponse
+}
+
+func (response ChangePassword400ApplicationProblemPlusJSONResponse) VisitChangePasswordResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ChangePassword401ApplicationProblemPlusJSONResponse struct {
+	UnauthorizedApplicationProblemPlusJSONResponse
+}
+
+func (response ChangePassword401ApplicationProblemPlusJSONResponse) VisitChangePasswordResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type UnlinkTelegramRequestObject struct {
+}
+
+type UnlinkTelegramResponseObject interface {
+	VisitUnlinkTelegramResponse(w http.ResponseWriter) error
+}
+
+type UnlinkTelegram204Response struct {
+}
+
+func (response UnlinkTelegram204Response) VisitUnlinkTelegramResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type UnlinkTelegram401ApplicationProblemPlusJSONResponse struct {
+	UnauthorizedApplicationProblemPlusJSONResponse
+}
+
+func (response UnlinkTelegram401ApplicationProblemPlusJSONResponse) VisitUnlinkTelegramResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type LinkTelegramRequestObject struct {
+	Body *LinkTelegramJSONRequestBody
+}
+
+type LinkTelegramResponseObject interface {
+	VisitLinkTelegramResponse(w http.ResponseWriter) error
+}
+
+type LinkTelegram200JSONResponse User
+
+func (response LinkTelegram200JSONResponse) VisitLinkTelegramResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type LinkTelegram400ApplicationProblemPlusJSONResponse struct {
+	BadRequestApplicationProblemPlusJSONResponse
+}
+
+func (response LinkTelegram400ApplicationProblemPlusJSONResponse) VisitLinkTelegramResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type LinkTelegram401ApplicationProblemPlusJSONResponse struct {
+	UnauthorizedApplicationProblemPlusJSONResponse
+}
+
+func (response LinkTelegram401ApplicationProblemPlusJSONResponse) VisitLinkTelegramResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type LinkTelegram409ApplicationProblemPlusJSONResponse struct {
+	ConflictApplicationProblemPlusJSONResponse
+}
+
+func (response LinkTelegram409ApplicationProblemPlusJSONResponse) VisitLinkTelegramResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(409)
+
+	return json.NewEncoder(w).Encode(response)
 }
 
 type HealthRequestObject struct {
@@ -135,6 +1007,39 @@ func (response Health503JSONResponse) VisitHealthResponse(w http.ResponseWriter)
 
 // StrictServerInterface represents all server handlers.
 type StrictServerInterface interface {
+	// Вход по нику и паролю
+	// (POST /api/v1/auth/login)
+	Login(ctx context.Context, request LoginRequestObject) (LoginResponseObject, error)
+	// Завершить текущий сеанс
+	// (POST /api/v1/auth/logout)
+	Logout(ctx context.Context, request LogoutRequestObject) (LogoutResponseObject, error)
+	// Завершить все сеансы
+	// (POST /api/v1/auth/logout-all)
+	LogoutAll(ctx context.Context, request LogoutAllRequestObject) (LogoutAllResponseObject, error)
+	// Регистрация
+	// (POST /api/v1/auth/register)
+	Register(ctx context.Context, request RegisterRequestObject) (RegisterResponseObject, error)
+	// Вход через Telegram Login Widget
+	// (POST /api/v1/auth/telegram)
+	LoginTelegram(ctx context.Context, request LoginTelegramRequestObject) (LoginTelegramResponseObject, error)
+	// Удаление учётной записи
+	// (DELETE /api/v1/me)
+	DeleteMe(ctx context.Context, request DeleteMeRequestObject) (DeleteMeResponseObject, error)
+	// Профиль текущего пользователя
+	// (GET /api/v1/me)
+	GetMe(ctx context.Context, request GetMeRequestObject) (GetMeResponseObject, error)
+	// Смена ника
+	// (PATCH /api/v1/me)
+	UpdateMe(ctx context.Context, request UpdateMeRequestObject) (UpdateMeResponseObject, error)
+	// Смена пароля
+	// (PUT /api/v1/me/password)
+	ChangePassword(ctx context.Context, request ChangePasswordRequestObject) (ChangePasswordResponseObject, error)
+	// Отвязка Telegram
+	// (DELETE /api/v1/me/telegram)
+	UnlinkTelegram(ctx context.Context, request UnlinkTelegramRequestObject) (UnlinkTelegramResponseObject, error)
+	// Привязка Telegram
+	// (PUT /api/v1/me/telegram)
+	LinkTelegram(ctx context.Context, request LinkTelegramRequestObject) (LinkTelegramResponseObject, error)
 	// Проверка сервера и БД
 	// (GET /health)
 	Health(ctx context.Context, request HealthRequestObject) (HealthResponseObject, error)
@@ -150,6 +1055,329 @@ func NewStrictHandler(ssi StrictServerInterface, middlewares []StrictMiddlewareF
 type strictHandler struct {
 	ssi         StrictServerInterface
 	middlewares []StrictMiddlewareFunc
+}
+
+// Login operation middleware
+func (sh *strictHandler) Login(ctx *gin.Context) {
+	var request LoginRequestObject
+
+	var body LoginJSONRequestBody
+	if err := ctx.ShouldBindJSON(&body); err != nil {
+		ctx.Status(http.StatusBadRequest)
+		ctx.Error(err)
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.Login(ctx, request.(LoginRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "Login")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		ctx.Error(err)
+		ctx.Status(http.StatusInternalServerError)
+	} else if validResponse, ok := response.(LoginResponseObject); ok {
+		if err := validResponse.VisitLoginResponse(ctx.Writer); err != nil {
+			ctx.Error(err)
+		}
+	} else if response != nil {
+		ctx.Error(fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// Logout operation middleware
+func (sh *strictHandler) Logout(ctx *gin.Context) {
+	var request LogoutRequestObject
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.Logout(ctx, request.(LogoutRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "Logout")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		ctx.Error(err)
+		ctx.Status(http.StatusInternalServerError)
+	} else if validResponse, ok := response.(LogoutResponseObject); ok {
+		if err := validResponse.VisitLogoutResponse(ctx.Writer); err != nil {
+			ctx.Error(err)
+		}
+	} else if response != nil {
+		ctx.Error(fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// LogoutAll operation middleware
+func (sh *strictHandler) LogoutAll(ctx *gin.Context) {
+	var request LogoutAllRequestObject
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.LogoutAll(ctx, request.(LogoutAllRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "LogoutAll")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		ctx.Error(err)
+		ctx.Status(http.StatusInternalServerError)
+	} else if validResponse, ok := response.(LogoutAllResponseObject); ok {
+		if err := validResponse.VisitLogoutAllResponse(ctx.Writer); err != nil {
+			ctx.Error(err)
+		}
+	} else if response != nil {
+		ctx.Error(fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// Register operation middleware
+func (sh *strictHandler) Register(ctx *gin.Context) {
+	var request RegisterRequestObject
+
+	var body RegisterJSONRequestBody
+	if err := ctx.ShouldBindJSON(&body); err != nil {
+		ctx.Status(http.StatusBadRequest)
+		ctx.Error(err)
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.Register(ctx, request.(RegisterRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "Register")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		ctx.Error(err)
+		ctx.Status(http.StatusInternalServerError)
+	} else if validResponse, ok := response.(RegisterResponseObject); ok {
+		if err := validResponse.VisitRegisterResponse(ctx.Writer); err != nil {
+			ctx.Error(err)
+		}
+	} else if response != nil {
+		ctx.Error(fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// LoginTelegram operation middleware
+func (sh *strictHandler) LoginTelegram(ctx *gin.Context) {
+	var request LoginTelegramRequestObject
+
+	var body LoginTelegramJSONRequestBody
+	if err := ctx.ShouldBindJSON(&body); err != nil {
+		ctx.Status(http.StatusBadRequest)
+		ctx.Error(err)
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.LoginTelegram(ctx, request.(LoginTelegramRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "LoginTelegram")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		ctx.Error(err)
+		ctx.Status(http.StatusInternalServerError)
+	} else if validResponse, ok := response.(LoginTelegramResponseObject); ok {
+		if err := validResponse.VisitLoginTelegramResponse(ctx.Writer); err != nil {
+			ctx.Error(err)
+		}
+	} else if response != nil {
+		ctx.Error(fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// DeleteMe operation middleware
+func (sh *strictHandler) DeleteMe(ctx *gin.Context) {
+	var request DeleteMeRequestObject
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.DeleteMe(ctx, request.(DeleteMeRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DeleteMe")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		ctx.Error(err)
+		ctx.Status(http.StatusInternalServerError)
+	} else if validResponse, ok := response.(DeleteMeResponseObject); ok {
+		if err := validResponse.VisitDeleteMeResponse(ctx.Writer); err != nil {
+			ctx.Error(err)
+		}
+	} else if response != nil {
+		ctx.Error(fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetMe operation middleware
+func (sh *strictHandler) GetMe(ctx *gin.Context) {
+	var request GetMeRequestObject
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.GetMe(ctx, request.(GetMeRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetMe")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		ctx.Error(err)
+		ctx.Status(http.StatusInternalServerError)
+	} else if validResponse, ok := response.(GetMeResponseObject); ok {
+		if err := validResponse.VisitGetMeResponse(ctx.Writer); err != nil {
+			ctx.Error(err)
+		}
+	} else if response != nil {
+		ctx.Error(fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UpdateMe operation middleware
+func (sh *strictHandler) UpdateMe(ctx *gin.Context) {
+	var request UpdateMeRequestObject
+
+	var body UpdateMeJSONRequestBody
+	if err := ctx.ShouldBindJSON(&body); err != nil {
+		ctx.Status(http.StatusBadRequest)
+		ctx.Error(err)
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.UpdateMe(ctx, request.(UpdateMeRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UpdateMe")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		ctx.Error(err)
+		ctx.Status(http.StatusInternalServerError)
+	} else if validResponse, ok := response.(UpdateMeResponseObject); ok {
+		if err := validResponse.VisitUpdateMeResponse(ctx.Writer); err != nil {
+			ctx.Error(err)
+		}
+	} else if response != nil {
+		ctx.Error(fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ChangePassword operation middleware
+func (sh *strictHandler) ChangePassword(ctx *gin.Context) {
+	var request ChangePasswordRequestObject
+
+	var body ChangePasswordJSONRequestBody
+	if err := ctx.ShouldBindJSON(&body); err != nil {
+		ctx.Status(http.StatusBadRequest)
+		ctx.Error(err)
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.ChangePassword(ctx, request.(ChangePasswordRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ChangePassword")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		ctx.Error(err)
+		ctx.Status(http.StatusInternalServerError)
+	} else if validResponse, ok := response.(ChangePasswordResponseObject); ok {
+		if err := validResponse.VisitChangePasswordResponse(ctx.Writer); err != nil {
+			ctx.Error(err)
+		}
+	} else if response != nil {
+		ctx.Error(fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UnlinkTelegram operation middleware
+func (sh *strictHandler) UnlinkTelegram(ctx *gin.Context) {
+	var request UnlinkTelegramRequestObject
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.UnlinkTelegram(ctx, request.(UnlinkTelegramRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UnlinkTelegram")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		ctx.Error(err)
+		ctx.Status(http.StatusInternalServerError)
+	} else if validResponse, ok := response.(UnlinkTelegramResponseObject); ok {
+		if err := validResponse.VisitUnlinkTelegramResponse(ctx.Writer); err != nil {
+			ctx.Error(err)
+		}
+	} else if response != nil {
+		ctx.Error(fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// LinkTelegram operation middleware
+func (sh *strictHandler) LinkTelegram(ctx *gin.Context) {
+	var request LinkTelegramRequestObject
+
+	var body LinkTelegramJSONRequestBody
+	if err := ctx.ShouldBindJSON(&body); err != nil {
+		ctx.Status(http.StatusBadRequest)
+		ctx.Error(err)
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.LinkTelegram(ctx, request.(LinkTelegramRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "LinkTelegram")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		ctx.Error(err)
+		ctx.Status(http.StatusInternalServerError)
+	} else if validResponse, ok := response.(LinkTelegramResponseObject); ok {
+		if err := validResponse.VisitLinkTelegramResponse(ctx.Writer); err != nil {
+			ctx.Error(err)
+		}
+	} else if response != nil {
+		ctx.Error(fmt.Errorf("unexpected response type: %T", response))
+	}
 }
 
 // Health operation middleware
