@@ -1,0 +1,40 @@
+# Деплой Hub на dev при слиянии в dev (ADR-017).
+# Задачи сливаются squash'ем, у коммита в dev свой SHA, поэтому образ sha-<коммит> собирается здесь.
+name: hub-deploy-dev
+
+on:
+  push:
+    branches: [dev]
+    paths:
+      - hub/**
+      - deploy/**
+      - .gitea/workflows/hub-deploy-dev.yaml
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: deploy
+    # Docker хоста и конфиг окружений нужны только деплою; задачам PR они не монтируются.
+    container:
+      image: docker.gitea.com/runner-images:ubuntu-latest
+      volumes:
+        - /var/run/docker.sock:/var/run/docker.sock
+        - /var/lib/himo-hub:/var/lib/himo-hub:ro
+    env:
+      IMAGE: git.hakoniwa.ru/tech/himo-hub
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Тег образа
+        run: echo "TAG=sha-${GITHUB_SHA:0:7}" >> "$GITHUB_ENV"
+
+      - name: Вход в реестр
+        run: echo "${{ secrets.REGISTRY_TOKEN }}" | docker login git.hakoniwa.ru -u "${{ vars.REGISTRY_USER }}" --password-stdin
+
+      - name: Сборка и публикация образа
+        run: |
+          docker build -t "$IMAGE:$TAG" hub
+          docker push "$IMAGE:$TAG"
+
+      - name: Развёртывание
+        run: deploy/deploy.sh dev "$TAG"

@@ -1,10 +1,12 @@
-// Команда hub запускает сервер Himo Hub.
+// Команда hub запускает сервер Himo Hub; hub healthcheck проверяет запущенный сервер.
 package main
 
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -19,9 +21,21 @@ import (
 	"git.hakoniwa.ru/tech/himodameshi/hub/internal/server"
 )
 
-const shutdownTimeout = 10 * time.Second
+const (
+	shutdownTimeout    = 10 * time.Second
+	healthcheckTimeout = 3 * time.Second
+)
 
 func main() {
+	// В образе distroless нет curl, поэтому healthcheck контейнера — подкоманда сервера (ADR-015).
+	if len(os.Args) > 1 && os.Args[1] == "healthcheck" {
+		if err := healthcheck(); err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
+		return
+	}
+
 	log := slog.New(slog.NewJSONHandler(os.Stdout, nil))
 	if err := run(log); err != nil {
 		log.Error("server stopped", "error", err)
@@ -77,6 +91,32 @@ func run(log *slog.Logger) error {
 	defer cancel()
 	if err := srv.Shutdown(shutdownCtx); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		return err
+	}
+	return nil
+}
+
+// healthcheck запрашивает GET /health у сервера в том же контейнере.
+func healthcheck() error {
+	cfg, err := config.Load()
+	if err != nil {
+		return err
+	}
+	host, port, err := net.SplitHostPort(cfg.Addr)
+	if err != nil {
+		return err
+	}
+	if host == "" || host == "0.0.0.0" || host == "::" {
+		host = "127.0.0.1"
+	}
+
+	client := &http.Client{Timeout: healthcheckTimeout}
+	resp, err := client.Get("http://" + net.JoinHostPort(host, port) + "/health")
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("health: status %d", resp.StatusCode)
 	}
 	return nil
 }

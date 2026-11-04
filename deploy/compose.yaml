@@ -1,0 +1,26 @@
+# Окружение Himo Hub на Хакониве (ADR-017) — одно описание для dev и prod.
+# Переменные задаёт deploy/deploy.sh, вручную compose не запускается.
+name: himo-hub-${HIMO_ENV:?}
+
+services:
+  hub:
+    image: git.hakoniwa.ru/tech/himo-hub:${HUB_TAG:?}
+    restart: unless-stopped
+    # Конфиг окружения лежит на сервере, в репозитории его нет.
+    env_file: /var/lib/himo-hub/${HIMO_ENV}/hub.env
+    environment:
+      # Порт внутри контейнера фиксирован, наружу его публикует ports.
+      HUB_ADDR: ":8080"
+      # nginx на хосте приходит в контейнер с адреса шлюза сети Docker.
+      # Подсеть Docker выбирает сам, поэтому доверяем всему его диапазону по умолчанию.
+      TRUSTED_PROXIES: 172.16.0.0/12
+    ports:
+      - 127.0.0.1:${HUB_PORT:?}:8080
+    # PostgreSQL на хосте доступен как host.docker.internal.
+    extra_hosts:
+      - host.docker.internal:host-gateway
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "5"
