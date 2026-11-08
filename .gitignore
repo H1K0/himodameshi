@@ -61,3 +61,11 @@ ehthumbs.db
 *.secret
 # Local app config with the AI service API key
 app/config/dev.json
+
+# ─── Frontend ───────────────────────────────────────────────────────────────────
+# Dependencies
+node_modules/
+# SvelteKit
+.svelte-kit/
+build/
+dist/

@@ -1,0 +1,19 @@
+# Зависимости
+node_modules/
+
+# Файлы сборки SvelteKit
+.svelte-kit/
+build/
+dist/
+
+# Локальные настройки редактора
+.vscode/
+.idea/
+
+# ОС
+.DS_Store
+Thumbs.db
+
+# Переменные окружения (если появятся)
+.env
+.env.*
