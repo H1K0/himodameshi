@@ -1,14 +1,18 @@
-name: ci
+# Проверка приложения в PR в dev и master: форматирование, анализатор, тесты (ADR-017).
+name: app-ci
 
-# Запускаем проверку при создании или обновлении Pull Request в ветку dev
+# Запускаем проверку при создании или обновлении Pull Request в ветки dev и master
+# (в master — релизы из dev и хотфиксы)
 on:
   pull_request:
-    branches: [dev]
-
+    branches: [dev, master]
+    paths:
+      - app/**
+      - .gitea/workflows/app-ci.yaml
 jobs:
   lint-and-test:
     # Используем образ, который поддерживает Flutter 3.41.x и заточен под CI
-    runs-on: host
+    runs-on: ubuntu-latest
     container:
       image: ghcr.io/gmeligio/flutter-android:3.41.6
     
@@ -18,24 +22,24 @@ jobs:
         working-directory: app
 
     steps:
-      - name: Checkout code
+      - name: Получение кода
         uses: actions/checkout@v4
 
-      - name: Install dependencies
+      - name: Зависимости
         # Получаем зависимости. В Gitea Actions (как и в GitHub) кэш pub не настроен,
         # но для маленького проекта это не критично.
         run: flutter pub get
 
-      - name: Check formatting
+      - name: Форматирование
         # Если кто-то забыл отформатировать код, шаг упадет (exit code 1).
         run: dart format --output=none --set-exit-if-changed .
 
-      - name: Analyze project
+      - name: Анализатор
         # Запускаем линтеры и статический анализ.
         # Если найдутся ошибки уровня error/warning, пайплайн остановится.
         run: flutter analyze --no-fatal-infos
 
-      - name: Run tests
+      - name: Тесты
         # Прогоняем юнит-тесты. Так как тестов пока нет, Flutter выдаст 
         # предупреждение, но не упадет с ошибкой (это безопасно).
         run: flutter test
