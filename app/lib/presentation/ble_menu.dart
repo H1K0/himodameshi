@@ -49,8 +49,7 @@ class _BleMenuState extends State<BleMenu> {
     if (dataSource != null) {
       setState(() {
         if (dataSource is BleRealDataSource) {
-          _connectionStatus =
-              (dataSource).bleProvider.connectionStatus;
+          _connectionStatus = (dataSource).bleProvider.connectionStatus;
         } else {
           // В мок-режиме всегда "подключены"
           _connectionStatus = ConnectionStatus.connected;

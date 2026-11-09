@@ -52,7 +52,7 @@ class _TestingScreenState extends State<TestingScreen> {
     final minutes = _totalDuration ~/ 60;
     final seconds = _totalDuration % 60;
     if (minutes > 0) {
-      return 'Старт · ~$minutes мин ${seconds} сек';
+      return 'Старт · ~$minutes мин $seconds сек';
     } else {
       return 'Старт · ~$seconds сек';
     }
@@ -454,7 +454,7 @@ class _TestingScreenState extends State<TestingScreen> {
               ),
             ),
             Text(
-              '~${duration}с',
+              '~$durationс',
               style: TextStyle(
                 fontSize: 10,
                 color: isBlocked

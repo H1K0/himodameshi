@@ -68,7 +68,7 @@ class _StartupScreenState extends State<StartupScreen> {
         _lastTestTime = _getLastTestTimeFromList(recentTests);
       });
     } catch (e) {
-      print('Error loading data: $e');
+      debugPrint('Error loading data: $e');
       setState(() {
         _recentCables = [];
         _totalCables = 0;

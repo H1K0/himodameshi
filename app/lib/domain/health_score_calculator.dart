@@ -95,9 +95,7 @@ class HealthScoreCalculator {
 
     // 7. Расчёт суб-скоров
     final double sc = _calculateContinuityScore(continuityConductors);
-    final double sm = (cmrrCompleted)
-        ? _calculateCmrrScore(cmrrDb)
-        : 0.0;
+    final double sm = (cmrrCompleted) ? _calculateCmrrScore(cmrrDb) : 0.0;
     final double sf = (freqCompleted)
         ? _calculateFreqResponseScore(freqResponseValues)
         : 0.0;

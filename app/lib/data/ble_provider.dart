@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:permission_handler/permission_handler.dart';
 
@@ -245,7 +246,7 @@ class BleProvider {
       _currentMtu = mtu;
       _mtuController.add(mtu);
 
-      print('MTU negotiated: $mtu');
+      debugPrint('MTU negotiated: $mtu');
 
       if (mtu < 100) {
         _lastError = 'MTU слишком мал: $mtu (минимум 100)';
@@ -271,7 +272,7 @@ class BleProvider {
       try {
         await _connectedDevice!.disconnect();
       } catch (e) {
-        print('Disconnect error: $e');
+        debugPrint('Disconnect error: $e');
       }
       _connectedDevice = null;
     }
@@ -294,7 +295,7 @@ class BleProvider {
     }
 
     // TODO: найти нужную характеристику и отправить данные
-    print('Sending command: $data');
+    debugPrint('Sending command: $data');
     return true;
   }
 

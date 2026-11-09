@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'ble_data_source.dart';
 import 'ble_provider.dart';
@@ -70,9 +71,9 @@ class BleRealDataSource implements BleDataSource {
       final jsonString = utf8.decode(data);
       final Map<String, dynamic> packet = jsonDecode(jsonString);
       _controller?.add(packet);
-      print('[REAL] Received: $packet');
+      debugPrint('[REAL] Received: $packet');
     } catch (e) {
-      print('[REAL] Parse error: $e, data: $data');
+      debugPrint('[REAL] Parse error: $e, data: $data');
     }
   }
 
@@ -86,13 +87,13 @@ class BleRealDataSource implements BleDataSource {
   @override
   Future<bool> sendCommand(Map<String, dynamic> command) async {
     if (!bleProvider.isConnected) {
-      print('[REAL] Cannot send command: not connected');
+      debugPrint('[REAL] Cannot send command: not connected');
       return false;
     }
 
     // Используем сохранённую командную характеристику (исправление 2)
     if (_commandCharacteristic == null) {
-      print('[REAL] Command characteristic not found');
+      debugPrint('[REAL] Command characteristic not found');
       return false;
     }
 
@@ -101,10 +102,10 @@ class BleRealDataSource implements BleDataSource {
 
     try {
       await _commandCharacteristic!.write(data, withoutResponse: false);
-      print('[REAL] Command sent: $command');
+      debugPrint('[REAL] Command sent: $command');
       return true;
     } catch (e) {
-      print('[REAL] Send error: $e');
+      debugPrint('[REAL] Send error: $e');
       return false;
     }
   }

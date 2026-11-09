@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
 import 'ble_data_source.dart';
 import 'package:app/domain/health_score_calculator.dart';
@@ -80,7 +81,7 @@ class BleMockDataSource implements BleDataSource {
       _cachedCables = _parseCablesFromJson(jsonData);
       return _cachedCables!;
     } catch (e) {
-      print('[MOCK] Error loading cables: $e');
+      debugPrint('[MOCK] Error loading cables: $e');
       return [];
     }
   }
@@ -99,12 +100,13 @@ class BleMockDataSource implements BleDataSource {
       if (hasCatastrophic) {
         fail++;
       } else if (healthScore != null) {
-        if (healthScore >= 80)
+        if (healthScore >= 80) {
           excellent++;
-        else if (healthScore >= 50)
+        } else if (healthScore >= 50) {
           ok++;
-        else
+        } else {
           fail++;
+        }
       }
     }
 
@@ -131,7 +133,7 @@ class BleMockDataSource implements BleDataSource {
       _cachedRecentTests = _parseRecentTestsFromJson(jsonData, limit);
       return _cachedRecentTests!;
     } catch (e) {
-      print('[MOCK] Error loading recent tests: $e');
+      debugPrint('[MOCK] Error loading recent tests: $e');
       return [];
     }
   }
@@ -229,12 +231,13 @@ class BleMockDataSource implements BleDataSource {
         if (hasCatastrophic) {
           colorCategory = 'red';
         } else if (healthScore != null) {
-          if (healthScore >= 80)
+          if (healthScore >= 80) {
             colorCategory = 'green';
-          else if (healthScore >= 50)
+          } else if (healthScore >= 50) {
             colorCategory = 'yellow';
-          else
+          } else {
             colorCategory = 'red';
+          }
         }
 
         // Форматируем имя для отображения
@@ -263,7 +266,7 @@ class BleMockDataSource implements BleDataSource {
         });
       }
     } catch (e) {
-      print('[MOCK] Parse error: $e');
+      debugPrint('[MOCK] Parse error: $e');
     }
 
     return results;
@@ -307,7 +310,7 @@ class BleMockDataSource implements BleDataSource {
         }
       }
     } catch (e) {
-      print('[MOCK] Error parsing recent tests: $e');
+      debugPrint('[MOCK] Error parsing recent tests: $e');
     }
 
     return tests;
@@ -391,7 +394,7 @@ class BleMockDataSource implements BleDataSource {
 
   @override
   Future<bool> sendCommand(Map<String, dynamic> command) async {
-    print('[MOCK] Sending command: $command');
+    debugPrint('[MOCK] Sending command: $command');
     return true;
   }
 
