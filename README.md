@@ -44,7 +44,8 @@ himodameshi/
 ├── docs/                      # Документация: спецификации, ADR
 ├── .pre-commit-config.yaml    # Проверки перед коммитом
 ├── CONTRIBUTING.md
-└── README.md
+├── README.md
+└── STYLEGUIDE.md              # Стиль кода и документации
 ```
 
 Каталоги `hub/`, `web/`, `contracts/` и `deploy/` появятся вместе с кодом ([ADR-014](docs/adr/014-repository-and-branching.md)).
@@ -104,6 +105,7 @@ Himo Hub разворачивается на домашнем сервере: Do
 | Документ                                                                 | Описание                                                                             |
 | ------------------------------------------------------------------------ | ------------------------------------------------------------------------------------ |
 | [CONTRIBUTING.md](./CONTRIBUTING.md)                                     | Правила работы с репозиторием: ветки, коммиты, PR, ревью, проверки, тесты            |
+| [STYLEGUIDE.md](./STYLEGUIDE.md)                                         | Стайлгайд: язык, именование, комментарии, форматирование кода и документации         |
 | [docs/spec/architecture.md](./docs/spec/architecture.md)                 | Техническая архитектура: компоненты, стек, развёртывание                             |
 | [docs/spec/device/requirements.md](./docs/spec/device/requirements.md)   | Требования к прибору (DVC-N)                                                         |
 | [docs/spec/device/ble-protocol.md](./docs/spec/device/ble-protocol.md)   | BLE-протокол v1.0 — контракт между прошивкой и приложением                           |
