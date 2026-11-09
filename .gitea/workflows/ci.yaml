@@ -1,0 +1,41 @@
+name: ci
+
+# Запускаем проверку при создании или обновлении Pull Request в ветку dev
+on:
+  pull_request:
+    branches: [dev]
+
+jobs:
+  lint-and-test:
+    # Используем образ, который поддерживает Flutter 3.41.x и заточен под CI
+    runs-on: host
+    container:
+      image: ghcr.io/gmeligio/flutter-android:3.41.6
+    
+    # Указываем рабочую директорию, где лежит наш pubspec.yaml
+    defaults:
+      run:
+        working-directory: app
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        # Получаем зависимости. В Gitea Actions (как и в GitHub) кэш pub не настроен,
+        # но для маленького проекта это не критично.
+        run: flutter pub get
+
+      - name: Check formatting
+        # Если кто-то забыл отформатировать код, шаг упадет (exit code 1).
+        run: dart format --output=none --set-exit-if-changed .
+
+      - name: Analyze project
+        # Запускаем линтеры и статический анализ.
+        # Если найдутся ошибки уровня error/warning, пайплайн остановится.
+        run: flutter analyze --no-fatal-infos
+
+      - name: Run tests
+        # Прогоняем юнит-тесты. Так как тестов пока нет, Flutter выдаст 
+        # предупреждение, но не упадет с ошибкой (это безопасно).
+        run: flutter test
