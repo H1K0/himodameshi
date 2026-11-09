@@ -4,7 +4,6 @@ import 'package:app/data/test_models.dart';
 
 void main() {
   group('HealthScoreCalculator', () {
-
     test('Идеальный XLR-кабель должен получать близко к 100 баллам', () {
       // Arrange
       final conductors = [
@@ -68,12 +67,15 @@ void main() {
         cmrrDb: null,
         freqResponseValues: null,
         continuityRun: true,
-        cmrrRun: true,  // <-- ЗАПРОШЕН
+        cmrrRun: true, // <-- ЗАПРОШЕН
         freqRun: false, // <-- НЕ ЗАПРОШЕН
       );
 
       // Assert
-      expect(result.isPartial, true); // Теперь true, так как CMRR запрошен, но не выполнен
+      expect(
+        result.isPartial,
+        true,
+      ); // Теперь true, так как CMRR запрошен, но не выполнен
       expect(result.missingTests, contains('CMRR'));
       expect(result.score, isNotNull);
     });
