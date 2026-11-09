@@ -42,7 +42,7 @@ class _StartupScreenState extends State<StartupScreen> {
     _dataManager.typeStream.listen((_) {
       if (mounted) {
         _updateConnectionStatus();
-        _loadData();  // перезагружаем при смене источника
+        _loadData(); // перезагружаем при смене источника
       }
     });
 
@@ -192,7 +192,8 @@ class _StartupScreenState extends State<StartupScreen> {
     });
   }
 
-  void _showCablePassport(String cableId) { // <-- принимает int
+  void _showCablePassport(String cableId) {
+    // <-- принимает int
     setState(() {
       _selectedCableId = cableId; // сохраняем id
       _currentView = 'cable_passport';
@@ -221,10 +222,7 @@ class _StartupScreenState extends State<StartupScreen> {
   @override
   Widget build(BuildContext context) {
     if (_currentView == 'testing') {
-      return TestingScreen(
-        onBack: _showMain,
-        preselectedCableType: null,
-      );
+      return TestingScreen(onBack: _showMain, preselectedCableType: null);
     }
     if (_currentView == 'device') {
       return DeviceSettingsScreen(onBack: _showMain);
@@ -260,7 +258,10 @@ class _StartupScreenState extends State<StartupScreen> {
 
   Widget _buildMainContent() {
     return SingleChildScrollView(
-      padding: EdgeInsets.only(top: MediaQuery.of(context).padding.top, bottom: 20),
+      padding: EdgeInsets.only(
+        top: MediaQuery.of(context).padding.top,
+        bottom: 20,
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -301,10 +302,14 @@ class _StartupScreenState extends State<StartupScreen> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      _isMockMode ? 'ПРОВЕРКА КАБЕЛЯ (MOCK)' : 'ПРОВЕРКА КАБЕЛЯ',
+                      _isMockMode
+                          ? 'ПРОВЕРКА КАБЕЛЯ (MOCK)'
+                          : 'ПРОВЕРКА КАБЕЛЯ',
                       style: TextStyle(
                         fontSize: 10,
-                        color: _isMockMode ? const Color(0xFF6366F1) : Colors.grey[600],
+                        color: _isMockMode
+                            ? const Color(0xFF6366F1)
+                            : Colors.grey[600],
                         letterSpacing: 1.5,
                       ),
                     ),
@@ -393,19 +398,46 @@ class _StartupScreenState extends State<StartupScreen> {
                   const SizedBox(height: 12),
                   Row(
                     children: [
-                      Expanded(flex: _excellentCount, child: Container(height: 4, color: const Color(0xFF639922))),
-                      Expanded(flex: _okCount, child: Container(height: 4, color: const Color(0xFFEF9F27))),
-                      Expanded(flex: _failCount, child: Container(height: 4, color: const Color(0xFFE24B4A))),
+                      Expanded(
+                        flex: _excellentCount,
+                        child: Container(
+                          height: 4,
+                          color: const Color(0xFF639922),
+                        ),
+                      ),
+                      Expanded(
+                        flex: _okCount,
+                        child: Container(
+                          height: 4,
+                          color: const Color(0xFFEF9F27),
+                        ),
+                      ),
+                      Expanded(
+                        flex: _failCount,
+                        child: Container(
+                          height: 4,
+                          color: const Color(0xFFE24B4A),
+                        ),
+                      ),
                     ],
                   ),
                   const SizedBox(height: 8),
                   Row(
                     children: [
-                      _buildStatusDot(const Color(0xFF97C459), '$_excellentCount ${_getStatusWord(_excellentCount, "исправен", "исправны", "исправно")}'),
+                      _buildStatusDot(
+                        const Color(0xFF97C459),
+                        '$_excellentCount ${_getStatusWord(_excellentCount, "исправен", "исправны", "исправно")}',
+                      ),
                       const SizedBox(width: 16),
-                      _buildStatusDot(const Color(0xFFEF9F27), '$_okCount ${_getStatusWord(_okCount, "внимание", "внимание", "внимание")}'),
+                      _buildStatusDot(
+                        const Color(0xFFEF9F27),
+                        '$_okCount ${_getStatusWord(_okCount, "внимание", "внимание", "внимание")}',
+                      ),
                       const SizedBox(width: 16),
-                      _buildStatusDot(const Color(0xFFE24B4A), '$_failCount ${_getStatusWord(_failCount, "брак", "брак", "брак")}'),
+                      _buildStatusDot(
+                        const Color(0xFFE24B4A),
+                        '$_failCount ${_getStatusWord(_failCount, "брак", "брак", "брак")}',
+                      ),
                     ],
                   ),
                 ],
@@ -495,30 +527,31 @@ class _StartupScreenState extends State<StartupScreen> {
                     ),
                   )
                 else if (_recentCables.isEmpty)
-                    Center(
-                      child: Padding(
-                        padding: const EdgeInsets.all(32),
-                        child: Column(
-                          children: [
-                            const Icon(
-                              Icons.inbox_outlined,
-                              size: 40,
-                              color: Color(0xFF666666),
+                  Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(32),
+                      child: Column(
+                        children: [
+                          const Icon(
+                            Icons.inbox_outlined,
+                            size: 40,
+                            color: Color(0xFF666666),
+                          ),
+                          const SizedBox(height: 12),
+                          Text(
+                            'Нет проверенных кабелей',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey[600],
                             ),
-                            const SizedBox(height: 12),
-                            Text(
-                              'Нет проверенных кабелей',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Colors.grey[600],
-                              ),
-                            ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
-                    )
-                  else
-                    ..._recentCables.map((cable) => Padding(
+                    ),
+                  )
+                else
+                  ..._recentCables.map(
+                    (cable) => Padding(
                       padding: const EdgeInsets.only(bottom: 6),
                       child: _buildHistoryItem(
                         color: _getStatusColor(cable['status'] ?? 'unknown'),
@@ -529,7 +562,8 @@ class _StartupScreenState extends State<StartupScreen> {
                         cableType: cable['cable'] ?? 'unknown',
                         healthScore: _calculateHealthScore(cable),
                       ),
-                    )),
+                    ),
+                  ),
               ],
             ),
           ),
@@ -582,7 +616,8 @@ class _StartupScreenState extends State<StartupScreen> {
 
     switch (status) {
       case 'excellent':
-        return (85.0 + (cmrrDb - 60) * 0.5).toInt(); // 85-100 в зависимости от CMRR
+        return (85.0 + (cmrrDb - 60) * 0.5)
+            .toInt(); // 85-100 в зависимости от CMRR
       case 'ok':
       case 'warning':
         return (50.0 + (cmrrDb - 30) * 0.8).toInt(); // 50-75
@@ -628,7 +663,9 @@ class _StartupScreenState extends State<StartupScreen> {
               width: 6,
               height: 6,
               decoration: BoxDecoration(
-                color: _isMockMode ? const Color(0xFF6366F1) : _getBleDotColor(),
+                color: _isMockMode
+                    ? const Color(0xFF6366F1)
+                    : _getBleDotColor(),
                 shape: BoxShape.circle,
               ),
             ),
@@ -638,7 +675,9 @@ class _StartupScreenState extends State<StartupScreen> {
               style: TextStyle(
                 fontSize: 11,
                 fontWeight: FontWeight.w500,
-                color: _isMockMode ? const Color(0xFF6366F1) : const Color(0xFFEF9F27),
+                color: _isMockMode
+                    ? const Color(0xFF6366F1)
+                    : const Color(0xFFEF9F27),
               ),
             ),
           ],
@@ -653,10 +692,7 @@ class _StartupScreenState extends State<StartupScreen> {
         Container(
           width: 6,
           height: 6,
-          decoration: BoxDecoration(
-            color: color,
-            shape: BoxShape.circle,
-          ),
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
         ),
         const SizedBox(width: 4),
         Text(
@@ -698,10 +734,7 @@ class _StartupScreenState extends State<StartupScreen> {
             const SizedBox(height: 2),
             Text(
               subtitle,
-              style: TextStyle(
-                fontSize: 10,
-                color: Colors.grey[600],
-              ),
+              style: TextStyle(fontSize: 10, color: Colors.grey[600]),
             ),
           ],
         ),

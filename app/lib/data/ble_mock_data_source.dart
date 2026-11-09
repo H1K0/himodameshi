@@ -32,7 +32,9 @@ class BleMockDataSource implements BleDataSource {
     _isActive = true;
 
     try {
-      final jsonString = await rootBundle.loadString('mock/ble_mock_packets.json');
+      final jsonString = await rootBundle.loadString(
+        'mock/ble_mock_packets.json',
+      );
       final Map<String, dynamic> jsonData = jsonDecode(jsonString);
 
       final sequences = jsonData['sequences'] as Map<String, dynamic>;
@@ -49,7 +51,10 @@ class BleMockDataSource implements BleDataSource {
         _controller?.add(packet as Map<String, dynamic>);
       }
 
-      _controller?.add({'type': 'finished', 'message': 'Mock sequence completed'});
+      _controller?.add({
+        'type': 'finished',
+        'message': 'Mock sequence completed',
+      });
     } catch (e) {
       _controller?.addError(e);
     } finally {
@@ -67,7 +72,9 @@ class BleMockDataSource implements BleDataSource {
     if (_cachedCables != null) return _cachedCables!;
 
     try {
-      final jsonString = await rootBundle.loadString('mock/ble_mock_packets.json');
+      final jsonString = await rootBundle.loadString(
+        'mock/ble_mock_packets.json',
+      );
       final Map<String, dynamic> jsonData = jsonDecode(jsonString);
 
       _cachedCables = _parseCablesFromJson(jsonData);
@@ -92,9 +99,12 @@ class BleMockDataSource implements BleDataSource {
       if (hasCatastrophic) {
         fail++;
       } else if (healthScore != null) {
-        if (healthScore >= 80) excellent++;
-        else if (healthScore >= 50) ok++;
-        else fail++;
+        if (healthScore >= 80)
+          excellent++;
+        else if (healthScore >= 50)
+          ok++;
+        else
+          fail++;
       }
     }
 
@@ -113,7 +123,9 @@ class BleMockDataSource implements BleDataSource {
     if (_cachedRecentTests != null) return _cachedRecentTests!;
 
     try {
-      final jsonString = await rootBundle.loadString('mock/ble_mock_packets.json');
+      final jsonString = await rootBundle.loadString(
+        'mock/ble_mock_packets.json',
+      );
       final Map<String, dynamic> jsonData = jsonDecode(jsonString);
 
       _cachedRecentTests = _parseRecentTestsFromJson(jsonData, limit);
@@ -129,13 +141,17 @@ class BleMockDataSource implements BleDataSource {
   // --------------------------------------------------------------------------
 
   /// Парсит все кабели из JSON-файла
-  List<Map<String, dynamic>> _parseCablesFromJson(Map<String, dynamic> jsonData) {
+  List<Map<String, dynamic>> _parseCablesFromJson(
+    Map<String, dynamic> jsonData,
+  ) {
     final List<Map<String, dynamic>> results = [];
 
     try {
-      final continuityResults = jsonData['results']['continuity'] as Map<String, dynamic>;
+      final continuityResults =
+          jsonData['results']['continuity'] as Map<String, dynamic>;
       final cmrrResults = jsonData['results']['cmrr'] as Map<String, dynamic>;
-      final freqResults = jsonData['results']['freq_response'] as Map<String, dynamic>;
+      final freqResults =
+          jsonData['results']['freq_response'] as Map<String, dynamic>;
 
       for (final entry in continuityResults.entries) {
         final String cableId = entry.key;
@@ -163,7 +179,8 @@ class BleMockDataSource implements BleDataSource {
         }
 
         // Формируем проводники
-        final conductorsMap = continuityData['conductors'] as Map<String, dynamic>;
+        final conductorsMap =
+            continuityData['conductors'] as Map<String, dynamic>;
         final List<Map<String, dynamic>> conductors = [];
         for (final condEntry in conductorsMap.entries) {
           conductors.add({
@@ -173,8 +190,8 @@ class BleMockDataSource implements BleDataSource {
         }
 
         // Проверяем катастрофические failure (open/short)
-        final bool hasCatastrophic = conductors.any((c) =>
-        c['s'] == 'open' || c['s'] == 'short'
+        final bool hasCatastrophic = conductors.any(
+          (c) => c['s'] == 'open' || c['s'] == 'short',
         );
 
         // Берём CMRR если есть
@@ -188,7 +205,9 @@ class BleMockDataSource implements BleDataSource {
         List<double>? freqValues;
         if (hasFreq) {
           final freqData = freqResults[cableId];
-          freqValues = (freqData['v'] as List).map((e) => (e as num).toDouble()).toList();
+          freqValues = (freqData['v'] as List)
+              .map((e) => (e as num).toDouble())
+              .toList();
         }
 
         // Рассчитываем Health Score
@@ -210,13 +229,21 @@ class BleMockDataSource implements BleDataSource {
         if (hasCatastrophic) {
           colorCategory = 'red';
         } else if (healthScore != null) {
-          if (healthScore >= 80) colorCategory = 'green';
-          else if (healthScore >= 50) colorCategory = 'yellow';
-          else colorCategory = 'red';
+          if (healthScore >= 80)
+            colorCategory = 'green';
+          else if (healthScore >= 50)
+            colorCategory = 'yellow';
+          else
+            colorCategory = 'red';
         }
 
         // Форматируем имя для отображения
-        String displayName = _formatCableName(cableId, cableTypeStr, continuityData, cmrrResults);
+        String displayName = _formatCableName(
+          cableId,
+          cableTypeStr,
+          continuityData,
+          cmrrResults,
+        );
 
         results.add({
           'id': cableId,
@@ -227,7 +254,12 @@ class BleMockDataSource implements BleDataSource {
           'continuityStatus': continuityData['status'],
           'colorCategory': colorCategory,
           'checksCount': _calculateChecksCount(cableId, continuityData),
-          'lastCheck': _getLastCheckDate(cableId, continuityData, cmrrResults, freqResults),
+          'lastCheck': _getLastCheckDate(
+            cableId,
+            continuityData,
+            cmrrResults,
+            freqResults,
+          ),
         });
       }
     } catch (e) {
@@ -238,7 +270,10 @@ class BleMockDataSource implements BleDataSource {
   }
 
   /// Парсит последние тесты (CMRR) для главного экрана
-  List<Map<String, dynamic>> _parseRecentTestsFromJson(Map<String, dynamic> jsonData, int limit) {
+  List<Map<String, dynamic>> _parseRecentTestsFromJson(
+    Map<String, dynamic> jsonData,
+    int limit,
+  ) {
     final List<Map<String, dynamic>> tests = [];
 
     try {
@@ -279,7 +314,12 @@ class BleMockDataSource implements BleDataSource {
   }
 
   /// Форматирует имя кабеля для отображения в коллекции
-  String _formatCableName(String id, String type, Map<String, dynamic> continuityData, Map<String, dynamic> cmrrResults) {
+  String _formatCableName(
+    String id,
+    String type,
+    Map<String, dynamic> continuityData,
+    Map<String, dynamic> cmrrResults,
+  ) {
     switch (type) {
       case 'jack_ts':
         return 'Jack TS ${_capitalize(continuityData['status'] ?? '')}';
@@ -295,10 +335,14 @@ class BleMockDataSource implements BleDataSource {
   /// Короткое имя для последних тестов
   String _formatCableNameShort(String cableType) {
     switch (cableType) {
-      case 'jack_ts': return 'JACK TS';
-      case 'jack_trs': return 'JACK TRS';
-      case 'xlr': return 'XLR';
-      default: return cableType.toUpperCase();
+      case 'jack_ts':
+        return 'JACK TS';
+      case 'jack_trs':
+        return 'JACK TRS';
+      case 'xlr':
+        return 'XLR';
+      default:
+        return cableType.toUpperCase();
     }
   }
 
@@ -307,14 +351,21 @@ class BleMockDataSource implements BleDataSource {
     return str[0].toUpperCase() + str.substring(1);
   }
 
-  int _calculateChecksCount(String cableId, Map<String, dynamic> continuityData) {
+  int _calculateChecksCount(
+    String cableId,
+    Map<String, dynamic> continuityData,
+  ) {
     // В mock-режиме возвращаем случайное число (или можно парсить из истории)
     // Для реального режима это будет из БД
     return DateTime.now().millisecondsSinceEpoch % 10 + 1;
   }
 
-  String _getLastCheckDate(String cableId, Map<String, dynamic> continuityData,
-      Map<String, dynamic> cmrrResults, Map<String, dynamic> freqResults) {
+  String _getLastCheckDate(
+    String cableId,
+    Map<String, dynamic> continuityData,
+    Map<String, dynamic> cmrrResults,
+    Map<String, dynamic> freqResults,
+  ) {
     // Ищем максимальный ts среди всех результатов для этого кабеля
     int maxTs = continuityData['ts'] ?? 0;
 

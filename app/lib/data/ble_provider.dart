@@ -3,12 +3,7 @@ import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 /// Статус подключения
-enum ConnectionStatus {
-  disconnected,
-  connecting,
-  connected,
-  error,
-}
+enum ConnectionStatus { disconnected, connecting, connected, error }
 
 /// Результат подключения
 enum ConnectionResult {
@@ -35,7 +30,7 @@ class BleProvider {
   // Подписки
   StreamSubscription<BluetoothConnectionState>? _connectionSubscription;
   StreamSubscription<List<ScanResult>>? _scanSubscription;
-  Completer<BluetoothDevice?>? _scanCompleter;   // для safe stop
+  Completer<BluetoothDevice?>? _scanCompleter; // для safe stop
 
   // Геттеры
   BluetoothDevice? get connectedDevice => _connectedDevice;
@@ -199,11 +194,12 @@ class BleProvider {
       }
 
       // Подписываемся на изменения состояния
-      _connectionSubscription = device.connectionState.listen(_onConnectionStateChanged);
+      _connectionSubscription = device.connectionState.listen(
+        _onConnectionStateChanged,
+      );
 
       _setStatus(ConnectionStatus.connected);
       return ConnectionResult.success;
-
     } on TimeoutException {
       _lastError = 'Таймаут подключения';
       _setStatus(ConnectionStatus.error);

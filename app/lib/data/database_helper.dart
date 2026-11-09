@@ -24,11 +24,7 @@ class DatabaseHelper {
     final directory = await getApplicationDocumentsDirectory();
     final path = join(directory.path, 'himo_database.db');
 
-    return await openDatabase(
-      path,
-      version: 1,
-      onCreate: _onCreate,
-    );
+    return await openDatabase(path, version: 1, onCreate: _onCreate);
   }
 
   Future<void> _onCreate(Database db, int version) async {
@@ -158,15 +154,22 @@ class DatabaseHelper {
   // ---------- Вспомогательные методы ----------
   Future<void> importMockDataIfEmpty() async {
     final db = await database;
-    final count = Sqflite.firstIntValue(await db.rawQuery('SELECT COUNT(*) FROM cables'));
+    final count = Sqflite.firstIntValue(
+      await db.rawQuery('SELECT COUNT(*) FROM cables'),
+    );
 
-    if (count != null && count > 0) return; // Если уже есть данные, не импортируем
+    if (count != null && count > 0)
+      return; // Если уже есть данные, не импортируем
 
-    final jsonString = await rootBundle.loadString('mock/ble_mock_packets.json');
+    final jsonString = await rootBundle.loadString(
+      'mock/ble_mock_packets.json',
+    );
     final Map<String, dynamic> jsonData = jsonDecode(jsonString);
-    final continuityResults = jsonData['results']['continuity'] as Map<String, dynamic>;
+    final continuityResults =
+        jsonData['results']['continuity'] as Map<String, dynamic>;
     final cmrrResults = jsonData['results']['cmrr'] as Map<String, dynamic>;
-    final freqResults = jsonData['results']['freq_response'] as Map<String, dynamic>;
+    final freqResults =
+        jsonData['results']['freq_response'] as Map<String, dynamic>;
 
     final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
 
@@ -177,7 +180,14 @@ class DatabaseHelper {
       final continuityData = entry.value;
       final cableTypeStr = continuityData['cable'] ?? 'unknown';
 
-      String displayName = cableIdStr.split('_').map((word) => word.isNotEmpty ? word[0].toUpperCase() + word.substring(1) : '').join(' ');
+      String displayName = cableIdStr
+          .split('_')
+          .map(
+            (word) => word.isNotEmpty
+                ? word[0].toUpperCase() + word.substring(1)
+                : '',
+          )
+          .join(' ');
 
       // ИСПОЛЬЗУЕМ insertCable
       final String cableId = await insertCable({
@@ -188,7 +198,8 @@ class DatabaseHelper {
         'note': 'Импортирован из mock-данных',
       });
 
-      final conductorsMap = continuityData['conductors'] as Map<String, dynamic>;
+      final conductorsMap =
+          continuityData['conductors'] as Map<String, dynamic>;
       final List<Map<String, dynamic>> conductors = [];
       for (final condEntry in conductorsMap.entries) {
         conductors.add({
@@ -204,14 +215,22 @@ class DatabaseHelper {
 
       List<double>? freqValues;
       if (freqResults.containsKey(cableIdStr)) {
-        freqValues = (freqResults[cableIdStr]['v'] as List).map((e) => (e as num).toDouble()).toList();
+        freqValues = (freqResults[cableIdStr]['v'] as List)
+            .map((e) => (e as num).toDouble())
+            .toList();
       }
 
       CableType? cableType;
       switch (cableTypeStr) {
-        case 'xlr': cableType = CableType.xlr; break;
-        case 'jack_trs': cableType = CableType.jackTrs; break;
-        case 'jack_ts': cableType = CableType.jackTs; break;
+        case 'xlr':
+          cableType = CableType.xlr;
+          break;
+        case 'jack_trs':
+          cableType = CableType.jackTrs;
+          break;
+        case 'jack_ts':
+          cableType = CableType.jackTs;
+          break;
       }
 
       int healthScore = 0;
@@ -314,11 +333,14 @@ class DatabaseHelper {
 
   /// Получить последние N тестовых сессий для главного экрана
   /// Возвращает список с информацией о кабеле и результатах CMRR
-  Future<List<Map<String, dynamic>>> getRecentTestSessions({int limit = 6}) async {
+  Future<List<Map<String, dynamic>>> getRecentTestSessions({
+    int limit = 6,
+  }) async {
     final db = await database;
 
     // Убрали WHERE, чтобы показывать ВСЕ сессии, а не только с CMRR
-    final result = await db.rawQuery('''
+    final result = await db.rawQuery(
+      '''
       SELECT 
         ts.id as session_id,
         ts.cable_id,
@@ -334,7 +356,9 @@ class DatabaseHelper {
       LEFT JOIN cmrr_results cr ON ts.id = cr.session_id
       ORDER BY ts.started_at DESC
       LIMIT ?
-    ''', [limit]);
+    ''',
+      [limit],
+    );
 
     // Форматируем результат для UI
     return result.map((row) {
@@ -343,11 +367,14 @@ class DatabaseHelper {
         'cable_id': row['cable_id'],
         'name': row['cable_name'],
         'cable': row['cable_type'],
-        'status': row['cmrr_status'] ?? 'unknown', // Если нет CMRR, будет unknown
+        'status':
+            row['cmrr_status'] ?? 'unknown', // Если нет CMRR, будет unknown
         'cmrr_db': row['cmrr_db']?.toString() ?? '--',
         'ts': row['started_at'],
         'health_score': row['health_score'],
-        'test_type': row['cmrr_db'] != null ? 'cmrr' : 'other', // Помечаем тип теста
+        'test_type': row['cmrr_db'] != null
+            ? 'cmrr'
+            : 'other', // Помечаем тип теста
       };
     }).toList();
   }
@@ -457,12 +484,14 @@ class DatabaseHelper {
       'history': history,
     };
   }
+
   /// Получить полные данные конкретной сессии для отображения результатов
   Future<Map<String, dynamic>?> getSessionDetails(String sessionId) async {
     final db = await database;
 
     // Получаем сессию и кабель
-    final sessionResult = await db.rawQuery('''
+    final sessionResult = await db.rawQuery(
+      '''
       SELECT 
         ts.id as session_id,
         ts.health_score,
@@ -471,17 +500,31 @@ class DatabaseHelper {
       FROM test_sessions ts
       JOIN cables c ON ts.cable_id = c.id
       WHERE ts.id = ?
-    ''', [sessionId]);
+    ''',
+      [sessionId],
+    );
 
     if (sessionResult.isEmpty) return null;
     final session = sessionResult.first;
 
     // Целостность
-    final continuity = await db.query('continuity_results', where: 'session_id = ?', whereArgs: [sessionId]);
+    final continuity = await db.query(
+      'continuity_results',
+      where: 'session_id = ?',
+      whereArgs: [sessionId],
+    );
     // CMRR
-    final cmrr = await db.query('cmrr_results', where: 'session_id = ?', whereArgs: [sessionId]);
+    final cmrr = await db.query(
+      'cmrr_results',
+      where: 'session_id = ?',
+      whereArgs: [sessionId],
+    );
     // АЧХ
-    final freq = await db.query('freq_response_results', where: 'session_id = ?', whereArgs: [sessionId]);
+    final freq = await db.query(
+      'freq_response_results',
+      where: 'session_id = ?',
+      whereArgs: [sessionId],
+    );
 
     return {
       'session_id': session['session_id'],

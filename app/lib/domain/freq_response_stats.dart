@@ -40,7 +40,7 @@ class FreqResponseStats {
     if (values.length < audioEndIndex) {
       throw ArgumentError(
         'FreqResponseStats: ожидается минимум $audioEndIndex точек, '
-            'получено ${values.length}',
+        'получено ${values.length}',
       );
     }
 
@@ -60,18 +60,14 @@ class FreqResponseStats {
 
     final sigma = sqrt(sumSquares / audio.length);
 
-    return FreqResponseStats(
-      peak: peak,
-      sigma: sigma,
-      noSignal: false,
-    );
+    return FreqResponseStats(peak: peak, sigma: sigma, noSignal: false);
   }
 }
 
 class FreqMetrics {
   final String bandwidth3db; // Например, "22.4" или "> 40"
   final String valueAt20khz; // Например, "-2.1"
-  final String unevenness;   // Например, "±0.4"
+  final String unevenness; // Например, "±0.4"
 
   const FreqMetrics({
     required this.bandwidth3db,
@@ -94,10 +90,36 @@ class FreqMetrics {
     bool foundDrop = false;
 
     final List<double> freqTable = [
-      10.0, 13.0, 18.0, 24.0, 31.0, 42.0, 56.0, 74.0, 99.0, 131.0,
-      175.0, 232.0, 309.0, 412.0, 548.0, 730.0, 1000.0, 1293.0, 1721.0,
-      2291.0, 3050.0, 4060.0, 5404.0, 7192.0, 9574.0, 12742.0, 16959.0,
-      22573.0, 30043.0, 40000.0,
+      10.0,
+      13.0,
+      18.0,
+      24.0,
+      31.0,
+      42.0,
+      56.0,
+      74.0,
+      99.0,
+      131.0,
+      175.0,
+      232.0,
+      309.0,
+      412.0,
+      548.0,
+      730.0,
+      1000.0,
+      1293.0,
+      1721.0,
+      2291.0,
+      3050.0,
+      4060.0,
+      5404.0,
+      7192.0,
+      9574.0,
+      12742.0,
+      16959.0,
+      22573.0,
+      30043.0,
+      40000.0,
     ];
 
     // Проверяем только аудиодиапазон (с 20 Гц до 20 кГц)

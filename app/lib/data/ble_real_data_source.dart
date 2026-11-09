@@ -14,8 +14,10 @@ class BleRealDataSource implements BleDataSource {
   StreamController<Map<String, dynamic>>? _controller;
 
   // UUID для CMD и DATA характеристик (замените на реальные)
-  static const String commandCharacteristicUuid = "484D0002-4A5B-6C7D-8E9F-A0B1C2D3E4F5";
-  static const String dataCharacteristicUuid = "484D0003-4A5B-6C7D-8E9F-A0B1C2D3E4F5";
+  static const String commandCharacteristicUuid =
+      "484D0002-4A5B-6C7D-8E9F-A0B1C2D3E4F5";
+  static const String dataCharacteristicUuid =
+      "484D0003-4A5B-6C7D-8E9F-A0B1C2D3E4F5";
 
   BleRealDataSource() {
     _setupDataSubscription();
@@ -51,7 +53,9 @@ class BleRealDataSource implements BleDataSource {
           // Подписываемся на уведомления
           await characteristic.setNotifyValue(true);
           _notificationSubscription?.cancel();
-          _notificationSubscription = characteristic.onValueReceived.listen((value) {
+          _notificationSubscription = characteristic.onValueReceived.listen((
+            value,
+          ) {
             _onDataReceived(value);
           });
         }
@@ -126,11 +130,7 @@ class BleRealDataSource implements BleDataSource {
 
   /// Отправка cancel команды
   Future<bool> cancel() async {
-    final command = {
-      'type': 'cmd',
-      'pv': 1,
-      'cmd': 'cancel',
-    };
+    final command = {'type': 'cmd', 'pv': 1, 'cmd': 'cancel'};
     return await sendCommand(command);
   }
 
@@ -150,7 +150,8 @@ class BleRealDataSource implements BleDataSource {
   void dispose() {
     _notificationSubscription?.cancel();
     if (_controller != null && !_controller!.isClosed) {
-      _controller?.close();}
+      _controller?.close();
+    }
     bleProvider.dispose();
   }
 
@@ -168,17 +169,12 @@ class BleRealDataSource implements BleDataSource {
     final ok = await db.getCablesCountByHealthStatus('ok');
     final fail = await db.getCablesCountByHealthStatus('fail');
 
-    return {
-      'total': total,
-      'excellent': excellent,
-      'ok': ok,
-      'fail': fail,
-    };
+    return {'total': total, 'excellent': excellent, 'ok': ok, 'fail': fail};
   }
 
   @override
   Future<List<Map<String, dynamic>>> getRecentTests({int limit = 6}) async {
     final db = DatabaseHelper();
-    return await db.getRecentTestSessions(limit:limit);
+    return await db.getRecentTestSessions(limit: limit);
   }
 }

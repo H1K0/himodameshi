@@ -5,10 +5,7 @@ import 'ble_provider.dart';
 import 'ble_real_data_source.dart';
 
 /// Тип источника данных
-enum DataSourceType {
-  mock,
-  real,
-}
+enum DataSourceType { mock, real }
 
 /// Менеджер для переключения между mock и real источниками
 class BleDataManager {
@@ -27,13 +24,18 @@ class BleDataManager {
   Stream<DataSourceType> get typeStream => _typeController.stream;
 
   // Поток для уведомления о статусе подключения BLE
-  final _connectionStatusController = StreamController<ConnectionStatus>.broadcast();
-  Stream<ConnectionStatus> get connectionStatusStream => _connectionStatusController.stream;
+  final _connectionStatusController =
+      StreamController<ConnectionStatus>.broadcast();
+  Stream<ConnectionStatus> get connectionStatusStream =>
+      _connectionStatusController.stream;
 
   DataSourceType get currentType => _currentType;
 
   /// Переключение между источниками данных
-  Future<void> switchTo(DataSourceType type, {String sequenceName = 'full_xlr_excellent'}) async {
+  Future<void> switchTo(
+    DataSourceType type, {
+    String sequenceName = 'full_xlr_excellent',
+  }) async {
     // Отключаем текущий источник
     if (_currentDataSource != null) {
       try {
@@ -129,7 +131,8 @@ class BleDataManager {
 
   /// Получить статистику коллекции
   Future<Map<String, dynamic>> getCollectionStatistics() async {
-    if (_currentDataSource == null) return {'total': 0, 'excellent': 0, 'ok': 0, 'fail': 0};
+    if (_currentDataSource == null)
+      return {'total': 0, 'excellent': 0, 'ok': 0, 'fail': 0};
     return await _currentDataSource!.getCollectionStatistics();
   }
 

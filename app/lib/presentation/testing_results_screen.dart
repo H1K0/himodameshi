@@ -18,7 +18,6 @@ class TestingResultsScreen extends StatefulWidget {
   final double? cmrrDb;
   final List<double>? freqValues;
 
-
   // ID сессии для режима "просмотр из истории"
   final String? sessionId;
 
@@ -71,17 +70,22 @@ class _TestingResultsScreenState extends State<TestingResultsScreen> {
     // Парсим данные из БД
     _savedHealthScore = data['health_score'] as int?;
     final cableTypeStr = data['cable_type'] as String;
-    _cableType = cableTypeStr == 'xlr' ? CableType.xlr
+    _cableType = cableTypeStr == 'xlr'
+        ? CableType.xlr
         : (cableTypeStr == 'jack_trs' ? CableType.jackTrs : CableType.jackTs);
 
     _continuityResult = data['continuity'] != null
         ? {'conductors': jsonDecode(data['continuity']['conductors'])}
         : null;
 
-    _cmrrDb = data['cmrr'] != null ? (data['cmrr']['value_db'] as num).toDouble() : null;
+    _cmrrDb = data['cmrr'] != null
+        ? (data['cmrr']['value_db'] as num).toDouble()
+        : null;
 
     _freqValues = data['freq_response'] != null
-        ? (jsonDecode(data['freq_response']['points']) as List).map((e) => (e as num).toDouble()).toList()
+        ? (jsonDecode(data['freq_response']['points']) as List)
+              .map((e) => (e as num).toDouble())
+              .toList()
         : null;
 
     setState(() => _isLoading = false);
@@ -92,8 +96,9 @@ class _TestingResultsScreenState extends State<TestingResultsScreen> {
   // -------------------------------------------------------------------------
 
   HealthScoreResult get _healthResult {
-    final conductors = (_continuityResult?['conductors'] as List?)
-        ?.cast<Map<String, dynamic>>() ??
+    final conductors =
+        (_continuityResult?['conductors'] as List?)
+            ?.cast<Map<String, dynamic>>() ??
         [];
 
     return HealthScoreCalculator.calculate(
@@ -101,9 +106,13 @@ class _TestingResultsScreenState extends State<TestingResultsScreen> {
       continuityConductors: conductors,
       cmrrDb: _cmrrDb,
       freqResponseValues: _freqValues,
-      continuityRun: _continuityResult != null || widget.selectedTests.contains(TestType.continuity),
+      continuityRun:
+          _continuityResult != null ||
+          widget.selectedTests.contains(TestType.continuity),
       cmrrRun: _cmrrDb != null || widget.selectedTests.contains(TestType.cmrr),
-      freqRun: _freqValues != null || widget.selectedTests.contains(TestType.freqResponse),
+      freqRun:
+          _freqValues != null ||
+          widget.selectedTests.contains(TestType.freqResponse),
     );
   }
 
@@ -155,7 +164,8 @@ class _TestingResultsScreenState extends State<TestingResultsScreen> {
   /// Строка результата целостности: диапазон сопротивлений + худший статус
   String get _continuityResultText {
     if (_continuityResult == null) return '—';
-    final conductors = (_continuityResult!['conductors'] as List).cast<Map<String, dynamic>>();
+    final conductors = (_continuityResult!['conductors'] as List)
+        .cast<Map<String, dynamic>>();
     if (conductors.isEmpty) return '—';
 
     final rs = conductors.map((c) => (c['r'] as num).toDouble()).toList();
@@ -174,7 +184,8 @@ class _TestingResultsScreenState extends State<TestingResultsScreen> {
   /// Статус целостности для иконки: ok / warning / fail
   String get _continuityStatus {
     if (_continuityResult == null) return 'fail';
-    final conductors = (_continuityResult!['conductors'] as List).cast<Map<String, dynamic>>();
+    final conductors = (_continuityResult!['conductors'] as List)
+        .cast<Map<String, dynamic>>();
     if (conductors.any((c) => c['s'] == 'open' || c['s'] == 'short')) {
       return 'fail';
     }
@@ -227,7 +238,9 @@ class _TestingResultsScreenState extends State<TestingResultsScreen> {
                   decoration: BoxDecoration(
                     color: const Color(0xFFEF9F27).withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(22),
-                    border: Border.all(color: const Color(0xFFEF9F27).withValues(alpha: 0.4)),
+                    border: Border.all(
+                      color: const Color(0xFFEF9F27).withValues(alpha: 0.4),
+                    ),
                   ),
                   child: const Icon(
                     Icons.refresh,
@@ -347,7 +360,9 @@ class _TestingResultsScreenState extends State<TestingResultsScreen> {
     if (_isLoading) {
       return const Scaffold(
         backgroundColor: Color(0xFF0A0A0A),
-        body: Center(child: CircularProgressIndicator(color: Color(0xFFEF9F27))),
+        body: Center(
+          child: CircularProgressIndicator(color: Color(0xFFEF9F27)),
+        ),
       );
     }
 
@@ -366,11 +381,7 @@ class _TestingResultsScreenState extends State<TestingResultsScreen> {
         ),
         backgroundColor: const Color(0xFF0A0A0A),
         elevation: 0,
-        actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 20),
-          ),
-        ],
+        actions: [Padding(padding: const EdgeInsets.only(right: 20))],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.only(bottom: 80),
@@ -390,14 +401,19 @@ class _TestingResultsScreenState extends State<TestingResultsScreen> {
                     ],
                   ),
                   borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: _statusColor.withValues(alpha: 0.35)),
+                  border: Border.all(
+                    color: _statusColor.withValues(alpha: 0.35),
+                  ),
                 ),
                 child: Padding(
                   padding: const EdgeInsets.all(18),
                   child: Column(
                     children: [
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 4,
+                        ),
                         decoration: BoxDecoration(
                           color: _statusColor.withValues(alpha: 0.18),
                           borderRadius: BorderRadius.circular(20),
@@ -493,8 +509,7 @@ class _TestingResultsScreenState extends State<TestingResultsScreen> {
                     ),
                   const SizedBox(height: 6),
                   // АЧХ (показываем только если был выбран)
-                  if (_freqValues != null)
-                    _buildFreqResponseItem(context),
+                  if (_freqValues != null) _buildFreqResponseItem(context),
                 ],
               ),
             ),
@@ -604,23 +619,27 @@ class _TestingResultsScreenState extends State<TestingResultsScreen> {
               color: isOk
                   ? const Color(0xFF639922).withValues(alpha: 0.12)
                   : (isWarning
-                  ? const Color(0xFFEF9F27).withValues(alpha: 0.12)
-                  : const Color(0xFFE24B4A).withValues(alpha: 0.12)),
+                        ? const Color(0xFFEF9F27).withValues(alpha: 0.12)
+                        : const Color(0xFFE24B4A).withValues(alpha: 0.12)),
               shape: BoxShape.circle,
               border: Border.all(
                 color: isOk
                     ? const Color(0xFF97C459).withValues(alpha: 0.5)
                     : (isWarning
-                    ? const Color(0xFFEF9F27).withValues(alpha: 0.5)
-                    : const Color(0xFFE24B4A).withValues(alpha: 0.5)),
+                          ? const Color(0xFFEF9F27).withValues(alpha: 0.5)
+                          : const Color(0xFFE24B4A).withValues(alpha: 0.5)),
               ),
             ),
             child: Icon(
-              isOk ? Icons.check : (isWarning ? Icons.warning_amber : Icons.close),
+              isOk
+                  ? Icons.check
+                  : (isWarning ? Icons.warning_amber : Icons.close),
               size: 12,
               color: isOk
                   ? const Color(0xFF97C459)
-                  : (isWarning ? const Color(0xFFEF9F27) : const Color(0xFFE24B4A)),
+                  : (isWarning
+                        ? const Color(0xFFEF9F27)
+                        : const Color(0xFFE24B4A)),
             ),
           ),
           const SizedBox(width: 10),
@@ -641,7 +660,9 @@ class _TestingResultsScreenState extends State<TestingResultsScreen> {
               fontWeight: FontWeight.w500,
               color: isOk
                   ? const Color(0xFFFAFAFA)
-                  : (isWarning ? const Color(0xFFEF9F27) : const Color(0xFFE24B4A)),
+                  : (isWarning
+                        ? const Color(0xFFEF9F27)
+                        : const Color(0xFFE24B4A)),
             ),
           ),
         ],
@@ -667,7 +688,9 @@ class _TestingResultsScreenState extends State<TestingResultsScreen> {
                 decoration: BoxDecoration(
                   color: const Color(0xFFEF9F27).withValues(alpha: 0.12),
                   shape: BoxShape.circle,
-                  border: Border.all(color: const Color(0xFFEF9F27).withValues(alpha: 0.5)),
+                  border: Border.all(
+                    color: const Color(0xFFEF9F27).withValues(alpha: 0.5),
+                  ),
                 ),
                 child: const Icon(
                   Icons.info_outline,
@@ -722,10 +745,13 @@ class _TestingResultsScreenState extends State<TestingResultsScreen> {
                   double? contMin;
                   double? contMax;
                   if (_continuityResult != null) {
-                    final conductors = (_continuityResult!['conductors'] as List)
-                        .cast<Map<String, dynamic>>();
+                    final conductors =
+                        (_continuityResult!['conductors'] as List)
+                            .cast<Map<String, dynamic>>();
                     if (conductors.isNotEmpty) {
-                      final rs = conductors.map((c) => (c['r'] as num).toDouble()).toList();
+                      final rs = conductors
+                          .map((c) => (c['r'] as num).toDouble())
+                          .toList();
                       contMin = rs.reduce((a, b) => a < b ? a : b);
                       contMax = rs.reduce((a, b) => a > b ? a : b);
                     }
@@ -749,7 +775,10 @@ class _TestingResultsScreenState extends State<TestingResultsScreen> {
                   );
                 },
                 style: TextButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 9,
+                    vertical: 4,
+                  ),
                   minimumSize: Size.zero,
                   side: const BorderSide(color: Color(0xFF2A2A2A)),
                   shape: RoundedRectangleBorder(
@@ -758,10 +787,7 @@ class _TestingResultsScreenState extends State<TestingResultsScreen> {
                 ),
                 child: const Text(
                   'детали',
-                  style: TextStyle(
-                    fontSize: 10,
-                    color: Color(0xFFAAAAAA),
-                  ),
+                  style: TextStyle(fontSize: 10, color: Color(0xFFAAAAAA)),
                 ),
               ),
             ],
@@ -770,9 +796,7 @@ class _TestingResultsScreenState extends State<TestingResultsScreen> {
           SizedBox(
             width: double.infinity,
             height: 46,
-            child: CustomPaint(
-              painter: _MiniGraphPainter(values: _freqValues),
-            ),
+            child: CustomPaint(painter: _MiniGraphPainter(values: _freqValues)),
           ),
         ],
       ),
@@ -802,7 +826,10 @@ class _MiniGraphPainter extends CustomPainter {
 
     // Если данных нет — рисуем прямую линию по центру
     if (values == null || values!.isEmpty || values!.length < 30) {
-      final graphPaint = Paint()..color = const Color(0xFFEF9F27)..strokeWidth = 1.6..style = PaintingStyle.stroke;
+      final graphPaint = Paint()
+        ..color = const Color(0xFFEF9F27)
+        ..strokeWidth = 1.6
+        ..style = PaintingStyle.stroke;
       canvas.drawLine(Offset(0, 25), Offset(width, 25), graphPaint);
       return;
     }
@@ -903,7 +930,10 @@ class _SaveToCollectionSheetState extends State<_SaveToCollectionSheet> {
       setState(() => _isLoading = false);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Ошибка загрузки кабелей: $e'), backgroundColor: const Color(0xFFE24B4A)),
+          SnackBar(
+            content: Text('Ошибка загрузки кабелей: $e'),
+            backgroundColor: const Color(0xFFE24B4A),
+          ),
         );
       }
     }
@@ -911,10 +941,14 @@ class _SaveToCollectionSheetState extends State<_SaveToCollectionSheet> {
 
   String _cableTypeDisplay(String type) {
     switch (type) {
-      case 'jack_ts': return 'JACK TS';
-      case 'jack_trs': return 'JACK TRS';
-      case 'xlr': return 'XLR';
-      default: return type.toUpperCase();
+      case 'jack_ts':
+        return 'JACK TS';
+      case 'jack_trs':
+        return 'JACK TRS';
+      case 'xlr':
+        return 'XLR';
+      default:
+        return type.toUpperCase();
     }
   }
 
@@ -928,9 +962,12 @@ class _SaveToCollectionSheetState extends State<_SaveToCollectionSheet> {
 
   String _mapCableType(CableType type) {
     switch (type) {
-      case CableType.jackTs: return 'jack_ts';
-      case CableType.jackTrs: return 'jack_trs';
-      case CableType.xlr: return 'xlr';
+      case CableType.jackTs:
+        return 'jack_ts';
+      case CableType.jackTrs:
+        return 'jack_trs';
+      case CableType.xlr:
+        return 'xlr';
     }
   }
 
@@ -967,9 +1004,18 @@ class _SaveToCollectionSheetState extends State<_SaveToCollectionSheet> {
 
   List<List<num>> _generateFreqPoints() {
     return [
-      [10, 0.1], [20, 0.1], [50, 0.0], [100, 0.0], [200, -0.1],
-      [500, -0.2], [1000, -0.2], [2000, -0.3], [5000, -0.5],
-      [10000, -0.8], [20000, -2.1], [40000, -4.5]
+      [10, 0.1],
+      [20, 0.1],
+      [50, 0.0],
+      [100, 0.0],
+      [200, -0.1],
+      [500, -0.2],
+      [1000, -0.2],
+      [2000, -0.3],
+      [5000, -0.5],
+      [10000, -0.8],
+      [20000, -2.1],
+      [40000, -4.5],
     ];
   }
 
@@ -1026,7 +1072,10 @@ class _SaveToCollectionSheetState extends State<_SaveToCollectionSheet> {
       final String name = _nameController.text.trim();
       if (name.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Введите название кабеля'), backgroundColor: Color(0xFFE24B4A)),
+          const SnackBar(
+            content: Text('Введите название кабеля'),
+            backgroundColor: Color(0xFFE24B4A),
+          ),
         );
         return;
       }
@@ -1049,7 +1098,10 @@ class _SaveToCollectionSheetState extends State<_SaveToCollectionSheet> {
         await _saveTestSession(cableId);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Новый кабель сохранён'), backgroundColor: Color(0xFF97C459)),
+            const SnackBar(
+              content: Text('Новый кабель сохранён'),
+              backgroundColor: Color(0xFF97C459),
+            ),
           );
           Navigator.pop(context);
           Navigator.pushReplacement(
@@ -1065,14 +1117,20 @@ class _SaveToCollectionSheetState extends State<_SaveToCollectionSheet> {
       } catch (e) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Ошибка сохранения: $e'), backgroundColor: const Color(0xFFE24B4A)),
+            SnackBar(
+              content: Text('Ошибка сохранения: $e'),
+              backgroundColor: const Color(0xFFE24B4A),
+            ),
           );
         }
       }
     } else {
       if (_selectedCableId == null) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Выберите кабель из списка'), backgroundColor: Color(0xFFEF9F27)),
+          const SnackBar(
+            content: Text('Выберите кабель из списка'),
+            backgroundColor: Color(0xFFEF9F27),
+          ),
         );
         return;
       }
@@ -1083,7 +1141,10 @@ class _SaveToCollectionSheetState extends State<_SaveToCollectionSheet> {
         final cable = _cables.firstWhere((c) => c['id'] == cableId);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Результат добавлен к кабелю ${cable['name']}'), backgroundColor: Color(0xFF97C459)),
+            SnackBar(
+              content: Text('Результат добавлен к кабелю ${cable['name']}'),
+              backgroundColor: Color(0xFF97C459),
+            ),
           );
           Navigator.pop(context);
           Navigator.pushReplacement(
@@ -1099,7 +1160,10 @@ class _SaveToCollectionSheetState extends State<_SaveToCollectionSheet> {
       } catch (e) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Ошибка сохранения: $e'), backgroundColor: const Color(0xFFE24B4A)),
+            SnackBar(
+              content: Text('Ошибка сохранения: $e'),
+              backgroundColor: const Color(0xFFE24B4A),
+            ),
           );
         }
       }
@@ -1148,7 +1212,11 @@ class _SaveToCollectionSheetState extends State<_SaveToCollectionSheet> {
                   ),
                 ),
                 IconButton(
-                  icon: const Icon(Icons.close, size: 20, color: Color(0xFF666666)),
+                  icon: const Icon(
+                    Icons.close,
+                    size: 20,
+                    color: Color(0xFF666666),
+                  ),
                   onPressed: () => Navigator.pop(context),
                   padding: EdgeInsets.zero,
                   constraints: const BoxConstraints(),
@@ -1161,7 +1229,11 @@ class _SaveToCollectionSheetState extends State<_SaveToCollectionSheet> {
             padding: const EdgeInsets.symmetric(horizontal: 20),
             child: Row(
               children: [
-                _buildModeButton('+ Новый кабель', 'Добавить в коллекцию', true),
+                _buildModeButton(
+                  '+ Новый кабель',
+                  'Добавить в коллекцию',
+                  true,
+                ),
                 const SizedBox(width: 6),
                 _buildModeButton('К существующему', 'В историю кабеля', false),
               ],
@@ -1193,10 +1265,7 @@ class _SaveToCollectionSheetState extends State<_SaveToCollectionSheet> {
                 ),
                 child: const Text(
                   'Сохранить',
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w500,
-                  ),
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
                 ),
               ),
             ),
@@ -1219,7 +1288,9 @@ class _SaveToCollectionSheetState extends State<_SaveToCollectionSheet> {
                 ? const Color(0xFFEF9F27).withValues(alpha: 0.08)
                 : const Color(0xFF111111),
             border: Border.all(
-              color: isSelected ? const Color(0xFFEF9F27) : const Color(0xFF1F1F1F),
+              color: isSelected
+                  ? const Color(0xFFEF9F27)
+                  : const Color(0xFF1F1F1F),
             ),
             borderRadius: BorderRadius.circular(8),
           ),
@@ -1230,7 +1301,9 @@ class _SaveToCollectionSheetState extends State<_SaveToCollectionSheet> {
                 style: TextStyle(
                   fontSize: 11,
                   fontWeight: FontWeight.w500,
-                  color: isSelected ? const Color(0xFFFAFAFA) : const Color(0xFFAAAAAA),
+                  color: isSelected
+                      ? const Color(0xFFFAFAFA)
+                      : const Color(0xFFAAAAAA),
                 ),
               ),
               const SizedBox(height: 2),
@@ -1238,7 +1311,9 @@ class _SaveToCollectionSheetState extends State<_SaveToCollectionSheet> {
                 subtitle,
                 style: TextStyle(
                   fontSize: 9,
-                  color: isSelected ? const Color(0xFF888888) : const Color(0xFF666666),
+                  color: isSelected
+                      ? const Color(0xFF888888)
+                      : const Color(0xFF666666),
                 ),
               ),
             ],
@@ -1316,7 +1391,10 @@ class _SaveToCollectionSheetState extends State<_SaveToCollectionSheet> {
             style: const TextStyle(fontSize: 12, color: Color(0xFFFAFAFA)),
             decoration: InputDecoration(
               hintText: 'Например: Mogami студийный',
-              hintStyle: const TextStyle(fontSize: 12, color: Color(0xFF666666)),
+              hintStyle: const TextStyle(
+                fontSize: 12,
+                color: Color(0xFF666666),
+              ),
               filled: true,
               fillColor: const Color(0xFF111111),
               border: OutlineInputBorder(
@@ -1331,7 +1409,10 @@ class _SaveToCollectionSheetState extends State<_SaveToCollectionSheet> {
                 borderRadius: BorderRadius.circular(8),
                 borderSide: const BorderSide(color: Color(0xFFEF9F27)),
               ),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 12,
+                vertical: 10,
+              ),
             ),
           ),
           const SizedBox(height: 14),
@@ -1361,7 +1442,10 @@ class _SaveToCollectionSheetState extends State<_SaveToCollectionSheet> {
             maxLines: 2,
             decoration: InputDecoration(
               hintText: 'Купил в 2024…',
-              hintStyle: const TextStyle(fontSize: 12, color: Color(0xFF666666)),
+              hintStyle: const TextStyle(
+                fontSize: 12,
+                color: Color(0xFF666666),
+              ),
               filled: true,
               fillColor: const Color(0xFF111111),
               border: OutlineInputBorder(
@@ -1376,7 +1460,10 @@ class _SaveToCollectionSheetState extends State<_SaveToCollectionSheet> {
                 borderRadius: BorderRadius.circular(8),
                 borderSide: const BorderSide(color: Color(0xFFEF9F27)),
               ),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 12,
+                vertical: 10,
+              ),
             ),
           ),
           const SizedBox(height: 20),
@@ -1428,13 +1515,19 @@ class _SaveToCollectionSheetState extends State<_SaveToCollectionSheet> {
                   final cable = _cables[index];
                   final isSelected = _selectedCableId == cable['id'].toString();
                   return GestureDetector(
-                    onTap: () => setState(() => _selectedCableId = cable['id'].toString()),
+                    onTap: () => setState(
+                      () => _selectedCableId = cable['id'].toString(),
+                    ),
                     child: Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: isSelected ? const Color(0xFF1A1A1A) : const Color(0xFF111111),
+                        color: isSelected
+                            ? const Color(0xFF1A1A1A)
+                            : const Color(0xFF111111),
                         border: Border.all(
-                          color: isSelected ? const Color(0xFFEF9F27) : const Color(0xFF1F1F1F),
+                          color: isSelected
+                              ? const Color(0xFFEF9F27)
+                              : const Color(0xFF1F1F1F),
                         ),
                         borderRadius: BorderRadius.circular(10),
                       ),
@@ -1473,7 +1566,11 @@ class _SaveToCollectionSheetState extends State<_SaveToCollectionSheet> {
                             ),
                           ),
                           if (isSelected)
-                            const Icon(Icons.check, size: 16, color: Color(0xFFEF9F27)),
+                            const Icon(
+                              Icons.check,
+                              size: 16,
+                              color: Color(0xFFEF9F27),
+                            ),
                         ],
                       ),
                     ),

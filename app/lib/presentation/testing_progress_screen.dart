@@ -3,7 +3,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import '/data/test_models.dart';
-import '/data/mock_test_data_generator.dart';   // ← новый импорт
+import '/data/mock_test_data_generator.dart'; // ← новый импорт
 import 'testing_results_screen.dart';
 
 class TestingProgressScreen extends StatefulWidget {
@@ -81,7 +81,9 @@ class _TestingProgressScreenState extends State<TestingProgressScreen> {
   void _generateResultForCurrentTest() {
     switch (_currentTest) {
       case TestType.continuity:
-        _continuityResult = MockTestDataGenerator.generateContinuity(widget.cableType);
+        _continuityResult = MockTestDataGenerator.generateContinuity(
+          widget.cableType,
+        );
         break;
       case TestType.cmrr:
         _cmrrDb = MockTestDataGenerator.generateCmrr();
@@ -130,7 +132,10 @@ class _TestingProgressScreenState extends State<TestingProgressScreen> {
       }
 
       final elapsed = DateTime.now().difference(_testStartTime!).inMilliseconds;
-      final newProgress = (elapsed / (_testDurationSeconds * 1000)).clamp(0.0, 1.0);
+      final newProgress = (elapsed / (_testDurationSeconds * 1000)).clamp(
+        0.0,
+        1.0,
+      );
 
       setState(() {
         _progress = newProgress;
@@ -194,11 +199,7 @@ class _TestingProgressScreenState extends State<TestingProgressScreen> {
         ),
         backgroundColor: const Color(0xFF0A0A0A),
         elevation: 0,
-        actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 20),
-          ),
-        ],
+        actions: [Padding(padding: const EdgeInsets.only(right: 20))],
       ),
       body: Column(
         children: [
@@ -308,7 +309,10 @@ class _TestingProgressScreenState extends State<TestingProgressScreen> {
 
                   return Container(
                     margin: const EdgeInsets.only(bottom: 6),
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 10,
+                    ),
                     decoration: BoxDecoration(
                       color: isCurrent
                           ? const Color(0xFFEF9F27).withValues(alpha: 0.06)
@@ -327,39 +331,51 @@ class _TestingProgressScreenState extends State<TestingProgressScreen> {
                           height: 22,
                           decoration: BoxDecoration(
                             color: isCompleted
-                                ? const Color(0xFF639922).withValues(alpha: 0.12)
+                                ? const Color(
+                                    0xFF639922,
+                                  ).withValues(alpha: 0.12)
                                 : (isCurrent
-                                ? const Color(0xFFEF9F27).withValues(alpha: 0.15)
-                                : const Color(0xFF1A1A1A)),
+                                      ? const Color(
+                                          0xFFEF9F27,
+                                        ).withValues(alpha: 0.15)
+                                      : const Color(0xFF1A1A1A)),
                             shape: BoxShape.circle,
                             border: Border.all(
                               color: isCompleted
-                                  ? const Color(0xFF97C459).withValues(alpha: 0.5)
+                                  ? const Color(
+                                      0xFF97C459,
+                                    ).withValues(alpha: 0.5)
                                   : (isCurrent
-                                  ? const Color(0xFFEF9F27).withValues(alpha: 0.6)
-                                  : const Color(0xFF2A2A2A)),
+                                        ? const Color(
+                                            0xFFEF9F27,
+                                          ).withValues(alpha: 0.6)
+                                        : const Color(0xFF2A2A2A)),
                             ),
                           ),
                           child: Center(
                             child: isCompleted
-                                ? const Icon(Icons.check, size: 12, color: Color(0xFF97C459))
+                                ? const Icon(
+                                    Icons.check,
+                                    size: 12,
+                                    color: Color(0xFF97C459),
+                                  )
                                 : (isCurrent
-                                ? SizedBox(
-                              width: 8,
-                              height: 8,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 1.5,
-                                color: const Color(0xFFEF9F27),
-                              ),
-                            )
-                                : Text(
-                              '${index + 1}',
-                              style: const TextStyle(
-                                fontSize: 10,
-                                fontWeight: FontWeight.w500,
-                                color: Color(0xFF555555),
-                              ),
-                            )),
+                                      ? SizedBox(
+                                          width: 8,
+                                          height: 8,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 1.5,
+                                            color: const Color(0xFFEF9F27),
+                                          ),
+                                        )
+                                      : Text(
+                                          '${index + 1}',
+                                          style: const TextStyle(
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.w500,
+                                            color: Color(0xFF555555),
+                                          ),
+                                        )),
                           ),
                         ),
                         const SizedBox(width: 10),
@@ -425,10 +441,7 @@ class _ProgressRingPainter extends CustomPainter {
   final double progress;
   final Color color;
 
-  _ProgressRingPainter({
-    required this.progress,
-    required this.color,
-  });
+  _ProgressRingPainter({required this.progress, required this.color});
 
   @override
   void paint(Canvas canvas, Size size) {

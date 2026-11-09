@@ -29,19 +29,12 @@ class MockTestDataGenerator {
 
     for (final name in conductorNames) {
       final conductor = _generateSingleConductor();
-      conductors.add({
-        'name': name,
-        'r': conductor['r'],
-        's': conductor['s'],
-      });
+      conductors.add({'name': name, 'r': conductor['r'], 's': conductor['s']});
     }
 
     final overallStatus = _getOverallContinuityStatus(conductors);
 
-    return {
-      'conductors': conductors,
-      'status': overallStatus,
-    };
+    return {'conductors': conductors, 'status': overallStatus};
   }
 
   static List<String> _getConductorNames(CableType type) {
@@ -78,16 +71,22 @@ class MockTestDataGenerator {
     }
   }
 
-  static String _getOverallContinuityStatus(List<Map<String, dynamic>> conductors) {
+  static String _getOverallContinuityStatus(
+    List<Map<String, dynamic>> conductors,
+  ) {
     bool hasOpen = false;
     bool hasShort = false;
     bool hasWarning = false;
 
     for (final c in conductors) {
       final s = c['s'] as String;
-      if (s == 'open') {hasOpen = true;}
-      else if (s == 'short') {hasShort = true;}
-      else if (s == 'warning') {hasWarning = true;}
+      if (s == 'open') {
+        hasOpen = true;
+      } else if (s == 'short') {
+        hasShort = true;
+      } else if (s == 'warning') {
+        hasWarning = true;
+      }
     }
 
     if (hasOpen || hasShort) return 'fail';
@@ -125,10 +124,36 @@ class MockTestDataGenerator {
 
   /// Частотная таблица из ble-protocol.md (30 точек)
   static const List<double> freqTable = [
-    10.0, 13.0, 18.0, 24.0, 31.0, 42.0, 56.0, 74.0, 99.0, 131.0,
-    175.0, 232.0, 309.0, 412.0, 548.0, 730.0, 1000.0, 1293.0, 1721.0,
-    2291.0, 3050.0, 4060.0, 5404.0, 7192.0, 9574.0, 12742.0, 16959.0,
-    22573.0, 30043.0, 40000.0,
+    10.0,
+    13.0,
+    18.0,
+    24.0,
+    31.0,
+    42.0,
+    56.0,
+    74.0,
+    99.0,
+    131.0,
+    175.0,
+    232.0,
+    309.0,
+    412.0,
+    548.0,
+    730.0,
+    1000.0,
+    1293.0,
+    1721.0,
+    2291.0,
+    3050.0,
+    4060.0,
+    5404.0,
+    7192.0,
+    9574.0,
+    12742.0,
+    16959.0,
+    22573.0,
+    30043.0,
+    40000.0,
   ];
 
   static const int refIndex = 16; // 1000 Гц — опорная точка
@@ -163,9 +188,9 @@ class MockTestDataGenerator {
   /// - на ВЧ (> 1 кГц): плавный завал, нормированный так, чтобы peak в аудио
   ///   диапазоне (индекс 26, 16959 Гц) был равен targetPeak
   static List<double> _buildFreqCurve(double targetPeak) {
-    final double refFreq = freqTable[refIndex];              // 1000 Гц
-    final double maxAudioFreq = freqTable[26];               // 16959 Гц
-    final double logMax = log(maxAudioFreq / refFreq);       // log(16.959)
+    final double refFreq = freqTable[refIndex]; // 1000 Гц
+    final double maxAudioFreq = freqTable[26]; // 16959 Гц
+    final double logMax = log(maxAudioFreq / refFreq); // log(16.959)
 
     final List<double> result = [];
 

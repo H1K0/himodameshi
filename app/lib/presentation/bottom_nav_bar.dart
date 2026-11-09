@@ -14,41 +14,32 @@ class BottomNavBar extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        border: Border(
-          top: BorderSide(
-            color: Colors.grey[800]!,
-            width: 0.5,
-          ),
-        ),
+        border: Border(top: BorderSide(color: Colors.grey[800]!, width: 0.5)),
       ),
       child: NavigationBarTheme(
         data: NavigationBarThemeData(
           indicatorColor: Colors.transparent,
           labelBehavior: NavigationDestinationLabelBehavior.onlyShowSelected,
-          iconTheme: WidgetStateProperty.resolveWith<IconThemeData>(
-                (states) {
-              if (states.contains(WidgetState.selected)) {
-                return const IconThemeData(color: Color(0xFFEF9F27), size: 22);
-              }
-              return const IconThemeData(color: Color(0xFF555555), size: 22);
-            },
-          ),
-          labelTextStyle: WidgetStateProperty.resolveWith<TextStyle>(
-                (states) {
-              if (states.contains(WidgetState.selected)) {
-                return const TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w500,
-                  color: Color(0xFFEF9F27),
-                );
-              }
+          iconTheme: WidgetStateProperty.resolveWith<IconThemeData>((states) {
+            if (states.contains(WidgetState.selected)) {
+              return const IconThemeData(color: Color(0xFFEF9F27), size: 22);
+            }
+            return const IconThemeData(color: Color(0xFF555555), size: 22);
+          }),
+          labelTextStyle: WidgetStateProperty.resolveWith<TextStyle>((states) {
+            if (states.contains(WidgetState.selected)) {
               return const TextStyle(
                 fontSize: 11,
                 fontWeight: FontWeight.w500,
-                color: Color(0xFF555555),
+                color: Color(0xFFEF9F27),
               );
-            },
-          ),
+            }
+            return const TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w500,
+              color: Color(0xFF555555),
+            );
+          }),
         ),
         child: NavigationBar(
           height: 68,

@@ -1,8 +1,4 @@
-enum CableType {
-  jackTs,
-  jackTrs,
-  xlr,
-}
+enum CableType { jackTs, jackTrs, xlr }
 
 extension CableTypeExtension on CableType {
   String get displayName {
@@ -40,11 +36,7 @@ extension CableTypeExtension on CableType {
   }
 }
 
-enum TestType {
-  continuity,
-  cmrr,
-  freqResponse,
-}
+enum TestType { continuity, cmrr, freqResponse }
 
 extension TestTypeExtension on TestType {
   String get displayName {

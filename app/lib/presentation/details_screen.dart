@@ -57,20 +57,15 @@ class _DetailsScreenState extends State<DetailsScreen> {
       healthScore: widget.healthScore,
       continuity: (widget.continuityMin != null && widget.continuityMax != null)
           ? ContinuityInsight(
-        min: widget.continuityMin!,
-        max: widget.continuityMax!,
-      )
+              min: widget.continuityMin!,
+              max: widget.continuityMax!,
+            )
           : null,
-      cmrr: widget.cmrrDb != null
-          ? CmrrInsight(valueDb: widget.cmrrDb!)
-          : null,
+      cmrr: widget.cmrrDb != null ? CmrrInsight(valueDb: widget.cmrrDb!) : null,
       freq: widget.freqHasNoSignal
           ? const FreqInsight(noSignal: true)
           : (widget.freqPeak != null && widget.freqSigma != null)
-          ? FreqInsight(
-        peak: widget.freqPeak,
-        sigma: widget.freqSigma,
-      )
+          ? FreqInsight(peak: widget.freqPeak, sigma: widget.freqSigma)
           : null,
     );
 
@@ -136,7 +131,9 @@ class _DetailsScreenState extends State<DetailsScreen> {
                     title: 'На 20 кГц',
                     value: metrics.valueAt20khz,
                     unit: 'дБ',
-                    valueColor: double.tryParse(metrics.valueAt20khz) != null && double.parse(metrics.valueAt20khz) < -3.0
+                    valueColor:
+                        double.tryParse(metrics.valueAt20khz) != null &&
+                            double.parse(metrics.valueAt20khz) < -3.0
                         ? const Color(0xFFE24B4A) // Красный, если провал
                         : const Color(0xFF97C459), // Зеленый, если норма
                   ),
@@ -223,10 +220,7 @@ class _DetailsScreenState extends State<DetailsScreen> {
         children: [
           Text(
             title.toUpperCase(),
-            style: const TextStyle(
-              fontSize: 8,
-              color: Color(0xFF666666),
-            ),
+            style: const TextStyle(fontSize: 8, color: Color(0xFF666666)),
           ),
           const SizedBox(height: 3),
           RichText(
@@ -242,10 +236,7 @@ class _DetailsScreenState extends State<DetailsScreen> {
                 ),
                 TextSpan(
                   text: ' $unit',
-                  style: const TextStyle(
-                    fontSize: 9,
-                    color: Color(0xFF888888),
-                  ),
+                  style: const TextStyle(fontSize: 9, color: Color(0xFF888888)),
                 ),
               ],
             ),
@@ -273,10 +264,7 @@ class _DetailsScreenState extends State<DetailsScreen> {
             SizedBox(width: 10),
             Text(
               'Анализ результатов...',
-              style: TextStyle(
-                fontSize: 11,
-                color: Color(0xFF888888),
-              ),
+              style: TextStyle(fontSize: 11, color: Color(0xFF888888)),
             ),
           ],
         ),
@@ -374,17 +362,45 @@ class _FrGraphPainter extends CustomPainter {
 
     // Частотная таблица
     final List<double> freqTable = [
-      10.0, 13.0, 18.0, 24.0, 31.0, 42.0, 56.0, 74.0, 99.0, 131.0,
-      175.0, 232.0, 309.0, 412.0, 548.0, 730.0, 1000.0, 1293.0, 1721.0,
-      2291.0, 3050.0, 4060.0, 5404.0, 7192.0, 9574.0, 12742.0, 16959.0,
-      22573.0, 30043.0, 40000.0,
+      10.0,
+      13.0,
+      18.0,
+      24.0,
+      31.0,
+      42.0,
+      56.0,
+      74.0,
+      99.0,
+      131.0,
+      175.0,
+      232.0,
+      309.0,
+      412.0,
+      548.0,
+      730.0,
+      1000.0,
+      1293.0,
+      1721.0,
+      2291.0,
+      3050.0,
+      4060.0,
+      5404.0,
+      7192.0,
+      9574.0,
+      12742.0,
+      16959.0,
+      22573.0,
+      30043.0,
+      40000.0,
     ];
 
     final double minLog = math.log(freqTable[0]);
     final double maxLog = math.log(freqTable[29]);
 
     double getX(int index) {
-      return ((math.log(freqTable[index]) - minLog) / (maxLog - minLog)) * (width - 30) + 15;
+      return ((math.log(freqTable[index]) - minLog) / (maxLog - minLog)) *
+              (width - 30) +
+          15;
     }
 
     // Новая Y-формула. Теперь 0 дБ находится по центру между 30 и 230 (это 130).
@@ -401,15 +417,39 @@ class _FrGraphPainter extends CustomPainter {
 
     // Горизонтальные линии (от 30 до 230)
     for (int db = 3; db >= -3; db--) {
-      canvas.drawLine(Offset(15, getY(db.toDouble())), Offset(width, getY(db.toDouble())), gridPaint);
+      canvas.drawLine(
+        Offset(15, getY(db.toDouble())),
+        Offset(width, getY(db.toDouble())),
+        gridPaint,
+      );
     }
 
     // Вертикальные линии (от 0 до 250)
-    canvas.drawLine(Offset(getX(3), 0), Offset(getX(3), 250), gridPaint);   // 20 Гц
-    canvas.drawLine(Offset(getX(8), 0), Offset(getX(8), 250), gridPaint);   // 100 Гц
-    canvas.drawLine(Offset(getX(16), 0), Offset(getX(16), 250), gridPaint); // 1 кГц
-    canvas.drawLine(Offset(getX(24), 0), Offset(getX(24), 250), gridPaint); // 10 кГц
-    canvas.drawLine(Offset(getX(29), 0), Offset(getX(29), 250), gridPaint); // 40 кГц
+    canvas.drawLine(
+      Offset(getX(3), 0),
+      Offset(getX(3), 250),
+      gridPaint,
+    ); // 20 Гц
+    canvas.drawLine(
+      Offset(getX(8), 0),
+      Offset(getX(8), 250),
+      gridPaint,
+    ); // 100 Гц
+    canvas.drawLine(
+      Offset(getX(16), 0),
+      Offset(getX(16), 250),
+      gridPaint,
+    ); // 1 кГц
+    canvas.drawLine(
+      Offset(getX(24), 0),
+      Offset(getX(24), 250),
+      gridPaint,
+    ); // 10 кГц
+    canvas.drawLine(
+      Offset(getX(29), 0),
+      Offset(getX(29), 250),
+      gridPaint,
+    ); // 40 кГц
 
     // Подписи осей Y (сдвинуты вправо на x=45)
     for (int db = 3; db >= -3; db--) {
@@ -426,7 +466,10 @@ class _FrGraphPainter extends CustomPainter {
 
     // Если данных нет — прямая линия
     if (values == null || values!.isEmpty || values!.length < 30) {
-      final graphPaint = Paint()..color = const Color(0xFFEF9F27)..strokeWidth = 2..style = PaintingStyle.stroke;
+      final graphPaint = Paint()
+        ..color = const Color(0xFFEF9F27)
+        ..strokeWidth = 2
+        ..style = PaintingStyle.stroke;
       canvas.drawLine(Offset(0, getY(0)), Offset(width, getY(0)), graphPaint);
       return;
     }
@@ -436,7 +479,9 @@ class _FrGraphPainter extends CustomPainter {
 
     // Рисуем график по точкам
     final graphPaint = Paint()
-      ..color = hasDrop ? const Color(0xFFE24B4A) : const Color(0xFFEF9F27) // Красный при провале
+      ..color = hasDrop
+          ? const Color(0xFFE24B4A)
+          : const Color(0xFFEF9F27) // Красный при провале
       ..strokeWidth = 2
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round;
@@ -462,10 +507,17 @@ class _FrGraphPainter extends CustomPainter {
     final double y20k = getY(v20k);
 
     final bool isBad20k = v20k < -3.0;
-    final Color pointColor = isBad20k ? const Color(0xFFE24B4A) : const Color(0xFFEF9F27);
+    final Color pointColor = isBad20k
+        ? const Color(0xFFE24B4A)
+        : const Color(0xFFEF9F27);
 
-    final pointPaint = Paint()..color = const Color(0xFF0A0A0A)..style = PaintingStyle.fill;
-    final pointStrokePaint = Paint()..color = pointColor..strokeWidth = 1.5..style = PaintingStyle.stroke;
+    final pointPaint = Paint()
+      ..color = const Color(0xFF0A0A0A)
+      ..style = PaintingStyle.fill;
+    final pointStrokePaint = Paint()
+      ..color = pointColor
+      ..strokeWidth = 1.5
+      ..style = PaintingStyle.stroke;
 
     // Рисуем точку (прижимая её к нижней границе, если она ушла за -3)
     final double displayY = y20k.clamp(30.0, 240.0);
@@ -473,14 +525,24 @@ class _FrGraphPainter extends CustomPainter {
     canvas.drawCircle(Offset(x20k, displayY), 4, pointStrokePaint);
 
     // Рисуем подпись со значением: НАД точкой, если это провал, и ПОД точкой в норме
-    final String labelText = isBad20k ? '${v20k.toStringAsFixed(1)} дБ' : '20 кГц';
+    final String labelText = isBad20k
+        ? '${v20k.toStringAsFixed(1)} дБ'
+        : '20 кГц';
     final double labelY = isBad20k ? displayY - 12 : displayY + 18;
 
     _drawText(canvas, labelText, x20k, labelY);
   }
 
-  void _drawText(Canvas canvas, String text, double x, double y, {bool alignRight = false}) {
-    final paragraphBuilder = ui.ParagraphBuilder(ui.ParagraphStyle(fontSize: 9, textAlign: TextAlign.center));
+  void _drawText(
+    Canvas canvas,
+    String text,
+    double x,
+    double y, {
+    bool alignRight = false,
+  }) {
+    final paragraphBuilder = ui.ParagraphBuilder(
+      ui.ParagraphStyle(fontSize: 9, textAlign: TextAlign.center),
+    );
     paragraphBuilder.addText(text);
     final paragraph = paragraphBuilder.build();
     paragraph.layout(const ui.ParagraphConstraints(width: 100));
@@ -494,7 +556,7 @@ class _FrGraphPainter extends CustomPainter {
 
     // Вычитаем половину высоты текста (примерно 4.5 пикселя), чтобы центр текста
     // совпал с координатой y.
-    canvas.drawParagraph(paragraph, Offset(dx, y-4.5));
+    canvas.drawParagraph(paragraph, Offset(dx, y - 4.5));
   }
 
   @override

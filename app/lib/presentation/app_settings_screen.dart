@@ -30,8 +30,12 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
   }
 
   void _showEditProfileDialog() {
-    final TextEditingController nameController = TextEditingController(text: _userName);
-    final TextEditingController emailController = TextEditingController(text: _userEmail);
+    final TextEditingController nameController = TextEditingController(
+      text: _userName,
+    );
+    final TextEditingController emailController = TextEditingController(
+      text: _userEmail,
+    );
 
     showDialog(
       context: context,
@@ -77,7 +81,10 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
                       borderRadius: BorderRadius.circular(8),
                       borderSide: const BorderSide(color: Color(0xFFEF9F27)),
                     ),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 10,
+                    ),
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -101,7 +108,10 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
                       borderRadius: BorderRadius.circular(8),
                       borderSide: const BorderSide(color: Color(0xFFEF9F27)),
                     ),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 10,
+                    ),
                   ),
                 ),
                 const SizedBox(height: 20),
@@ -217,9 +227,15 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
                               width: 42,
                               height: 42,
                               decoration: BoxDecoration(
-                                color: const Color(0xFFEF9F27).withValues(alpha: 0.12),
+                                color: const Color(
+                                  0xFFEF9F27,
+                                ).withValues(alpha: 0.12),
                                 borderRadius: BorderRadius.circular(21),
-                                border: Border.all(color: const Color(0xFFEF9F27).withValues(alpha: 0.4)),
+                                border: Border.all(
+                                  color: const Color(
+                                    0xFFEF9F27,
+                                  ).withValues(alpha: 0.4),
+                                ),
                               ),
                               child: Center(
                                 child: Text(
@@ -259,8 +275,13 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
                             TextButton(
                               onPressed: _showEditProfileDialog,
                               style: TextButton.styleFrom(
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                                side: const BorderSide(color: Color(0xFF2A2A2A)),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 5,
+                                ),
+                                side: const BorderSide(
+                                  color: Color(0xFF2A2A2A),
+                                ),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(8),
                                 ),
@@ -280,9 +301,15 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
                         Container(
                           padding: const EdgeInsets.all(11),
                           decoration: BoxDecoration(
-                            color: const Color(0xFFEF9F27).withValues(alpha: 0.06),
+                            color: const Color(
+                              0xFFEF9F27,
+                            ).withValues(alpha: 0.06),
                             borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: const Color(0xFFEF9F27).withValues(alpha: 0.25)),
+                            border: Border.all(
+                              color: const Color(
+                                0xFFEF9F27,
+                              ).withValues(alpha: 0.25),
+                            ),
                           ),
                           child: Row(
                             children: [
@@ -367,17 +394,22 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
                     ),
                     child: Column(
                       children: [
-                        _buildSettingsRow(
-                          label: 'Версия',
-                          value: _appVersion,
+                        _buildSettingsRow(label: 'Версия', value: _appVersion),
+                        const Divider(
+                          height: 0.5,
+                          thickness: 0.5,
+                          color: Color(0xFF1A1A1A),
                         ),
-                        const Divider(height: 0.5, thickness: 0.5, color: Color(0xFF1A1A1A)),
                         _buildSettingsButtonRow(
                           label: 'Сайт проекта',
                           value: 'himo.app ↗',
                           onTap: () => _launchUrl(_websiteUrl),
                         ),
-                        const Divider(height: 0.5, thickness: 0.5, color: Color(0xFF1A1A1A)),
+                        const Divider(
+                          height: 0.5,
+                          thickness: 0.5,
+                          color: Color(0xFF1A1A1A),
+                        ),
                         _buildSettingsButtonRow(
                           label: 'Политика приватности',
                           value: '›',
@@ -419,7 +451,11 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
                           label: 'Сообщить об ошибке',
                           onTap: () => _launchUrl(_websiteUrl),
                         ),
-                        const Divider(height: 0.5, thickness: 0.5, color: Color(0xFF1A1A1A)),
+                        const Divider(
+                          height: 0.5,
+                          thickness: 0.5,
+                          color: Color(0xFF1A1A1A),
+                        ),
                         _buildFeedbackRow(
                           icon: Icons.lightbulb_outline,
                           iconColor: const Color(0xFFEF9F27),
@@ -445,10 +481,7 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
     return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
   }
 
-  Widget _buildSettingsRow({
-    required String label,
-    required String value,
-  }) {
+  Widget _buildSettingsRow({required String label, required String value}) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       child: Row(
@@ -460,7 +493,11 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
           ),
           Text(
             value,
-            style: const TextStyle(fontSize: 11, color: Color(0xFFE8E8E8), fontWeight: FontWeight.w500),
+            style: const TextStyle(
+              fontSize: 11,
+              color: Color(0xFFE8E8E8),
+              fontWeight: FontWeight.w500,
+            ),
           ),
         ],
       ),

@@ -3,33 +3,16 @@ import '/data/ble_data_manager.dart';
 import 'cable_passport_screen.dart';
 
 /// Статус фильтрации по цвету
-enum ColorFilter {
-  all,
-  green,
-  yellow,
-  red,
-}
+enum ColorFilter { all, green, yellow, red }
 
 /// Статус фильтрации по типу кабеля
-enum TypeFilter {
-  all,
-  xlr,
-  jackTrs,
-  jackTs,
-}
+enum TypeFilter { all, xlr, jackTrs, jackTs }
 
 /// Направление сортировки
-enum SortDirection {
-  ascending,
-  descending,
-}
+enum SortDirection { ascending, descending }
 
 /// Поле сортировки
-enum SortField {
-  date,
-  healthScore,
-  name,
-}
+enum SortField { date, healthScore, name }
 
 class CollectionScreen extends StatefulWidget {
   const CollectionScreen({super.key});
@@ -100,7 +83,9 @@ class _CollectionScreenState extends State<CollectionScreen> {
     // Поиск по имени
     if (_searchQuery.isNotEmpty) {
       filtered = filtered.where((cable) {
-        return cable['name'].toString().toLowerCase().contains(_searchQuery.toLowerCase());
+        return cable['name'].toString().toLowerCase().contains(
+          _searchQuery.toLowerCase(),
+        );
       }).toList();
     }
 
@@ -114,9 +99,12 @@ class _CollectionScreenState extends State<CollectionScreen> {
         if (cable['hasCatastrophic'] == true) {
           category = 'red';
         } else if (score != null) {
-          if (score >= 80) category = 'green';
-          else if (score >= 50) category = 'yellow';
-          else category = 'red';
+          if (score >= 80)
+            category = 'green';
+          else if (score >= 50)
+            category = 'yellow';
+          else
+            category = 'red';
         }
 
         switch (_colorFilter) {
@@ -165,7 +153,9 @@ class _CollectionScreenState extends State<CollectionScreen> {
           comparison = a['name'].compareTo(b['name']);
           break;
       }
-      return _sortDirection == SortDirection.ascending ? comparison : -comparison;
+      return _sortDirection == SortDirection.ascending
+          ? comparison
+          : -comparison;
     });
 
     setState(() {
@@ -257,7 +247,10 @@ class _CollectionScreenState extends State<CollectionScreen> {
 
   String _getChecksWord(int count) {
     if (count % 10 == 1 && count % 100 != 11) return 'проверка';
-    if (count % 10 >= 2 && count % 10 <= 4 && (count % 100 < 10 || count % 100 >= 20)) return 'проверки';
+    if (count % 10 >= 2 &&
+        count % 10 <= 4 &&
+        (count % 100 < 10 || count % 100 >= 20))
+      return 'проверки';
     return 'проверок';
   }
 
@@ -318,15 +311,24 @@ class _CollectionScreenState extends State<CollectionScreen> {
             itemBuilder: (context) => [
               const PopupMenuItem(
                 value: SortField.date,
-                child: Text('По дате проверки', style: TextStyle(color: Color(0xFFE8E8E8))),
+                child: Text(
+                  'По дате проверки',
+                  style: TextStyle(color: Color(0xFFE8E8E8)),
+                ),
               ),
               const PopupMenuItem(
                 value: SortField.healthScore,
-                child: Text('По Health Score', style: TextStyle(color: Color(0xFFE8E8E8))),
+                child: Text(
+                  'По Health Score',
+                  style: TextStyle(color: Color(0xFFE8E8E8)),
+                ),
               ),
               const PopupMenuItem(
                 value: SortField.name,
-                child: Text('По имени (А–Я)', style: TextStyle(color: Color(0xFFE8E8E8))),
+                child: Text(
+                  'По имени (А–Я)',
+                  style: TextStyle(color: Color(0xFFE8E8E8)),
+                ),
               ),
             ],
           ),
@@ -334,191 +336,238 @@ class _CollectionScreenState extends State<CollectionScreen> {
       ),
       body: _isLoading
           ? const Center(
-        child: CircularProgressIndicator(color: Color(0xFFEF9F27)),
-      )
+              child: CircularProgressIndicator(color: Color(0xFFEF9F27)),
+            )
           : _error.isNotEmpty
           ? Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.error_outline, size: 48, color: Color(0xFFE24B4A)),
-            const SizedBox(height: 16),
-            Text(
-              _error,
-              style: const TextStyle(color: Color(0xFF888888)),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: _loadCables,
-              child: const Text('Повторить'),
-            ),
-          ],
-        ),
-      )
-          : Column(
-        children: [
-          // Поле поиска
-          Padding(
-            padding: const EdgeInsets.fromLTRB(24, 10, 24, 10),
-            child: TextField(
-              controller: _searchController,
-              style: const TextStyle(color: Color(0xFFFAFAFA)),
-              onChanged: _updateSearch,
-              decoration: InputDecoration(
-                hintText: 'Поиск по названию',
-                hintStyle: const TextStyle(color: Color(0xFF666666)),
-                prefixIcon: const Icon(Icons.search, color: Color(0xFF666666), size: 18),
-                filled: true,
-                fillColor: const Color(0xFF111111),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                  borderSide: const BorderSide(color: Color(0xFF1F1F1F)),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                  borderSide: const BorderSide(color: Color(0xFF1F1F1F)),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                  borderSide: const BorderSide(color: Color(0xFFEF9F27)),
-                ),
-                contentPadding: const EdgeInsets.symmetric(vertical: 10),
-              ),
-            ),
-          ),
-          // Чипсы фильтров
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 24),
-            child: Row(
-              children: [
-                _buildFilterChip('Все · ${_allCables.length}', null, _colorFilter == ColorFilter.all && _typeFilter == TypeFilter.all),
-                _buildColorFilterChip('${_getCountByColor('green')}', ColorFilter.green, Colors.green),
-                _buildColorFilterChip('${_getCountByColor('yellow')}', ColorFilter.yellow, Colors.orange),
-                _buildColorFilterChip('${_getCountByColor('red')}', ColorFilter.red, Colors.red),
-                _buildTypeFilterChip('XLR', TypeFilter.xlr),
-                _buildTypeFilterChip('Jack TS', TypeFilter.jackTs),
-                _buildTypeFilterChip('Jack TRS', TypeFilter.jackTrs),
-              ],
-            ),
-          ),
-          const SizedBox(height: 10),
-          // Список кабелей
-          Expanded(
-            child: _filteredCables.isEmpty
-                ? const Center(
-              child: Text(
-                'Нет кабелей',
-                style: TextStyle(color: Color(0xFF888888)),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(
+                    Icons.error_outline,
+                    size: 48,
+                    color: Color(0xFFE24B4A),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    _error,
+                    style: const TextStyle(color: Color(0xFF888888)),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 16),
+                  ElevatedButton(
+                    onPressed: _loadCables,
+                    child: const Text('Повторить'),
+                  ),
+                ],
               ),
             )
-                : ListView.builder(
-              padding: const EdgeInsets.fromLTRB(24, 0, 24, 80),
-              itemCount: _filteredCables.length,
-              itemBuilder: (context, index) {
-                final cable = _filteredCables[index];
-                final int? score = cable['healthScore'];
-                final bool hasCatastrophic = cable['hasCatastrophic'] ?? false;
-
-                Color stripColor = _getScoreColor(score);
-                if (hasCatastrophic) stripColor = const Color(0xFFE24B4A);
-
-                return GestureDetector(
-                  onTap: () => _navigateToCableDetail(cable),
-                  child: Container(
-                    margin: const EdgeInsets.only(bottom: 6),
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF111111),
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: const Color(0xFF1F1F1F)),
-                    ),
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 3,
-                          height: 36,
-                          decoration: BoxDecoration(
-                            color: stripColor,
-                            borderRadius: BorderRadius.circular(2),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  Text(
-                                    cable['name'],
-                                    style: const TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w500,
-                                      color: Color(0xFFFAFAFA),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 6),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFF1A1A1A),
-                                      borderRadius: BorderRadius.circular(3),
-                                    ),
-                                    child: Text(
-                                      _getTypeLabelFromString(cable['cable_type']),
-                                      style: const TextStyle(
-                                        fontSize: 8,
-                                        color: Color(0xFF666666),
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                '${cable['checksCount'] ?? 0} ${_getChecksWord(cable['checksCount'] ?? 0)} · ${cable['lastCheck'] ?? 'нет данных'}',
-                                style: const TextStyle(
-                                  fontSize: 10,
-                                  color: Color(0xFF888888),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          children: [
-                            Text(
-                              _getScoreText(score),
-                              style: const TextStyle(
-                                fontSize: 15,
-                                fontWeight: FontWeight.w500,
-                                color: Color(0xFFFAFAFA),
-                              ),
-                            ),
-                            const SizedBox(height: 2),
-                            const Text(
-                              '/100',
-                              style: TextStyle(
-                                fontSize: 8,
-                                color: Color(0xFF666666),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(width: 8),
-                        const Icon(Icons.chevron_right, size: 16, color: Color(0xFF444444)),
-                      ],
+          : Column(
+              children: [
+                // Поле поиска
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 10, 24, 10),
+                  child: TextField(
+                    controller: _searchController,
+                    style: const TextStyle(color: Color(0xFFFAFAFA)),
+                    onChanged: _updateSearch,
+                    decoration: InputDecoration(
+                      hintText: 'Поиск по названию',
+                      hintStyle: const TextStyle(color: Color(0xFF666666)),
+                      prefixIcon: const Icon(
+                        Icons.search,
+                        color: Color(0xFF666666),
+                        size: 18,
+                      ),
+                      filled: true,
+                      fillColor: const Color(0xFF111111),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide: const BorderSide(color: Color(0xFF1F1F1F)),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide: const BorderSide(color: Color(0xFF1F1F1F)),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide: const BorderSide(color: Color(0xFFEF9F27)),
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(vertical: 10),
                     ),
                   ),
-                );
-              },
+                ),
+                // Чипсы фильтров
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: Row(
+                    children: [
+                      _buildFilterChip(
+                        'Все · ${_allCables.length}',
+                        null,
+                        _colorFilter == ColorFilter.all &&
+                            _typeFilter == TypeFilter.all,
+                      ),
+                      _buildColorFilterChip(
+                        '${_getCountByColor('green')}',
+                        ColorFilter.green,
+                        Colors.green,
+                      ),
+                      _buildColorFilterChip(
+                        '${_getCountByColor('yellow')}',
+                        ColorFilter.yellow,
+                        Colors.orange,
+                      ),
+                      _buildColorFilterChip(
+                        '${_getCountByColor('red')}',
+                        ColorFilter.red,
+                        Colors.red,
+                      ),
+                      _buildTypeFilterChip('XLR', TypeFilter.xlr),
+                      _buildTypeFilterChip('Jack TS', TypeFilter.jackTs),
+                      _buildTypeFilterChip('Jack TRS', TypeFilter.jackTrs),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 10),
+                // Список кабелей
+                Expanded(
+                  child: _filteredCables.isEmpty
+                      ? const Center(
+                          child: Text(
+                            'Нет кабелей',
+                            style: TextStyle(color: Color(0xFF888888)),
+                          ),
+                        )
+                      : ListView.builder(
+                          padding: const EdgeInsets.fromLTRB(24, 0, 24, 80),
+                          itemCount: _filteredCables.length,
+                          itemBuilder: (context, index) {
+                            final cable = _filteredCables[index];
+                            final int? score = cable['healthScore'];
+                            final bool hasCatastrophic =
+                                cable['hasCatastrophic'] ?? false;
+
+                            Color stripColor = _getScoreColor(score);
+                            if (hasCatastrophic)
+                              stripColor = const Color(0xFFE24B4A);
+
+                            return GestureDetector(
+                              onTap: () => _navigateToCableDetail(cable),
+                              child: Container(
+                                margin: const EdgeInsets.only(bottom: 6),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 10,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF111111),
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(
+                                    color: const Color(0xFF1F1F1F),
+                                  ),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Container(
+                                      width: 3,
+                                      height: 36,
+                                      decoration: BoxDecoration(
+                                        color: stripColor,
+                                        borderRadius: BorderRadius.circular(2),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Row(
+                                            children: [
+                                              Text(
+                                                cable['name'],
+                                                style: const TextStyle(
+                                                  fontSize: 12,
+                                                  fontWeight: FontWeight.w500,
+                                                  color: Color(0xFFFAFAFA),
+                                                ),
+                                              ),
+                                              const SizedBox(width: 6),
+                                              Container(
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                      horizontal: 5,
+                                                      vertical: 2,
+                                                    ),
+                                                decoration: BoxDecoration(
+                                                  color: const Color(
+                                                    0xFF1A1A1A,
+                                                  ),
+                                                  borderRadius:
+                                                      BorderRadius.circular(3),
+                                                ),
+                                                child: Text(
+                                                  _getTypeLabelFromString(
+                                                    cable['cable_type'],
+                                                  ),
+                                                  style: const TextStyle(
+                                                    fontSize: 8,
+                                                    color: Color(0xFF666666),
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                          const SizedBox(height: 2),
+                                          Text(
+                                            '${cable['checksCount'] ?? 0} ${_getChecksWord(cable['checksCount'] ?? 0)} · ${cable['lastCheck'] ?? 'нет данных'}',
+                                            style: const TextStyle(
+                                              fontSize: 10,
+                                              color: Color(0xFF888888),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.end,
+                                      children: [
+                                        Text(
+                                          _getScoreText(score),
+                                          style: const TextStyle(
+                                            fontSize: 15,
+                                            fontWeight: FontWeight.w500,
+                                            color: Color(0xFFFAFAFA),
+                                          ),
+                                        ),
+                                        const SizedBox(height: 2),
+                                        const Text(
+                                          '/100',
+                                          style: TextStyle(
+                                            fontSize: 8,
+                                            color: Color(0xFF666666),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(width: 8),
+                                    const Icon(
+                                      Icons.chevron_right,
+                                      size: 16,
+                                      color: Color(0xFF444444),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                ),
+              ],
             ),
-          ),
-        ],
-      ),
     );
   }
 
@@ -531,7 +580,9 @@ class _CollectionScreenState extends State<CollectionScreen> {
           style: TextStyle(
             fontSize: 10,
             fontWeight: FontWeight.w500,
-            color: isSelected ? const Color(0xFFEF9F27) : const Color(0xFFAAAAAA),
+            color: isSelected
+                ? const Color(0xFFEF9F27)
+                : const Color(0xFFAAAAAA),
           ),
         ),
         selected: isSelected,
@@ -549,7 +600,9 @@ class _CollectionScreenState extends State<CollectionScreen> {
         ),
         shape: StadiumBorder(
           side: BorderSide(
-            color: isSelected ? const Color(0xFFEF9F27) : const Color(0xFF1F1F1F),
+            color: isSelected
+                ? const Color(0xFFEF9F27)
+                : const Color(0xFF1F1F1F),
           ),
         ),
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
@@ -557,7 +610,11 @@ class _CollectionScreenState extends State<CollectionScreen> {
     );
   }
 
-  Widget _buildColorFilterChip(String label, ColorFilter filter, Color dotColor) {
+  Widget _buildColorFilterChip(
+    String label,
+    ColorFilter filter,
+    Color dotColor,
+  ) {
     final isSelected = _colorFilter == filter;
     return Padding(
       padding: const EdgeInsets.only(right: 6),
@@ -579,7 +636,9 @@ class _CollectionScreenState extends State<CollectionScreen> {
               style: TextStyle(
                 fontSize: 10,
                 fontWeight: FontWeight.w500,
-                color: isSelected ? const Color(0xFFEF9F27) : const Color(0xFFAAAAAA),
+                color: isSelected
+                    ? const Color(0xFFEF9F27)
+                    : const Color(0xFFAAAAAA),
               ),
             ),
           ],
@@ -593,7 +652,9 @@ class _CollectionScreenState extends State<CollectionScreen> {
         ),
         shape: StadiumBorder(
           side: BorderSide(
-            color: isSelected ? const Color(0xFFEF9F27) : const Color(0xFF1F1F1F),
+            color: isSelected
+                ? const Color(0xFFEF9F27)
+                : const Color(0xFF1F1F1F),
           ),
         ),
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
@@ -611,7 +672,9 @@ class _CollectionScreenState extends State<CollectionScreen> {
           style: TextStyle(
             fontSize: 10,
             fontWeight: FontWeight.w500,
-            color: isSelected ? const Color(0xFFEF9F27) : const Color(0xFFAAAAAA),
+            color: isSelected
+                ? const Color(0xFFEF9F27)
+                : const Color(0xFFAAAAAA),
           ),
         ),
         selected: isSelected,
@@ -623,7 +686,9 @@ class _CollectionScreenState extends State<CollectionScreen> {
         ),
         shape: StadiumBorder(
           side: BorderSide(
-            color: isSelected ? const Color(0xFFEF9F27) : const Color(0xFF1F1F1F),
+            color: isSelected
+                ? const Color(0xFFEF9F27)
+                : const Color(0xFF1F1F1F),
           ),
         ),
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
