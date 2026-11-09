@@ -957,7 +957,7 @@ class _SaveToCollectionSheetState extends State<_SaveToCollectionSheet> {
   }
 
   String _colorToHex(Color color) {
-    return color.value.toRadixString(16).substring(2);
+    return color.toARGB32().toRadixString(16).substring(2);
   }
 
   String _mapCableType(CableType type) {
@@ -1343,7 +1343,7 @@ class _SaveToCollectionSheetState extends State<_SaveToCollectionSheet> {
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
               itemCount: _colorPalette.length,
-              separatorBuilder: (_, __) => const SizedBox(width: 8),
+              separatorBuilder: (_, _) => const SizedBox(width: 8),
               itemBuilder: (context, index) {
                 final color = _colorPalette[index];
                 final isSelected = _selectedColor == color;
@@ -1510,7 +1510,7 @@ class _SaveToCollectionSheetState extends State<_SaveToCollectionSheet> {
               child: ListView.separated(
                 shrinkWrap: true,
                 itemCount: _cables.length,
-                separatorBuilder: (_, __) => const SizedBox(height: 6),
+                separatorBuilder: (_, _) => const SizedBox(height: 6),
                 itemBuilder: (context, index) {
                   final cable = _cables[index];
                   final isSelected = _selectedCableId == cable['id'].toString();

@@ -164,29 +164,6 @@ class _TestingProgressScreenState extends State<TestingProgressScreen> {
     }
   }
 
-  Color _getTestStatusColor(int index) {
-    if (index < _currentTestIndex) {
-      // Завершённый тест — зелёный
-      return const Color(0xFF97C459);
-    } else if (index == _currentTestIndex) {
-      // Текущий тест — оранжевый
-      return const Color(0xFFEF9F27);
-    } else {
-      // Предстоящий тест — серый
-      return const Color(0xFF2A2A2A);
-    }
-  }
-
-  String _getTestStatusIcon(int index) {
-    if (index < _currentTestIndex) {
-      return '✓';
-    } else if (index == _currentTestIndex) {
-      return '';
-    } else {
-      return (index + 1).toString();
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(

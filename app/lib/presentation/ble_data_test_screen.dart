@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../data/ble_data_manager.dart';
 import '../data/ble_real_data_source.dart';
-import '../data/database_helper.dart';
 
 class BleDataTestScreen extends StatefulWidget {
   const BleDataTestScreen({super.key});
@@ -12,11 +11,9 @@ class BleDataTestScreen extends StatefulWidget {
 
 class _BleDataTestScreenState extends State<BleDataTestScreen> {
   final BleDataManager _manager = BleDataManager();
-  final DatabaseHelper _dbHelper = DatabaseHelper();
 
-  List<Map<String, dynamic>> _receivedPackets = [];
+  final List<Map<String, dynamic>> _receivedPackets = [];
   DataSourceType _currentType = DataSourceType.mock;
-  bool _isReceiving = false;
   bool _isSwitching = false;
   bool _isMounted = false;
 
@@ -78,7 +75,6 @@ class _BleDataTestScreenState extends State<BleDataTestScreen> {
     if (!_isMounted) return;
     setState(() {
       _receivedPackets.clear();
-      _isReceiving = true;
     });
     _manager.currentDataSource?.dataStream.listen(
       (packet) {

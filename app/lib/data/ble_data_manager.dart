@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'ble_data_source.dart';
-import 'ble_mock_data_source.dart';
 import 'ble_provider.dart';
 import 'ble_real_data_source.dart';
 
@@ -38,11 +37,7 @@ class BleDataManager {
   }) async {
     // Отключаем текущий источник
     if (_currentDataSource != null) {
-      try {
-        await _currentDataSource!.disconnect();
-      } catch (e) {
-        print('[BLE] Error disconnecting: $e');
-      }
+      await _currentDataSource!.disconnect();
       _currentDataSource = null;
     }
 
@@ -75,8 +70,6 @@ class BleDataManager {
     if (_isConnecting) return;
     _isConnecting = true;
 
-    print('[BLE] Starting background connection...');
-
     // Уведомляем о начале подключения
     if (!_connectionStatusController.isClosed) {
       _connectionStatusController.add(ConnectionStatus.connecting);
@@ -84,7 +77,6 @@ class BleDataManager {
 
     try {
       final result = await realSource.bleProvider.connect();
-      print('[BLE] Connection result: $result');
 
       // Уведомляем о результате подключения
       if (!_connectionStatusController.isClosed) {
@@ -95,7 +87,6 @@ class BleDataManager {
         }
       }
     } catch (e) {
-      print('[BLE] Connection error: $e');
       if (!_connectionStatusController.isClosed) {
         _connectionStatusController.add(ConnectionStatus.error);
       }
@@ -131,8 +122,9 @@ class BleDataManager {
 
   /// Получить статистику коллекции
   Future<Map<String, dynamic>> getCollectionStatistics() async {
-    if (_currentDataSource == null)
+    if (_currentDataSource == null) {
       return {'total': 0, 'excellent': 0, 'ok': 0, 'fail': 0};
+    }
     return await _currentDataSource!.getCollectionStatistics();
   }
 

@@ -8,7 +8,6 @@ import 'database_helper.dart';
 /// Реальный BLE-источник данных
 class BleRealDataSource implements BleDataSource {
   final BleProvider bleProvider = BleProvider();
-  BluetoothCharacteristic? _dataCharacteristic;
   BluetoothCharacteristic? _commandCharacteristic;
   StreamSubscription<List<int>>? _notificationSubscription;
   StreamController<Map<String, dynamic>>? _controller;
@@ -42,14 +41,12 @@ class BleRealDataSource implements BleDataSource {
     await device.discoverServices();
 
     // Сбрасываем сохранённые характеристики перед новым поиском
-    _dataCharacteristic = null;
     _commandCharacteristic = null;
 
     for (final service in device.servicesList) {
       for (final characteristic in service.characteristics) {
         // Ищем DATA характеристику
         if (characteristic.uuid.toString() == dataCharacteristicUuid) {
-          _dataCharacteristic = characteristic;
           // Подписываемся на уведомления
           await characteristic.setNotifyValue(true);
           _notificationSubscription?.cancel();

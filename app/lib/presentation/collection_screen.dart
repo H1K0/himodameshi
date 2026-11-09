@@ -99,12 +99,13 @@ class _CollectionScreenState extends State<CollectionScreen> {
         if (cable['hasCatastrophic'] == true) {
           category = 'red';
         } else if (score != null) {
-          if (score >= 80)
+          if (score >= 80) {
             category = 'green';
-          else if (score >= 50)
+          } else if (score >= 50) {
             category = 'yellow';
-          else
+          } else {
             category = 'red';
+          }
         }
 
         switch (_colorFilter) {
@@ -249,8 +250,9 @@ class _CollectionScreenState extends State<CollectionScreen> {
     if (count % 10 == 1 && count % 100 != 11) return 'проверка';
     if (count % 10 >= 2 &&
         count % 10 <= 4 &&
-        (count % 100 < 10 || count % 100 >= 20))
+        (count % 100 < 10 || count % 100 >= 20)) {
       return 'проверки';
+    }
     return 'проверок';
   }
 
@@ -450,8 +452,9 @@ class _CollectionScreenState extends State<CollectionScreen> {
                                 cable['hasCatastrophic'] ?? false;
 
                             Color stripColor = _getScoreColor(score);
-                            if (hasCatastrophic)
+                            if (hasCatastrophic) {
                               stripColor = const Color(0xFFE24B4A);
+                            }
 
                             return GestureDetector(
                               onTap: () => _navigateToCableDetail(cable),

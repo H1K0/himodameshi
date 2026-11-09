@@ -158,8 +158,9 @@ class DatabaseHelper {
       await db.rawQuery('SELECT COUNT(*) FROM cables'),
     );
 
-    if (count != null && count > 0)
+    if (count != null && count > 0) {
       return; // Если уже есть данные, не импортируем
+    }
 
     final jsonString = await rootBundle.loadString(
       'mock/ble_mock_packets.json',

@@ -62,13 +62,6 @@ class HealthScoreCalculator {
     final bool freqCompleted =
         freqResponseValues != null && freqResponseValues.isNotEmpty;
 
-    // 3. Собираем завершённые тесты
-    final Map<String, bool> completed = {
-      'continuity': continuityCompleted,
-      'cmrr': cmrrCompleted,
-      'freq': freqCompleted,
-    };
-
     // 4. Проверяем, был ли запущен хотя бы один тест
     final bool anyRun = continuityRun || cmrrRun || freqRun;
     if (!anyRun) {
@@ -102,10 +95,10 @@ class HealthScoreCalculator {
 
     // 7. Расчёт суб-скоров
     final double sc = _calculateContinuityScore(continuityConductors);
-    final double sm = (cmrrCompleted && cmrrDb != null)
+    final double sm = (cmrrCompleted)
         ? _calculateCmrrScore(cmrrDb)
         : 0.0;
-    final double sf = (freqCompleted && freqResponseValues != null)
+    final double sf = (freqCompleted)
         ? _calculateFreqResponseScore(freqResponseValues)
         : 0.0;
 
@@ -114,8 +107,9 @@ class HealthScoreCalculator {
 
     // Собираем веса только для тех тестов, которые были ЗАПУЩЕНЫ И ЗАВЕРШЕНЫ
     final Map<String, double> activeWeights = {};
-    if (continuityRun && continuityCompleted)
+    if (continuityRun && continuityCompleted) {
       activeWeights['continuity'] = baseW['continuity']!;
+    }
     if (cmrrRun && cmrrCompleted) activeWeights['cmrr'] = baseW['cmrr']!;
     if (freqRun && freqCompleted) activeWeights['freq'] = baseW['freq']!;
 

@@ -64,7 +64,7 @@ class BottomNavBar extends StatelessWidget {
               selectedIcon: Icon(Icons.settings),
               label: 'Настройки',
             ),
-            const NavigationDestination(
+            NavigationDestination(
               icon: Icon(Icons.data_usage_outlined),
               selectedIcon: Icon(Icons.data_usage),
               label: 'BLE Data',

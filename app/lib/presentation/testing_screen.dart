@@ -493,10 +493,6 @@ class _TsIconPainter extends CustomPainter {
       ..strokeWidth = 1.2
       ..style = PaintingStyle.stroke;
 
-    final fillPaint = Paint()
-      ..color = Colors.white.withValues(alpha: 0.7)
-      ..style = PaintingStyle.fill;
-
     // Корпус разъёма
     canvas.drawRect(const Rect.fromLTWH(2, 9, 10, 12), paint);
     // Контакт

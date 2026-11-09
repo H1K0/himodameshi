@@ -944,7 +944,7 @@ class _CablePassportScreenState extends State<CablePassportScreen> {
                           ),
                         ),
                       );
-                    }).toList(),
+                    }),
                 ],
               ),
             ),
