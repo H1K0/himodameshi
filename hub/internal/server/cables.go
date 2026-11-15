@@ -102,78 +102,84 @@ func (s *Server) UpdateCable(ctx context.Context, request api.UpdateCableRequest
 		if err != nil {
 			return err
 		}
-		if old.ArchivedAt != nil {
-			return errCableArchived
-		}
-		if int(old.Version) != body.Version {
-			current, err := cableDetails(ctx, q, old.ID)
-			if err != nil {
-				return err
-			}
-			return versionConflict(current)
-		}
-		if string(body.CableType) != old.CableType {
-			n, err := q.CountCableTests(ctx, old.ID)
-			if err != nil {
-				return err
-			}
-			if n > 0 {
-				return errCableTypeLocked
-			}
-		}
-		if body.AssigneeId != nil {
-			_, err := q.GetMemberRole(ctx, store.GetMemberRoleParams{TeamID: old.TeamID, UserID: *body.AssigneeId})
-			if errors.Is(err, pgx.ErrNoRows) {
-				return errNotAMember
-			}
-			if err != nil {
-				return err
-			}
-		}
-
-		changes := cableChanges(old, body)
-		assigneeChanged := !sameUser(old.AssigneeID, body.AssigneeId)
-		if len(changes) > 0 || assigneeChanged {
-			seq, err := q.AdvanceChangeSeq(ctx, store.AdvanceChangeSeqParams{ID: old.TeamID, N: 1})
-			if err != nil {
-				return err
-			}
-			if err := q.UpdateCable(ctx, store.UpdateCableParams{
-				ID:         old.ID,
-				Name:       body.Name,
-				CableType:  string(body.CableType),
-				Color:      body.Color,
-				Note:       body.Note,
-				AssigneeID: body.AssigneeId,
-				ChangeSeq:  seq,
-			}); err != nil {
-				return err
-			}
-		}
-		if len(changes) > 0 {
-			if err := insertCableEvent(ctx, q, old, userID, "cable.updated", nil, changes); err != nil {
-				return err
-			}
-		}
-		if assigneeChanged {
-			// При снятии ответственного subject — тот, кого сняли, как и при выходе участника.
-			subject := body.AssigneeId
-			if subject == nil {
-				subject = old.AssigneeID
-			}
-			details := map[string]any{"from": old.AssigneeID, "to": body.AssigneeId}
-			if err := insertCableEvent(ctx, q, old, userID, "cable.assignee_changed", subject, details); err != nil {
-				return err
-			}
-		}
-
-		result, err = cableDetails(ctx, q, old.ID)
+		result, err = applyCableUpdate(ctx, q, old, userID, body)
 		return err
 	})
 	if err != nil {
 		return nil, err
 	}
 	return api.UpdateCable200JSONResponse(result), nil
+}
+
+// applyCableUpdate применяет правку атрибутов к кабелю old, строка команды которого уже
+// заблокирована, и отдаёт новое состояние кабеля. Общая для PUT /cables/{id} и выгрузки.
+func applyCableUpdate(ctx context.Context, q *store.Queries, old store.Cable, userID uuid.UUID, body *api.CableUpdate) (api.Cable, error) {
+	if old.ArchivedAt != nil {
+		return api.Cable{}, errCableArchived
+	}
+	if int(old.Version) != body.Version {
+		current, err := cableDetails(ctx, q, old.ID)
+		if err != nil {
+			return api.Cable{}, err
+		}
+		return api.Cable{}, versionConflict(current)
+	}
+	if string(body.CableType) != old.CableType {
+		n, err := q.CountCableTests(ctx, old.ID)
+		if err != nil {
+			return api.Cable{}, err
+		}
+		if n > 0 {
+			return api.Cable{}, errCableTypeLocked
+		}
+	}
+	if body.AssigneeId != nil {
+		_, err := q.GetMemberRole(ctx, store.GetMemberRoleParams{TeamID: old.TeamID, UserID: *body.AssigneeId})
+		if errors.Is(err, pgx.ErrNoRows) {
+			return api.Cable{}, errNotAMember
+		}
+		if err != nil {
+			return api.Cable{}, err
+		}
+	}
+
+	changes := cableChanges(old, body)
+	assigneeChanged := !sameUser(old.AssigneeID, body.AssigneeId)
+	if len(changes) > 0 || assigneeChanged {
+		seq, err := q.AdvanceChangeSeq(ctx, store.AdvanceChangeSeqParams{ID: old.TeamID, N: 1})
+		if err != nil {
+			return api.Cable{}, err
+		}
+		if err := q.UpdateCable(ctx, store.UpdateCableParams{
+			ID:         old.ID,
+			Name:       body.Name,
+			CableType:  string(body.CableType),
+			Color:      body.Color,
+			Note:       body.Note,
+			AssigneeID: body.AssigneeId,
+			ChangeSeq:  seq,
+		}); err != nil {
+			return api.Cable{}, err
+		}
+	}
+	if len(changes) > 0 {
+		if err := insertCableEvent(ctx, q, old, userID, "cable.updated", nil, changes); err != nil {
+			return api.Cable{}, err
+		}
+	}
+	if assigneeChanged {
+		// При снятии ответственного subject — тот, кого сняли, как и при выходе участника.
+		subject := body.AssigneeId
+		if subject == nil {
+			subject = old.AssigneeID
+		}
+		details := map[string]any{"from": old.AssigneeID, "to": body.AssigneeId}
+		if err := insertCableEvent(ctx, q, old, userID, "cable.assignee_changed", subject, details); err != nil {
+			return api.Cable{}, err
+		}
+	}
+
+	return cableDetails(ctx, q, old.ID)
 }
 
 // DeleteCable окончательно удаляет кабель; тесты удаляются каскадом, записи журнала остаются.
@@ -313,7 +319,7 @@ func insertCableEvent(ctx context.Context, q *store.Queries, cable store.Cable, 
 
 // cableChanges собирает «было / стало» по изменённым атрибутам, кроме ответственного:
 // у него своё событие в журнале.
-func cableChanges(old store.Cable, body *api.UpdateCableJSONRequestBody) map[string]any {
+func cableChanges(old store.Cable, body *api.CableUpdate) map[string]any {
 	changes := map[string]any{}
 	if body.Name != old.Name {
 		changes["name"] = map[string]string{"from": old.Name, "to": body.Name}
@@ -489,20 +495,25 @@ func validCableType(cableType api.CableType) bool {
 	return false
 }
 
-func appendCableUpdateErrors(fields []api.FieldError, body *api.UpdateCableJSONRequestBody) []api.FieldError {
+func appendCableUpdateErrors(fields []api.FieldError, body *api.CableUpdate) []api.FieldError {
 	if body.Version < 1 {
 		fields = append(fields, api.FieldError{Field: "version", Message: "ожидается версия кабеля"})
 	}
-	if strings.TrimSpace(body.Name) == "" || utf8.RuneCountInString(body.Name) > cableNameMaxLen || strings.ContainsRune(body.Name, 0) {
+	return appendCableAttrErrors(fields, body.Name, body.CableType, body.Color, body.Note)
+}
+
+// appendCableAttrErrors проверяет атрибуты, общие для нового кабеля и правки.
+func appendCableAttrErrors(fields []api.FieldError, name string, cableType api.CableType, color string, note *string) []api.FieldError {
+	if strings.TrimSpace(name) == "" || utf8.RuneCountInString(name) > cableNameMaxLen || strings.ContainsRune(name, 0) {
 		fields = append(fields, api.FieldError{Field: "name", Message: "от 1 до 100 символов"})
 	}
-	if !validCableType(body.CableType) {
+	if !validCableType(cableType) {
 		fields = append(fields, api.FieldError{Field: "cable_type", Message: "ожидается jack_ts, jack_trs или xlr"})
 	}
-	if !colorPattern.MatchString(body.Color) {
+	if !colorPattern.MatchString(color) {
 		fields = append(fields, api.FieldError{Field: "color", Message: "ожидается hex без # в нижнем регистре"})
 	}
-	if body.Note != nil && (utf8.RuneCountInString(*body.Note) > cableNoteMaxLen || strings.ContainsRune(*body.Note, 0)) {
+	if note != nil && (utf8.RuneCountInString(*note) > cableNoteMaxLen || strings.ContainsRune(*note, 0)) {
 		fields = append(fields, api.FieldError{Field: "note", Message: "не длиннее 2000 символов"})
 	}
 	return fields

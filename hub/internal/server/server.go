@@ -28,6 +28,7 @@ type DB interface {
 	Pinger
 	store.DBTX
 	Begin(ctx context.Context) (pgx.Tx, error)
+	BeginTx(ctx context.Context, txOptions pgx.TxOptions) (pgx.Tx, error)
 }
 
 type Server struct {

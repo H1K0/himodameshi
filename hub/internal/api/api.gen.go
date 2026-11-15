@@ -69,6 +69,12 @@ const (
 	Unavailable HealthStatus = "unavailable"
 )
 
+// Defines values for ItemStatus.
+const (
+	Accepted ItemStatus = "accepted"
+	Rejected ItemStatus = "rejected"
+)
+
 // Defines values for SortOrder.
 const (
 	Asc  SortOrder = "asc"
@@ -174,6 +180,22 @@ type CableUpdate struct {
 
 	// Color Цветная метка — hex без `#` в нижнем регистре
 	Color   Color      `json:"color"`
+	Name    CableName  `json:"name"`
+	Note    *CableNote `json:"note"`
+	Version int        `json:"version"`
+}
+
+// CableUpdateItem defines model for CableUpdateItem.
+type CableUpdateItem struct {
+	// AssigneeId Ответственный или `null` — не назначен
+	AssigneeId *Uuid     `json:"assignee_id"`
+	CableType  CableType `json:"cable_type"`
+
+	// Color Цветная метка — hex без `#` в нижнем регистре
+	Color Color `json:"color"`
+
+	// Id UUIDv7 (RFC 9562)
+	Id      Uuid       `json:"id"`
 	Name    CableName  `json:"name"`
 	Note    *CableNote `json:"note"`
 	Version int        `json:"version"`
@@ -333,6 +355,16 @@ type InvitationPreview struct {
 	TeamName  string    `json:"team_name"`
 }
 
+// ItemError defines model for ItemError.
+type ItemError struct {
+	// Code Код из таблицы ошибок, а также `cable_not_found` и `id_conflict`
+	Code   string  `json:"code"`
+	Detail *string `json:"detail,omitempty"`
+}
+
+// ItemStatus defines model for ItemStatus.
+type ItemStatus string
+
 // LoginRequest defines model for LoginRequest.
 type LoginRequest struct {
 	// Client `web` — токен в cookie, `app` — токен в теле ответа
@@ -353,6 +385,58 @@ type Member struct {
 // MemberList defines model for MemberList.
 type MemberList struct {
 	Items []Member `json:"items"`
+}
+
+// NewCable defines model for NewCable.
+type NewCable struct {
+	CableType CableType `json:"cable_type"`
+
+	// Color Цветная метка — hex без `#` в нижнем регистре
+	Color Color `json:"color"`
+
+	// CreatedAt Время создания в приложении
+	CreatedAt time.Time `json:"created_at"`
+
+	// Id UUIDv7 (RFC 9562)
+	Id   Uuid       `json:"id"`
+	Name CableName  `json:"name"`
+	Note *CableNote `json:"note"`
+
+	// TeamId UUIDv7 (RFC 9562)
+	TeamId Uuid `json:"team_id"`
+}
+
+// NewTest defines model for NewTest.
+type NewTest struct {
+	AppVersion string `json:"app_version"`
+
+	// CableId UUIDv7 (RFC 9562)
+	CableId Uuid `json:"cable_id"`
+
+	// DeviceId ID прибора (MAC или UUID BLE-устройства)
+	DeviceId        string  `json:"device_id"`
+	FirmwareVersion *string `json:"firmware_version"`
+
+	// HealthIncomplete Health Score неполный — выполнены не все применимые измерения (ADR-011)
+	HealthIncomplete bool `json:"health_incomplete"`
+	HealthScore      *int `json:"health_score"`
+
+	// Id UUIDv7 (RFC 9562)
+	Id Uuid `json:"id"`
+
+	// MeasuredAt Время измерения по часам приложения
+	MeasuredAt time.Time `json:"measured_at"`
+	Note       *string   `json:"note"`
+
+	// Pv Версия BLE-протокола
+	Pv int `json:"pv"`
+
+	// Results Результаты в формате BLE-протокола; ключ есть, только если измерение выполнено,
+	// хотя бы одно обязательно. Незнакомые поля внутри измерений сохраняются без изменений.
+	Results TestResults `json:"results"`
+
+	// RulesVersion Версия правил расчёта вердиктов и Health Score
+	RulesVersion string `json:"rules_version"`
 }
 
 // Nickname Латинские буквы, цифры и `_`; уникален без учёта регистра
@@ -381,6 +465,70 @@ type Problem struct {
 	Status   int           `json:"status"`
 	Title    string        `json:"title"`
 	Type     string        `json:"type"`
+}
+
+// PullRequest defines model for PullRequest.
+type PullRequest struct {
+	// Cables Отслеживаемые кабели команды
+	Cables []Uuid `json:"cables"`
+
+	// Cursor Курсор команды из прошлого ответа; `0` — с начала
+	Cursor int64 `json:"cursor"`
+
+	// TeamId UUIDv7 (RFC 9562)
+	TeamId Uuid `json:"team_id"`
+}
+
+// PullResponse defines model for PullResponse.
+type PullResponse struct {
+	// Cables Отслеживаемые кабели, изменённые после курсора
+	Cables []Cable `json:"cables"`
+
+	// Cursor Новый курсор
+	Cursor int64 `json:"cursor"`
+
+	// DeletedCables Отслеживаемые кабели, которых в команде больше нет
+	DeletedCables []Uuid `json:"deleted_cables"`
+
+	// HasMore Есть ещё изменения — повторить запрос с новым курсором
+	HasMore bool `json:"has_more"`
+
+	// Tests Новые и изменённые тесты отслеживаемых кабелей, по возрастанию номера изменения, до 100
+	Tests []Test `json:"tests"`
+}
+
+// PushCableResult Результат по новому кабелю или правке. `cable` — состояние кабеля на сервере:
+// при `accepted` и при отказе `version_conflict`.
+type PushCableResult struct {
+	Cable *Cable     `json:"cable,omitempty"`
+	Error *ItemError `json:"error,omitempty"`
+
+	// Id UUIDv7 (RFC 9562)
+	Id     Uuid       `json:"id"`
+	Status ItemStatus `json:"status"`
+}
+
+// PushRequest Не больше 100 объектов в сумме по трём разделам
+type PushRequest struct {
+	CableUpdates []CableUpdateItem `json:"cable_updates"`
+	Cables       []NewCable        `json:"cables"`
+	Tests        []NewTest         `json:"tests"`
+}
+
+// PushResponse Результаты в том же порядке, что объекты в запросе
+type PushResponse struct {
+	CableUpdates []PushCableResult `json:"cable_updates"`
+	Cables       []PushCableResult `json:"cables"`
+	Tests        []PushTestResult  `json:"tests"`
+}
+
+// PushTestResult defines model for PushTestResult.
+type PushTestResult struct {
+	Error *ItemError `json:"error,omitempty"`
+
+	// Id UUIDv7 (RFC 9562)
+	Id     Uuid       `json:"id"`
+	Status ItemStatus `json:"status"`
 }
 
 // RegisterRequest defines model for RegisterRequest.
@@ -764,6 +912,12 @@ type ChangePasswordJSONRequestBody = ChangePasswordRequest
 
 // LinkTelegramJSONRequestBody defines body for LinkTelegram for application/json ContentType.
 type LinkTelegramJSONRequestBody = TelegramAuthData
+
+// SyncPullJSONRequestBody defines body for SyncPull for application/json ContentType.
+type SyncPullJSONRequestBody = PullRequest
+
+// SyncPushJSONRequestBody defines body for SyncPush for application/json ContentType.
+type SyncPushJSONRequestBody = PushRequest
 
 // CreateTeamJSONRequestBody defines body for CreateTeam for application/json ContentType.
 type CreateTeamJSONRequestBody = CreateTeamRequest
@@ -1173,6 +1327,12 @@ type ServerInterface interface {
 	// Привязка Telegram
 	// (PUT /api/v1/me/telegram)
 	LinkTelegram(c *gin.Context)
+	// Получить изменения отслеживаемых кабелей
+	// (POST /api/v1/sync/pull)
+	SyncPull(c *gin.Context)
+	// Выгрузить кабели, правки и тесты
+	// (POST /api/v1/sync/push)
+	SyncPush(c *gin.Context)
 	// Мои команды
 	// (GET /api/v1/teams)
 	ListTeams(c *gin.Context, params ListTeamsParams)
@@ -1683,6 +1843,40 @@ func (siw *ServerInterfaceWrapper) LinkTelegram(c *gin.Context) {
 	}
 
 	siw.Handler.LinkTelegram(c)
+}
+
+// SyncPull operation middleware
+func (siw *ServerInterfaceWrapper) SyncPull(c *gin.Context) {
+
+	c.Set(BearerAuthScopes, []string{})
+
+	c.Set(CookieAuthScopes, []string{})
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.SyncPull(c)
+}
+
+// SyncPush operation middleware
+func (siw *ServerInterfaceWrapper) SyncPush(c *gin.Context) {
+
+	c.Set(BearerAuthScopes, []string{})
+
+	c.Set(CookieAuthScopes, []string{})
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.SyncPush(c)
 }
 
 // ListTeams operation middleware
@@ -2276,6 +2470,8 @@ func RegisterHandlersWithOptions(router gin.IRouter, si ServerInterface, options
 	router.PUT(options.BaseURL+"/api/v1/me/password", wrapper.ChangePassword)
 	router.DELETE(options.BaseURL+"/api/v1/me/telegram", wrapper.UnlinkTelegram)
 	router.PUT(options.BaseURL+"/api/v1/me/telegram", wrapper.LinkTelegram)
+	router.POST(options.BaseURL+"/api/v1/sync/pull", wrapper.SyncPull)
+	router.POST(options.BaseURL+"/api/v1/sync/push", wrapper.SyncPush)
 	router.GET(options.BaseURL+"/api/v1/teams", wrapper.ListTeams)
 	router.POST(options.BaseURL+"/api/v1/teams", wrapper.CreateTeam)
 	router.DELETE(options.BaseURL+"/api/v1/teams/:teamId", wrapper.DeleteTeam)
@@ -3188,6 +3384,117 @@ func (response LinkTelegram409ApplicationProblemPlusJSONResponse) VisitLinkTeleg
 	return json.NewEncoder(w).Encode(response)
 }
 
+type SyncPullRequestObject struct {
+	Body *SyncPullJSONRequestBody
+}
+
+type SyncPullResponseObject interface {
+	VisitSyncPullResponse(w http.ResponseWriter) error
+}
+
+type SyncPull200JSONResponse PullResponse
+
+func (response SyncPull200JSONResponse) VisitSyncPullResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type SyncPull400ApplicationProblemPlusJSONResponse struct {
+	BadRequestApplicationProblemPlusJSONResponse
+}
+
+func (response SyncPull400ApplicationProblemPlusJSONResponse) VisitSyncPullResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type SyncPull401ApplicationProblemPlusJSONResponse struct {
+	UnauthorizedApplicationProblemPlusJSONResponse
+}
+
+func (response SyncPull401ApplicationProblemPlusJSONResponse) VisitSyncPullResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type SyncPull403ApplicationProblemPlusJSONResponse struct {
+	ForbiddenApplicationProblemPlusJSONResponse
+}
+
+func (response SyncPull403ApplicationProblemPlusJSONResponse) VisitSyncPullResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type SyncPull426ApplicationProblemPlusJSONResponse struct {
+	AppOutdatedApplicationProblemPlusJSONResponse
+}
+
+func (response SyncPull426ApplicationProblemPlusJSONResponse) VisitSyncPullResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(426)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type SyncPushRequestObject struct {
+	Body *SyncPushJSONRequestBody
+}
+
+type SyncPushResponseObject interface {
+	VisitSyncPushResponse(w http.ResponseWriter) error
+}
+
+type SyncPush200JSONResponse PushResponse
+
+func (response SyncPush200JSONResponse) VisitSyncPushResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type SyncPush400ApplicationProblemPlusJSONResponse struct {
+	BadRequestApplicationProblemPlusJSONResponse
+}
+
+func (response SyncPush400ApplicationProblemPlusJSONResponse) VisitSyncPushResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type SyncPush401ApplicationProblemPlusJSONResponse struct {
+	UnauthorizedApplicationProblemPlusJSONResponse
+}
+
+func (response SyncPush401ApplicationProblemPlusJSONResponse) VisitSyncPushResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type SyncPush426ApplicationProblemPlusJSONResponse struct {
+	AppOutdatedApplicationProblemPlusJSONResponse
+}
+
+func (response SyncPush426ApplicationProblemPlusJSONResponse) VisitSyncPushResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(426)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
 type ListTeamsRequestObject struct {
 	Params ListTeamsParams
 }
@@ -4045,6 +4352,12 @@ type StrictServerInterface interface {
 	// Привязка Telegram
 	// (PUT /api/v1/me/telegram)
 	LinkTelegram(ctx context.Context, request LinkTelegramRequestObject) (LinkTelegramResponseObject, error)
+	// Получить изменения отслеживаемых кабелей
+	// (POST /api/v1/sync/pull)
+	SyncPull(ctx context.Context, request SyncPullRequestObject) (SyncPullResponseObject, error)
+	// Выгрузить кабели, правки и тесты
+	// (POST /api/v1/sync/push)
+	SyncPush(ctx context.Context, request SyncPushRequestObject) (SyncPushResponseObject, error)
 	// Мои команды
 	// (GET /api/v1/teams)
 	ListTeams(ctx context.Context, request ListTeamsRequestObject) (ListTeamsResponseObject, error)
@@ -4678,6 +4991,72 @@ func (sh *strictHandler) LinkTelegram(ctx *gin.Context) {
 		ctx.Status(http.StatusInternalServerError)
 	} else if validResponse, ok := response.(LinkTelegramResponseObject); ok {
 		if err := validResponse.VisitLinkTelegramResponse(ctx.Writer); err != nil {
+			ctx.Error(err)
+		}
+	} else if response != nil {
+		ctx.Error(fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// SyncPull operation middleware
+func (sh *strictHandler) SyncPull(ctx *gin.Context) {
+	var request SyncPullRequestObject
+
+	var body SyncPullJSONRequestBody
+	if err := ctx.ShouldBindJSON(&body); err != nil {
+		ctx.Status(http.StatusBadRequest)
+		ctx.Error(err)
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.SyncPull(ctx, request.(SyncPullRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "SyncPull")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		ctx.Error(err)
+		ctx.Status(http.StatusInternalServerError)
+	} else if validResponse, ok := response.(SyncPullResponseObject); ok {
+		if err := validResponse.VisitSyncPullResponse(ctx.Writer); err != nil {
+			ctx.Error(err)
+		}
+	} else if response != nil {
+		ctx.Error(fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// SyncPush operation middleware
+func (sh *strictHandler) SyncPush(ctx *gin.Context) {
+	var request SyncPushRequestObject
+
+	var body SyncPushJSONRequestBody
+	if err := ctx.ShouldBindJSON(&body); err != nil {
+		ctx.Status(http.StatusBadRequest)
+		ctx.Error(err)
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.SyncPush(ctx, request.(SyncPushRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "SyncPush")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		ctx.Error(err)
+		ctx.Status(http.StatusInternalServerError)
+	} else if validResponse, ok := response.(SyncPushResponseObject); ok {
+		if err := validResponse.VisitSyncPushResponse(ctx.Writer); err != nil {
 			ctx.Error(err)
 		}
 	} else if response != nil {

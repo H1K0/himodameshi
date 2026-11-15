@@ -13,4 +13,5 @@ output-options:
     - invitations
     - cables
     - tests
+    - sync
     - service

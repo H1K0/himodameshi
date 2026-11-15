@@ -46,6 +46,10 @@ var (
 	errCableArchived       = &problem{status: http.StatusConflict, code: "cable_archived"}
 	errCableTypeLocked     = &problem{status: http.StatusConflict, code: "cable_type_locked"}
 	errInternal            = &problem{status: http.StatusInternalServerError, code: "internal_error"}
+
+	// Только в результатах выгрузки по отдельным объектам: статус ответа они не задают.
+	errCableNotFound = &problem{status: http.StatusNotFound, code: "cable_not_found"}
+	errIDConflict    = &problem{status: http.StatusConflict, code: "id_conflict"}
 )
 
 func validationError(fields ...api.FieldError) *problem {
