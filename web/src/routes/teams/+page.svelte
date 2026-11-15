@@ -1,51 +1,108 @@
 <script lang="ts">
-  // 1. Импортируем данные из общего хранилища (обратите внимание на #lib)
-  import { teamsData } from '#lib/store.svelte';
+  import { onMount } from 'svelte';
+  import { goto } from '$app/navigation';
+
+  // Список команд с сервера
+  let teams = $state<any[]>([]);
+  let isLoading = $state(true);
+  let errorMessage = $state('');
 
   // Состояния экранов
   let isCreating = $state(false);
-  let editingTeamId = $state<number | null>(null);
-
-  // Данные для формы создания
   let newTeamName = $state('');
-  
-  // Данные для редактирования
+  let isSubmitting = $state(false);
+
+  // Состояния для редактирования
+  let editingTeamId = $state<string | null>(null);
   let editName = $state('');
   let isEditingName = $state(false);
   let inviteInput = $state('');
   let invitedUsers = $state<string[]>([]);
 
-  // --- ФУНКЦИИ ---
-
-  function createTeam() {
-    if (newTeamName.trim() === '') return;
-    teamsData.push({
-      id: Date.now(),
-      name: newTeamName,
-      members: 'Вы',
-      isBase: false,
-      invited: []
-    });
-    newTeamName = '';
-    isCreating = false;
-  }
-
-  function deleteTeam(id: number) {
-    // Находим индекс и удаляем из глобального массива
-    const index = teamsData.findIndex(t => t.id === id);
-    if (index !== -1) {
-      teamsData.splice(index, 1);
+  // Загружаем команды с сервера
+  async function loadTeams() {
+    isLoading = true;
+    try {
+      const res = await fetch('/api/v1/teams', { credentials: 'include' });
+      if (res.ok) {
+        const data = await res.json();
+        teams = data.items; 
+      } else if (res.status === 401) {
+        goto('/login');
+      } else {
+        errorMessage = 'Не удалось загрузить команды';
+      }
+    } catch (e) {
+      errorMessage = 'Ошибка сервера';
+    } finally {
+      isLoading = false;
     }
   }
 
-  function openSettings(id: number) {
-    const team = teamsData.find(t => t.id === id);
+  onMount(() => {
+    loadTeams();
+  });
+
+  // Создание команды
+  async function createTeam() {
+    if (newTeamName.trim() === '') return;
+    isSubmitting = true;
+    errorMessage = '';
+
+    try {
+      const res = await fetch('/api/v1/teams', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ name: newTeamName })
+      });
+
+      if (res.ok) {
+        const newTeam = await res.json();
+        teams.push(newTeam); 
+        newTeamName = '';
+        isCreating = false;
+      } else {
+        const errorData = await res.json().catch(() => ({}));
+        errorMessage = `Ошибка ${res.status}: ${errorData.code || 'Неизвестная ошибка'}`;
+      }
+    } catch (e) {
+      errorMessage = 'Сервер недоступен';
+    } finally {
+      isSubmitting = false;
+    }
+  }
+
+  // Удаление команды
+  async function deleteTeam(id: string) {
+    if (!confirm('Вы уверены, что хотите удалить команду?')) return;
+    errorMessage = '';
+
+    try {
+      const res = await fetch(`/api/v1/teams/${id}`, {
+        method: 'DELETE',
+        credentials: 'include'
+      });
+
+      if (res.ok || res.status === 204) {
+        teams = teams.filter((t: any) => t.id !== id);
+      } else {
+        errorMessage = 'Не удалось удалить команду';
+      }
+    } catch (e) {
+      errorMessage = 'Ошибка сервера';
+    }
+  }
+
+  // Открытие настроек
+  function openSettings(id: string) {
+    const team = teams.find((t: any) => t.id === id);
     if (!team) return;
     
     editingTeamId = id;
     editName = team.name;
     inviteInput = '';
-    invitedUsers = [...team.invited]; // Копируем массив приглашенных
+    invitedUsers = []; 
     isEditingName = false;
   }
 
@@ -53,20 +110,30 @@
     isEditingName = !isEditingName;
   }
 
-  function getCurrentTeamName() {
-    const team = teamsData.find(t => t.id === editingTeamId);
-    return team ? team.name : editName;
-  }
+  // Сохранение настроек
+  async function saveSettings() {
+    if (!editingTeamId) return;
+    
+    try {
+      const res = await fetch(`/api/v1/teams/${editingTeamId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ name: editName })
+      });
 
-  function saveSettings() {
-    const team = teamsData.find(t => t.id === editingTeamId);
-    if (team) {
-      if (editName.trim() !== '') {
-        team.name = editName;
+      if (res.ok) {
+        const updatedTeam = await res.json();
+        const index = teams.findIndex((t: any) => t.id === editingTeamId);
+        if (index !== -1) teams[index].name = updatedTeam.name;
+        
+        editingTeamId = null;
+      } else {
+        errorMessage = 'Не удалось сохранить настройки';
       }
-      team.invited = [...invitedUsers]; // Сохраняем приглашенных
+    } catch (e) {
+      errorMessage = 'Ошибка сервера при сохранении';
     }
-    editingTeamId = null;
   }
 
   function inviteUser() {
@@ -83,138 +150,140 @@
 
 <div class="teams-page">
   
-  <!-- 1. ЭКРАН СОЗДАНИЯ КОМАНДЫ -->
-  {#if isCreating}
-    <div class="form-container">
-      <h2 class="page-title">Создание новой команды</h2>
-      <input 
-        type="text" 
-        bind:value={newTeamName} 
-        placeholder="Название команды" 
-        class="text-input"
-        onkeydown={(e) => e.key === 'Enter' && createTeam()}
-      />
-      <div class="form-actions">
-        <button class="btn primary" onclick={createTeam}>Создать команду</button>
-        <button class="btn secondary" onclick={() => isCreating = false}>Назад</button>
-      </div>
-    </div>
-
-  <!-- 2. ЭКРАН НАСТРОЕК КОМАНДЫ -->
-  {:else if editingTeamId !== null}
-    <div class="form-container">
-      <!-- Выводим сохраненное имя, а не то, что печатаем -->
-      <h2 class="page-title">Команда “{getCurrentTeamName()}”</h2>
-      
-      <!-- Поле изменения названия -->
-      <div class="input-wrapper">
-        <input 
-          type="text" 
-          bind:value={editName} 
-          class="text-input"
-          class:editing={isEditingName}
-          disabled={!isEditingName}
-          placeholder="Название команды"
-        />
-        <button class="input-icon-btn" onclick={toggleNameEdit} aria-label="Редактировать">
-          {#if isEditingName}
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
-          {:else}
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
-          {/if}
-        </button>
-      </div>
-
-      <!-- Поле добавления участников -->
-      <div class="input-wrapper">
-        <input 
-          type="text" 
-          bind:value={inviteInput} 
-          placeholder="Добавьте пользователя в команду по его логину" 
-          class="text-input"
-          onkeydown={(e) => e.key === 'Enter' && inviteInput.trim() !== '' && inviteUser()}
-        />
-        <button 
-          class="input-icon-btn" 
-          onclick={inviteUser} 
-          disabled={inviteInput.trim() === ''}
-          aria-label="Найти"
-        >
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-        </button>
-      </div>
-
-      <!-- Общий блок участников -->
-      {#if invitedUsers.length > 0}
-        <div class="participants-container">
-          {#each invitedUsers as user, index}
-            <div class="participant-row">
-              <span class="participant-name">{user}</span>
-              <span class="participant-status">Приглашение отправлено</span>
-              <button class="remove-btn" onclick={() => removeInvited(user)} aria-label="Удалить из команды">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <polyline points="3 6 5 6 21 6"></polyline>
-                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                </svg>
-              </button>
-            </div>
-            {#if index < invitedUsers.length - 1}
-              <div class="divider"></div>
-            {/if}
-          {/each}
-        </div>
-      {/if}
-
-      <div class="form-actions">
-        <button class="btn primary" onclick={saveSettings}>Сохранить</button>
-        <button class="btn secondary" onclick={() => editingTeamId = null}>Назад</button>
-      </div>
-    </div>
-
-  <!-- 3. ЭКРАН СПИСКА КОМАНД -->
+  {#if isLoading}
+    <p style="color: #fff;">Загрузка команд...</p>
   {:else}
-    <div class="teams-list">
-      {#each teamsData as team (team.id)}
-        <div class="team-card">
-          <div class="team-info">
-            <div class="team-header">
-              <h3 class="team-title">{team.name}</h3>
-              
-              {#if !team.isBase}
-                <div class="team-controls">
-                  <button class="icon-btn" onclick={() => openSettings(team.id)} aria-label="Настройки">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
-                  </button>
-                  <button class="icon-btn delete" onclick={() => deleteTeam(team.id)} aria-label="Удалить команду">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-                  </button>
-                </div>
+    
+    {#if errorMessage}
+      <div class="error-message" style="color: #ff4444; margin-bottom: 20px;">{errorMessage}</div>
+    {/if}
+
+    <!-- ЭКРАН СОЗДАНИЯ -->
+    {#if isCreating}
+      <div class="form-container">
+        <h2 class="page-title">Создание новой команды</h2>
+        <input 
+          type="text" 
+          bind:value={newTeamName} 
+          placeholder="Название команды" 
+          class="text-input"
+          disabled={isSubmitting}
+        />
+        <div class="form-actions">
+          <button class="btn primary" onclick={createTeam} disabled={isSubmitting}>
+            {isSubmitting ? 'Создание...' : 'Создать'}
+          </button>
+          <button class="btn secondary" onclick={() => isCreating = false}>Назад</button>
+        </div>
+      </div>
+
+    <!-- ЭКРАН НАСТРОЕК -->
+    {:else if editingTeamId !== null}
+      <div class="form-container">
+        <h2 class="page-title">Команда “{editName}”</h2>
+        
+        <div class="input-wrapper">
+          <input 
+            type="text" 
+            bind:value={editName} 
+            class="text-input"
+            class:editing={isEditingName}
+            disabled={!isEditingName}
+            placeholder="Название команды"
+          />
+          <button class="input-icon-btn" onclick={toggleNameEdit} aria-label="Редактировать">
+            {#if isEditingName}
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            {:else}
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+            {/if}
+          </button>
+        </div>
+
+        <div class="input-wrapper">
+          <input 
+            type="text" 
+            bind:value={inviteInput} 
+            placeholder="Добавьте пользователя в команду по его логину" 
+            class="text-input"
+            onkeydown={(e) => e.key === 'Enter' && inviteInput.trim() !== '' && inviteUser()}
+          />
+          <button 
+            class="input-icon-btn" 
+            onclick={inviteUser} 
+            disabled={inviteInput.trim() === ''}
+            aria-label="Найти"
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+          </button>
+        </div>
+
+        {#if invitedUsers.length > 0}
+          <div class="participants-container">
+            {#each invitedUsers as user, index}
+              <div class="participant-row">
+                <span class="participant-name">{user}</span>
+                <span class="participant-status">Приглашение отправлено</span>
+                <button class="remove-btn" onclick={() => removeInvited(user)} aria-label="Удалить из команды">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="3 6 5 6 21 6"></polyline>
+                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                  </svg>
+                </button>
+              </div>
+              {#if index < invitedUsers.length - 1}
+                <div class="divider"></div>
               {/if}
+            {/each}
+          </div>
+        {/if}
+
+        <div class="form-actions">
+          <button class="btn primary" onclick={saveSettings}>Сохранить</button>
+          <button class="btn secondary" onclick={() => editingTeamId = null}>Назад</button>
+        </div>
+      </div>
+
+    <!-- СПИСОК КОМАНД -->
+    {:else}
+      <div class="teams-list">
+        {#each teams as team (team.id)}
+          <div class="team-card">
+            <div class="team-info">
+              <div class="team-header">
+                <h3 class="team-title">{team.name}</h3>
+                
+                {#if !team.is_personal}
+                  <div class="team-controls">
+                    <button class="icon-btn" onclick={() => openSettings(team.id)} aria-label="Настройки">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+                    </button>
+                    <button class="icon-btn delete" onclick={() => deleteTeam(team.id)} aria-label="Удалить команду">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                    </button>
+                  </div>
+                {/if}
+              </div>
+              
+              <!-- ИСПРАВЛЕНО: выводим только количество участников -->
+              <p class="team-participants">Участников: {team.member_count}</p>
             </div>
             
-            {#if team.isBase}
-              <p class="team-participants">Участники: {team.members}</p>
-            {:else}
-              <p class="team-participants">Админ: {team.members}</p>
-              <!-- Считаем: 1 (Вы) + длина массива приглашенных -->
-              <p class="team-participants">
-                Участники: {1 + (team.invited ? team.invited.length : 0)}
-              </p>
-            {/if}
+            <a href="/teams/cables?id={team.id}" class="cables-link">Перейти в раздел кабелей</a>
           </div>
-          <a href="/teams/cables?id={team.id}" class="cables-link">Перейти в раздел кабелей</a>
-        </div>
-      {/each}
-    </div>
+        {/each}
+      </div>
 
-    <button class="create-team-btn" onclick={() => isCreating = true}>
-      Создать команду
-    </button>
+      <button class="create-team-btn" onclick={() => isCreating = true}>
+        Создать команду
+      </button>
+    {/if}
   {/if}
 
 </div>
 
 <style>
+  /* Стили остались без изменений */
   .teams-page { display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%; height: 100%; }
   .form-container { display: flex; flex-direction: column; align-items: center; width: 100%; max-width: 600px; gap: 20px; }
   .page-title { color: #ffffff; font-size: 24px; font-weight: 700; margin: 0 0 20px 0; text-align: center; }

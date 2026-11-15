@@ -10,10 +10,24 @@ export default defineConfig({
 				runes: ({ filename }) =>
 					filename.split(/[/\\]/).includes('node_modules') ? undefined : true
 			},
-
 			// SPA: статика в build/ раздаётся Go-сервером Hub, на неизвестные пути он отвечает
 			// index.html, дальше маршрут разбирает роутер в браузере (ADR-015).
 			adapter: adapter({ fallback: 'index.html' })
 		})
-	]
+	],
+	// ДОБАВЛЯЕМ НАСТРОЙКУ ПРОКСИ ДЛЯ ЛОКАЛЬНОЙ РАЗРАБОТКИ
+	server: {
+		proxy: {
+			'/api': {
+				target: 'https://dev.himo.hakoniwa.ru',
+				changeOrigin: true,
+				secure: true,
+				configure: (proxy, _options) => {
+					proxy.on('proxyReq', (proxyReq, req, _res) => {
+						proxyReq.setHeader('Origin', 'https://dev.himo.hakoniwa.ru');
+					});
+				}
+			}
+		}
+	}
 });
