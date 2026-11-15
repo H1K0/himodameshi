@@ -1,0 +1,55 @@
+# Проверка Hub в PR в dev и master: форматирование и линтер (ADR-015, ADR-017).
+name: hub-ci
+
+# Запускаем при создании или обновлении PR в dev и master
+# (в master — релизы из dev и хотфиксы)
+on:
+  pull_request:
+    branches: [dev, master]
+    paths:
+      - hub/**
+      - .gitea/workflows/hub-ci.yaml
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    # В официальном образе golangci-lint уже есть Go и git
+    container:
+      image: golangci/golangci-lint:v2.15.0
+
+    defaults:
+      run:
+        working-directory: hub
+
+    env:
+      GOFUMPT_VERSION: v0.12.0
+
+    steps:
+      - name: Получение кода
+        # actions/checkout написан на JavaScript, а node в образе нет,
+        # поэтому код забираем обычным git (как в app-ci).
+        working-directory: .
+        run: |
+          git init -q .
+          git remote add origin "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY.git"
+          git -c http.extraHeader="Authorization: token ${{ github.token }}" \
+            fetch -q --depth=1 origin "$GITHUB_REF"
+          git checkout -q FETCH_HEAD
+
+      - name: Зависимости
+        run: go mod download
+
+      - name: Форматирование (gofumpt)
+        # gofumpt -l печатает неотформатированные файлы; если список не пуст, шаг падает.
+        run: |
+          go install "mvdan.cc/gofumpt@$GOFUMPT_VERSION"
+          files=$(gofumpt -l .)
+          if [ -n "$files" ]; then
+            echo "Не отформатированы gofumpt (запустите gofumpt -l -w . в hub/):"
+            echo "$files"
+            exit 1
+          fi
+
+      - name: Линтер (golangci-lint)
+        # Настройки — в hub/.golangci.yml. Сгенерированный код линтер пропускает сам.
+        run: golangci-lint run

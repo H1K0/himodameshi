@@ -1,0 +1,11 @@
+# Настройки golangci-lint для Hub (ADR-015). Версия линтера закреплена в .gitea/workflows/hub-ci.yaml.
+version: "2"
+
+linters:
+  # Стандартный набор: errcheck, govet, ineffassign, staticcheck, unused
+  default: standard
+  exclusions:
+    # Не требовать проверки ошибок там, где их принято игнорировать: defer Close() и т. п.
+    # В golangci-lint v1 это исключение было включено по умолчанию.
+    presets:
+      - std-error-handling
