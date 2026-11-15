@@ -1,35 +1,63 @@
 <script lang="ts">
   import { page } from '$app/state';
+  import { goto } from '$app/navigation';
+  import { userProfile } from '#lib/store.svelte';
   import '../app.css'; 
   
   let { children } = $props();
+
+  // Функция выхода
+  async function handleLogout() {
+    try {
+      // Отправляем запрос на сервер, чтобы убить сессию (удалить Cookie)
+      await fetch('/api/v1/auth/logout', {
+        method: 'POST',
+        credentials: 'include'
+      });
+    } catch (e) {
+      console.error('Не удалось выйти на сервере', e);
+    }
+
+    // В любом случае сбрасываем локальный статус и идем на логин
+    userProfile.isAuthenticated = false;
+    userProfile.username = '';
+    goto('/login');
+  }
 </script>
 
-<div class="app-container">
-  <!-- Сайдбар -->
-  <aside class="sidebar">
-    <!-- Логотип -->
-    <div class="logo-wrapper">
-      <img src="/logo.png" alt="Himo Logo" class="logo-img" />
-    </div>
-    
-    <nav class="nav-menu">
-      <a href="/" class="nav-item" class:active={page.url.pathname === '/'}>
-        Моя страница
-      </a>
-      <a href="/teams" class="nav-item" class:active={page.url.pathname === '/teams'}>
-        Команды
-      </a>
-    </nav>
+{#if page.url.pathname !== '/login'}
+  <div class="app-container">
+    <!-- Сайдбар -->
+    <aside class="sidebar">
+      <!-- Логотип -->
+      <div class="logo-wrapper">
+        <img src="/logo.png" alt="Himo Logo" class="logo-img" />
+      </div>
+      
+      <nav class="nav-menu">
+        <a href="/" class="nav-item" class:active={page.url.pathname === '/'}>
+          Моя страница
+        </a>
+        <a href="/teams" class="nav-item" class:active={page.url.pathname === '/teams'}>
+          Команды
+        </a>
+      </nav>
 
-    <button class="logout-btn">Выход</button>
-  </aside>
+      <!-- Кнопка выхода -->
+      <button class="logout-btn" onclick={handleLogout}>Выход</button>
+    </aside>
 
-  <!-- Основной контент -->
-  <main class="main-content">
+    <!-- Основной контент -->
+    <main class="main-content">
+      {@render children()}
+    </main>
+  </div>
+{:else}
+  <!-- Если мы на странице логина, показываем ТОЛЬКО контент (без сайдбара) -->
+  <main class="login-layout">
     {@render children()}
   </main>
-</div>
+{/if}
 
 <style>
   .app-container {
@@ -54,7 +82,6 @@
     flex-shrink: 0;
   }
 
-  /* Стили для логотипа */
   .logo-wrapper {
     margin-bottom: 40px;
     display: flex;
@@ -63,11 +90,9 @@
   }
 
   .logo-img {
-    width: 160px; /* Можете подогнать размер под свой вкус */
+    width: 160px;
     height: 160px;
     object-fit: contain;
-    /* Если у вашей картинки белый фон, а нужен прозрачный, 
-       используйте PNG с прозрачностью */
   }
 
   .nav-menu {
@@ -134,5 +159,11 @@
     box-sizing: border-box;
     background-color: #0f0f0f;
     overflow-y: auto;
+  }
+
+  .login-layout {
+    width: 100vw;
+    height: 100vh;
+    background-color: #0f0f0f;
   }
 </style>
