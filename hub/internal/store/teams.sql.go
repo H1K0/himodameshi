@@ -12,6 +12,21 @@ import (
 	"github.com/google/uuid"
 )
 
+const addTeamMember = `-- name: AddTeamMember :exec
+INSERT INTO team_members (team_id, user_id, role)
+VALUES ($1, $2, 'member')
+`
+
+type AddTeamMemberParams struct {
+	TeamID uuid.UUID
+	UserID uuid.UUID
+}
+
+func (q *Queries) AddTeamMember(ctx context.Context, arg AddTeamMemberParams) error {
+	_, err := q.db.Exec(ctx, addTeamMember, arg.TeamID, arg.UserID)
+	return err
+}
+
 const addTeamOwner = `-- name: AddTeamOwner :exec
 INSERT INTO team_members (team_id, user_id, role)
 VALUES ($1, $2, 'owner')
@@ -76,6 +91,17 @@ WHERE own.user_id = $1
 // Действующие команды пользователя, где кроме него есть другие участники.
 func (q *Queries) CountOwnedTeamsWithMembers(ctx context.Context, userID uuid.UUID) (int64, error) {
 	row := q.db.QueryRow(ctx, countOwnedTeamsWithMembers, userID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const countTeamMembers = `-- name: CountTeamMembers :one
+SELECT count(*) FROM team_members WHERE team_id = $1
+`
+
+func (q *Queries) CountTeamMembers(ctx context.Context, teamID uuid.UUID) (int64, error) {
+	row := q.db.QueryRow(ctx, countTeamMembers, teamID)
 	var count int64
 	err := row.Scan(&count)
 	return count, err

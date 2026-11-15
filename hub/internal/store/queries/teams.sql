@@ -6,6 +6,10 @@ VALUES (@id, @name, true);
 INSERT INTO team_members (team_id, user_id, role)
 VALUES (@team_id, @user_id, 'owner');
 
+-- name: AddTeamMember :exec
+INSERT INTO team_members (team_id, user_id, role)
+VALUES (@team_id, @user_id, 'member');
+
 -- name: CreateTeam :exec
 INSERT INTO teams (id, name, description)
 VALUES (@id, @name, @description);
@@ -17,6 +21,9 @@ SELECT sqlc.embed(t), m.role,
 FROM teams t
 JOIN team_members m ON m.team_id = t.id
 WHERE t.id = @id AND m.user_id = @user_id AND t.deleted_at IS NULL;
+
+-- name: CountTeamMembers :one
+SELECT count(*) FROM team_members WHERE team_id = @team_id;
 
 -- name: ListMemberTeams :many
 SELECT sqlc.embed(t), m.role,

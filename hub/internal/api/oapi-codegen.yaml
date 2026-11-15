@@ -10,6 +10,7 @@ output-options:
     - auth
     - profile
     - teams
+    - invitations
     - cables
     - tests
     - service

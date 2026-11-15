@@ -37,9 +37,12 @@ var (
 	errNoTeamAccess        = &problem{status: http.StatusForbidden, code: "no_team_access"}
 	errOwnerOnly           = &problem{status: http.StatusForbidden, code: "owner_only"}
 	errNotFound            = &problem{status: http.StatusNotFound, code: "not_found"}
+	errInvitationInvalid   = &problem{status: http.StatusNotFound, code: "invitation_invalid"}
 	errNotAMember          = &problem{status: http.StatusConflict, code: "not_a_member"}
 	errPersonalTeam        = &problem{status: http.StatusConflict, code: "personal_team"}
 	errOwnerCannotLeave    = &problem{status: http.StatusConflict, code: "owner_cannot_leave"}
+	errAlreadyMember       = &problem{status: http.StatusConflict, code: "already_member"}
+	errMemberLimitReached  = &problem{status: http.StatusConflict, code: "member_limit_reached"}
 	errCableArchived       = &problem{status: http.StatusConflict, code: "cable_archived"}
 	errCableTypeLocked     = &problem{status: http.StatusConflict, code: "cable_type_locked"}
 	errInternal            = &problem{status: http.StatusInternalServerError, code: "internal_error"}
