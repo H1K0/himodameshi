@@ -1,0 +1,40 @@
+# Проверка веба в PR в dev и master: сборка SPA (ADR-015, ADR-017).
+# Отдельного деплоя у веба нет: он входит в образ Hub и выезжает с hub-deploy-dev и hub-deploy-prod.
+name: web-ci
+
+on:
+  pull_request:
+    branches: [dev, master]
+    paths:
+      - web/**
+      - .gitea/workflows/web-ci.yaml
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    # Та же версия Node, что в стадии web из hub/Dockerfile
+    container:
+      image: node:24
+
+    defaults:
+      run:
+        working-directory: web
+
+    steps:
+      - name: Получение кода
+        # Как в app-ci и hub-ci: код забираем обычным git, без actions/checkout.
+        working-directory: .
+        run: |
+          git init -q .
+          git remote add origin "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY.git"
+          git -c http.extraHeader="Authorization: token ${{ github.token }}" \
+            fetch -q --depth=1 origin "$GITHUB_REF"
+          git checkout -q FETCH_HEAD
+
+      - name: Зависимости
+        # npm ci ставит ровно то, что в package-lock.json, и падает, если он не совпадает с package.json.
+        run: npm ci --no-audit --no-fund
+
+      - name: Сборка
+        # Тот же npm run build, что в образе: если он упадёт здесь, упал бы и деплой.
+        run: npm run build

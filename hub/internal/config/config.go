@@ -24,6 +24,8 @@ type Config struct {
 	TrustedProxies []string `env:"TRUSTED_PROXIES" envSeparator:","`
 	// Plans — лимиты тарифов по ключу из teams.plan (HUB-3).
 	Plans Plans `env:"PLANS" envDefault:"{\"free\":{\"max_members\":5}}"`
+	// StaticDir — каталог собранного веба (ADR-015); пустой — веб не раздаётся.
+	StaticDir string `env:"STATIC_DIR"`
 }
 
 // FreePlan — тариф по умолчанию; его лимиты применяются и к неизвестному ключу.
