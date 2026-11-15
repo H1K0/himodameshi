@@ -18,7 +18,10 @@ class TestingScreen extends StatefulWidget {
 
 class _TestingScreenState extends State<TestingScreen> {
   CableType _selectedCable = CableType.jackTs;
-  final Set<TestType> _selectedTests = {TestType.continuity, TestType.freqResponse};
+  final Set<TestType> _selectedTests = {
+    TestType.continuity,
+    TestType.freqResponse,
+  };
 
   @override
   void initState() {
@@ -27,7 +30,8 @@ class _TestingScreenState extends State<TestingScreen> {
     _selectedCable = widget.preselectedCableType ?? CableType.jackTs;
 
     // Если выбран Jack TS и CMRR был в выбранных тестах — убираем
-    if (!_selectedCable.supportsCmrr && _selectedTests.contains(TestType.cmrr)) {
+    if (!_selectedCable.supportsCmrr &&
+        _selectedTests.contains(TestType.cmrr)) {
       _selectedTests.remove(TestType.cmrr);
     }
   }
@@ -48,7 +52,7 @@ class _TestingScreenState extends State<TestingScreen> {
     final minutes = _totalDuration ~/ 60;
     final seconds = _totalDuration % 60;
     if (minutes > 0) {
-      return 'Старт · ~$minutes мин ${seconds} сек';
+      return 'Старт · ~$minutes мин $seconds сек';
     } else {
       return 'Старт · ~$seconds сек';
     }
@@ -138,20 +142,11 @@ class _TestingScreenState extends State<TestingScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 24),
               child: Row(
                 children: [
-                  _buildCableTypeCard(
-                    CableType.jackTs,
-                    iconPath: 'ts',
-                  ),
+                  _buildCableTypeCard(CableType.jackTs, iconPath: 'ts'),
                   const SizedBox(width: 8),
-                  _buildCableTypeCard(
-                    CableType.jackTrs,
-                    iconPath: 'trs',
-                  ),
+                  _buildCableTypeCard(CableType.jackTrs, iconPath: 'trs'),
                   const SizedBox(width: 8),
-                  _buildCableTypeCard(
-                    CableType.xlr,
-                    iconPath: 'xlr',
-                  ),
+                  _buildCableTypeCard(CableType.xlr, iconPath: 'xlr'),
                 ],
               ),
             ),
@@ -183,7 +178,10 @@ class _TestingScreenState extends State<TestingScreen> {
                     children: [
                       const TextSpan(
                         text: 'Подключите оба конца кабеля к разъёмам ',
-                        style: TextStyle(fontSize: 11, color: Color(0xFFAAAAAA)),
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: Color(0xFFAAAAAA),
+                        ),
                       ),
                       TextSpan(
                         text: 'A',
@@ -195,7 +193,10 @@ class _TestingScreenState extends State<TestingScreen> {
                       ),
                       const TextSpan(
                         text: ' и ',
-                        style: TextStyle(fontSize: 11, color: Color(0xFFAAAAAA)),
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: Color(0xFFAAAAAA),
+                        ),
                       ),
                       TextSpan(
                         text: 'B',
@@ -207,7 +208,10 @@ class _TestingScreenState extends State<TestingScreen> {
                       ),
                       const TextSpan(
                         text: ' на приборе',
-                        style: TextStyle(fontSize: 11, color: Color(0xFFAAAAAA)),
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: Color(0xFFAAAAAA),
+                        ),
                       ),
                     ],
                   ),
@@ -318,7 +322,9 @@ class _TestingScreenState extends State<TestingScreen> {
                 style: TextStyle(
                   fontSize: 11,
                   fontWeight: FontWeight.w500,
-                  color: isSelected ? const Color(0xFFFAFAFA) : const Color(0xFFAAAAAA),
+                  color: isSelected
+                      ? const Color(0xFFFAFAFA)
+                      : const Color(0xFFAAAAAA),
                 ),
               ),
             ],
@@ -329,32 +335,28 @@ class _TestingScreenState extends State<TestingScreen> {
   }
 
   Widget _buildCableIcon(String type, bool isSelected) {
-    final color = isSelected ? const Color(0xFFEF9F27) : const Color(0xFF666666);
+    final color = isSelected
+        ? const Color(0xFFEF9F27)
+        : const Color(0xFF666666);
 
     switch (type) {
       case 'ts':
         return SizedBox(
           width: 26,
           height: 26,
-          child: CustomPaint(
-            painter: _TsIconPainter(color: color),
-          ),
+          child: CustomPaint(painter: _TsIconPainter(color: color)),
         );
       case 'trs':
         return SizedBox(
           width: 26,
           height: 26,
-          child: CustomPaint(
-            painter: _TrsIconPainter(color: color),
-          ),
+          child: CustomPaint(painter: _TrsIconPainter(color: color)),
         );
       case 'xlr':
         return SizedBox(
           width: 26,
           height: 26,
-          child: CustomPaint(
-            painter: _XlrIconPainter(color: color),
-          ),
+          child: CustomPaint(painter: _XlrIconPainter(color: color)),
         );
       default:
         return const SizedBox.shrink();
@@ -380,8 +382,8 @@ class _TestingScreenState extends State<TestingScreen> {
           color: isBlocked
               ? const Color(0xFF0D0D0D)
               : (isSelected
-              ? const Color(0xFF111111)
-              : const Color(0xFF0D0D0D)),
+                    ? const Color(0xFF111111)
+                    : const Color(0xFF0D0D0D)),
           borderRadius: BorderRadius.circular(10),
           border: Border.all(
             color: isSelected
@@ -407,15 +409,21 @@ class _TestingScreenState extends State<TestingScreen> {
               ),
               child: Center(
                 child: isSelected && !isBlocked
-                    ? const Icon(Icons.check, size: 12, color: Color(0xFFEF9F27))
+                    ? const Icon(
+                        Icons.check,
+                        size: 12,
+                        color: Color(0xFFEF9F27),
+                      )
                     : Text(
-                  _getTestNumber(test),
-                  style: TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w500,
-                    color: isBlocked ? const Color(0xFF555555) : const Color(0xFF888888),
-                  ),
-                ),
+                        _getTestNumber(test),
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w500,
+                          color: isBlocked
+                              ? const Color(0xFF555555)
+                              : const Color(0xFF888888),
+                        ),
+                      ),
               ),
             ),
             const SizedBox(width: 10),
@@ -429,7 +437,9 @@ class _TestingScreenState extends State<TestingScreen> {
                       fontWeight: FontWeight.w500,
                       color: isBlocked
                           ? const Color(0xFF888888)
-                          : (isSelected ? const Color(0xFFFAFAFA) : const Color(0xFF888888)),
+                          : (isSelected
+                                ? const Color(0xFFFAFAFA)
+                                : const Color(0xFF888888)),
                     ),
                   ),
                   if (blockedHint.isNotEmpty)
@@ -444,10 +454,12 @@ class _TestingScreenState extends State<TestingScreen> {
               ),
             ),
             Text(
-              '~${duration}с',
+              '~$durationс',
               style: TextStyle(
                 fontSize: 10,
-                color: isBlocked ? const Color(0xFF444444) : const Color(0xFF555555),
+                color: isBlocked
+                    ? const Color(0xFF444444)
+                    : const Color(0xFF555555),
               ),
             ),
           ],
@@ -480,10 +492,6 @@ class _TsIconPainter extends CustomPainter {
       ..color = color
       ..strokeWidth = 1.2
       ..style = PaintingStyle.stroke;
-
-    final fillPaint = Paint()
-      ..color = Colors.white.withValues(alpha: 0.7)
-      ..style = PaintingStyle.fill;
 
     // Корпус разъёма
     canvas.drawRect(const Rect.fromLTWH(2, 9, 10, 12), paint);
@@ -537,7 +545,10 @@ class _XlrIconPainter extends CustomPainter {
 
     // Корпус XLR
     canvas.drawRRect(
-      RRect.fromRectAndRadius(const Rect.fromLTWH(2, 7, 12, 14), const Radius.circular(2)),
+      RRect.fromRectAndRadius(
+        const Rect.fromLTWH(2, 7, 12, 14),
+        const Radius.circular(2),
+      ),
       paint,
     );
     // Три пина

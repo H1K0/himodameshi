@@ -41,9 +41,5 @@ class FreqInsight {
   final double? sigma;
   final bool noSignal;
 
-  const FreqInsight({
-    this.peak,
-    this.sigma,
-    this.noSignal = false,
-  });
+  const FreqInsight({this.peak, this.sigma, this.noSignal = false});
 }

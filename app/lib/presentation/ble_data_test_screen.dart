@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../data/ble_data_manager.dart';
 import '../data/ble_real_data_source.dart';
-import '../data/database_helper.dart';
 
 class BleDataTestScreen extends StatefulWidget {
   const BleDataTestScreen({super.key});
@@ -12,11 +11,9 @@ class BleDataTestScreen extends StatefulWidget {
 
 class _BleDataTestScreenState extends State<BleDataTestScreen> {
   final BleDataManager _manager = BleDataManager();
-  final DatabaseHelper _dbHelper = DatabaseHelper();
 
-  List<Map<String, dynamic>> _receivedPackets = [];
+  final List<Map<String, dynamic>> _receivedPackets = [];
   DataSourceType _currentType = DataSourceType.mock;
-  bool _isReceiving = false;
   bool _isSwitching = false;
   bool _isMounted = false;
 
@@ -78,22 +75,27 @@ class _BleDataTestScreenState extends State<BleDataTestScreen> {
     if (!_isMounted) return;
     setState(() {
       _receivedPackets.clear();
-      _isReceiving = true;
     });
-    _manager.currentDataSource?.dataStream.listen((packet) {
-      if (!_isMounted) return;
-      setState(() {
-        _receivedPackets.insert(0, packet);
-        if (_receivedPackets.length > 50) {
-          _receivedPackets.removeLast();
-        }
-      });
-    }, onError: (error) {
-      if (!_isMounted) return;
-      setState(() {
-        _receivedPackets.insert(0, {'type': 'error', 'message': error.toString()});
-      });
-    });
+    _manager.currentDataSource?.dataStream.listen(
+      (packet) {
+        if (!_isMounted) return;
+        setState(() {
+          _receivedPackets.insert(0, packet);
+          if (_receivedPackets.length > 50) {
+            _receivedPackets.removeLast();
+          }
+        });
+      },
+      onError: (error) {
+        if (!_isMounted) return;
+        setState(() {
+          _receivedPackets.insert(0, {
+            'type': 'error',
+            'message': error.toString(),
+          });
+        });
+      },
+    );
   }
 
   Future<void> _sendStartTest() async {
@@ -194,7 +196,10 @@ class _BleDataTestScreenState extends State<BleDataTestScreen> {
                       side: const BorderSide(color: Color(0xFF2A2A2A)),
                       padding: const EdgeInsets.symmetric(vertical: 10),
                     ),
-                    child: const Text('start_test', style: TextStyle(color: Color(0xFFEF9F27))),
+                    child: const Text(
+                      'start_test',
+                      style: TextStyle(color: Color(0xFFEF9F27)),
+                    ),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -205,7 +210,10 @@ class _BleDataTestScreenState extends State<BleDataTestScreen> {
                       side: const BorderSide(color: Color(0xFF2A2A2A)),
                       padding: const EdgeInsets.symmetric(vertical: 10),
                     ),
-                    child: const Text('cancel', style: TextStyle(color: Color(0xFFE24B4A))),
+                    child: const Text(
+                      'cancel',
+                      style: TextStyle(color: Color(0xFFE24B4A)),
+                    ),
                   ),
                 ),
               ],
@@ -231,7 +239,10 @@ class _BleDataTestScreenState extends State<BleDataTestScreen> {
                 const Spacer(),
                 Text(
                   '${_receivedPackets.length}',
-                  style: const TextStyle(fontSize: 10, color: Color(0xFF888888)),
+                  style: const TextStyle(
+                    fontSize: 10,
+                    color: Color(0xFF888888),
+                  ),
                 ),
               ],
             ),
@@ -241,49 +252,52 @@ class _BleDataTestScreenState extends State<BleDataTestScreen> {
           Expanded(
             child: _receivedPackets.isEmpty
                 ? const Center(
-              child: Text(
-                'Нет данных\nПереключитесь на MOCK или REAL',
-                textAlign: TextAlign.center,
-                style: TextStyle(color: Color(0xFF888888)),
-              ),
-            )
+                    child: Text(
+                      'Нет данных\nПереключитесь на MOCK или REAL',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: Color(0xFF888888)),
+                    ),
+                  )
                 : ListView.builder(
-              reverse: true,
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              itemCount: _receivedPackets.length,
-              itemBuilder: (context, index) {
-                final packet = _receivedPackets[index];
-                return Container(
-                  margin: const EdgeInsets.only(bottom: 6),
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF111111),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: const Color(0xFF1F1F1F)),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        packet['type'] ?? 'unknown',
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w500,
-                          color: _getTypeColor(packet['type']),
+                    reverse: true,
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    itemCount: _receivedPackets.length,
+                    itemBuilder: (context, index) {
+                      final packet = _receivedPackets[index];
+                      return Container(
+                        margin: const EdgeInsets.only(bottom: 6),
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF111111),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: const Color(0xFF1F1F1F)),
                         ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        packet.toString(),
-                        style: const TextStyle(fontSize: 9, color: Color(0xFF888888)),
-                        maxLines: 3,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              packet['type'] ?? 'unknown',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w500,
+                                color: _getTypeColor(packet['type']),
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              packet.toString(),
+                              style: const TextStyle(
+                                fontSize: 9,
+                                color: Color(0xFF888888),
+                              ),
+                              maxLines: 3,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                        ),
+                      );
+                    },
                   ),
-                );
-              },
-            ),
           ),
         ],
       ),

@@ -6,10 +6,7 @@ import '/data/ble_real_data_source.dart';
 class DeviceSettingsScreen extends StatefulWidget {
   final VoidCallback onBack;
 
-  const DeviceSettingsScreen({
-    super.key,
-    required this.onBack,
-  });
+  const DeviceSettingsScreen({super.key, required this.onBack});
 
   @override
   State<DeviceSettingsScreen> createState() => _DeviceSettingsScreenState();
@@ -175,7 +172,9 @@ class _DeviceSettingsScreenState extends State<DeviceSettingsScreen> {
                           color: const Color(0xFF1A1205),
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(
-                            color: const Color(0xFFEF9F27).withValues(alpha: 0.4),
+                            color: const Color(
+                              0xFFEF9F27,
+                            ).withValues(alpha: 0.4),
                           ),
                         ),
                         child: const Center(
@@ -192,12 +191,19 @@ class _DeviceSettingsScreenState extends State<DeviceSettingsScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 3,
+                              ),
                               decoration: BoxDecoration(
-                                color: _getConnectionColor().withValues(alpha: 0.15),
+                                color: _getConnectionColor().withValues(
+                                  alpha: 0.15,
+                                ),
                                 borderRadius: BorderRadius.circular(14),
                                 border: Border.all(
-                                  color: _getConnectionColor().withValues(alpha: 0.4),
+                                  color: _getConnectionColor().withValues(
+                                    alpha: 0.4,
+                                  ),
                                 ),
                               ),
                               child: Row(
@@ -347,9 +353,17 @@ class _DeviceSettingsScreenState extends State<DeviceSettingsScreen> {
                     child: Column(
                       children: [
                         _buildInfoRow('Модель', 'Himo MVP rev 1'),
-                        const Divider(height: 0.5, thickness: 0.5, color: Color(0xFF1A1A1A)),
+                        const Divider(
+                          height: 0.5,
+                          thickness: 0.5,
+                          color: Color(0xFF1A1A1A),
+                        ),
                         _buildInfoRow('Серийный', 'HM2025-00142'),
-                        const Divider(height: 0.5, thickness: 0.5, color: Color(0xFF1A1A1A)),
+                        const Divider(
+                          height: 0.5,
+                          thickness: 0.5,
+                          color: Color(0xFF1A1A1A),
+                        ),
                         _buildInfoRow('Прошивка', '0.1'),
                       ],
                     ),
@@ -388,10 +402,14 @@ class _DeviceSettingsScreenState extends State<DeviceSettingsScreen> {
                               width: 22,
                               height: 22,
                               decoration: BoxDecoration(
-                                color: const Color(0xFF639922).withValues(alpha: 0.12),
+                                color: const Color(
+                                  0xFF639922,
+                                ).withValues(alpha: 0.12),
                                 shape: BoxShape.circle,
                                 border: Border.all(
-                                  color: const Color(0xFF97C459).withValues(alpha: 0.5),
+                                  color: const Color(
+                                    0xFF97C459,
+                                  ).withValues(alpha: 0.5),
                                 ),
                               ),
                               child: const Center(
@@ -483,21 +501,21 @@ class _DeviceSettingsScreenState extends State<DeviceSettingsScreen> {
                       ),
                       child: _isReconnecting
                           ? const SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Color(0xFFEF9F27),
-                        ),
-                      )
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Color(0xFFEF9F27),
+                              ),
+                            )
                           : const Text(
-                        'Переподключить',
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w500,
-                          color: Color(0xFFAAAAAA),
-                        ),
-                      ),
+                              'Переподключить',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w500,
+                                color: Color(0xFFAAAAAA),
+                              ),
+                            ),
                     ),
                   ),
                   const SizedBox(width: 6),
@@ -506,7 +524,9 @@ class _DeviceSettingsScreenState extends State<DeviceSettingsScreen> {
                       onPressed: _handleForget,
                       style: OutlinedButton.styleFrom(
                         backgroundColor: Colors.transparent,
-                        side: BorderSide(color: Color(0xFFE24B4A).withValues(alpha: 0.35)),
+                        side: BorderSide(
+                          color: Color(0xFFE24B4A).withValues(alpha: 0.35),
+                        ),
                         padding: const EdgeInsets.symmetric(vertical: 11),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(10),
@@ -539,10 +559,7 @@ class _DeviceSettingsScreenState extends State<DeviceSettingsScreen> {
         children: [
           Text(
             label,
-            style: const TextStyle(
-              fontSize: 11,
-              color: Color(0xFF888888),
-            ),
+            style: const TextStyle(fontSize: 11, color: Color(0xFF888888)),
           ),
           Text(
             value,

@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'ble_data_source.dart';
 import 'ble_provider.dart';
@@ -8,14 +9,15 @@ import 'database_helper.dart';
 /// Реальный BLE-источник данных
 class BleRealDataSource implements BleDataSource {
   final BleProvider bleProvider = BleProvider();
-  BluetoothCharacteristic? _dataCharacteristic;
   BluetoothCharacteristic? _commandCharacteristic;
   StreamSubscription<List<int>>? _notificationSubscription;
   StreamController<Map<String, dynamic>>? _controller;
 
   // UUID для CMD и DATA характеристик (замените на реальные)
-  static const String commandCharacteristicUuid = "484D0002-4A5B-6C7D-8E9F-A0B1C2D3E4F5";
-  static const String dataCharacteristicUuid = "484D0003-4A5B-6C7D-8E9F-A0B1C2D3E4F5";
+  static const String commandCharacteristicUuid =
+      "484D0002-4A5B-6C7D-8E9F-A0B1C2D3E4F5";
+  static const String dataCharacteristicUuid =
+      "484D0003-4A5B-6C7D-8E9F-A0B1C2D3E4F5";
 
   BleRealDataSource() {
     _setupDataSubscription();
@@ -40,18 +42,18 @@ class BleRealDataSource implements BleDataSource {
     await device.discoverServices();
 
     // Сбрасываем сохранённые характеристики перед новым поиском
-    _dataCharacteristic = null;
     _commandCharacteristic = null;
 
     for (final service in device.servicesList) {
       for (final characteristic in service.characteristics) {
         // Ищем DATA характеристику
         if (characteristic.uuid.toString() == dataCharacteristicUuid) {
-          _dataCharacteristic = characteristic;
           // Подписываемся на уведомления
           await characteristic.setNotifyValue(true);
           _notificationSubscription?.cancel();
-          _notificationSubscription = characteristic.onValueReceived.listen((value) {
+          _notificationSubscription = characteristic.onValueReceived.listen((
+            value,
+          ) {
             _onDataReceived(value);
           });
         }
@@ -69,9 +71,9 @@ class BleRealDataSource implements BleDataSource {
       final jsonString = utf8.decode(data);
       final Map<String, dynamic> packet = jsonDecode(jsonString);
       _controller?.add(packet);
-      print('[REAL] Received: $packet');
+      debugPrint('[REAL] Received: $packet');
     } catch (e) {
-      print('[REAL] Parse error: $e, data: $data');
+      debugPrint('[REAL] Parse error: $e, data: $data');
     }
   }
 
@@ -85,13 +87,13 @@ class BleRealDataSource implements BleDataSource {
   @override
   Future<bool> sendCommand(Map<String, dynamic> command) async {
     if (!bleProvider.isConnected) {
-      print('[REAL] Cannot send command: not connected');
+      debugPrint('[REAL] Cannot send command: not connected');
       return false;
     }
 
     // Используем сохранённую командную характеристику (исправление 2)
     if (_commandCharacteristic == null) {
-      print('[REAL] Command characteristic not found');
+      debugPrint('[REAL] Command characteristic not found');
       return false;
     }
 
@@ -100,10 +102,10 @@ class BleRealDataSource implements BleDataSource {
 
     try {
       await _commandCharacteristic!.write(data, withoutResponse: false);
-      print('[REAL] Command sent: $command');
+      debugPrint('[REAL] Command sent: $command');
       return true;
     } catch (e) {
-      print('[REAL] Send error: $e');
+      debugPrint('[REAL] Send error: $e');
       return false;
     }
   }
@@ -126,11 +128,7 @@ class BleRealDataSource implements BleDataSource {
 
   /// Отправка cancel команды
   Future<bool> cancel() async {
-    final command = {
-      'type': 'cmd',
-      'pv': 1,
-      'cmd': 'cancel',
-    };
+    final command = {'type': 'cmd', 'pv': 1, 'cmd': 'cancel'};
     return await sendCommand(command);
   }
 
@@ -150,7 +148,8 @@ class BleRealDataSource implements BleDataSource {
   void dispose() {
     _notificationSubscription?.cancel();
     if (_controller != null && !_controller!.isClosed) {
-      _controller?.close();}
+      _controller?.close();
+    }
     bleProvider.dispose();
   }
 
@@ -168,17 +167,12 @@ class BleRealDataSource implements BleDataSource {
     final ok = await db.getCablesCountByHealthStatus('ok');
     final fail = await db.getCablesCountByHealthStatus('fail');
 
-    return {
-      'total': total,
-      'excellent': excellent,
-      'ok': ok,
-      'fail': fail,
-    };
+    return {'total': total, 'excellent': excellent, 'ok': ok, 'fail': fail};
   }
 
   @override
   Future<List<Map<String, dynamic>>> getRecentTests({int limit = 6}) async {
     final db = DatabaseHelper();
-    return await db.getRecentTestSessions(limit:limit);
+    return await db.getRecentTestSessions(limit: limit);
   }
 }

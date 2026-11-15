@@ -49,7 +49,7 @@ class _BleMenuState extends State<BleMenu> {
     if (dataSource != null) {
       setState(() {
         if (dataSource is BleRealDataSource) {
-          _connectionStatus = (dataSource as BleRealDataSource).bleProvider.connectionStatus;
+          _connectionStatus = (dataSource).bleProvider.connectionStatus;
         } else {
           // В мок-режиме всегда "подключены"
           _connectionStatus = ConnectionStatus.connected;
@@ -164,10 +164,7 @@ class _BleMenuState extends State<BleMenu> {
                     const SizedBox(width: 6),
                     Text(
                       _getStatusText(),
-                      style: TextStyle(
-                        fontSize: 10,
-                        color: _getStatusColor(),
-                      ),
+                      style: TextStyle(fontSize: 10, color: _getStatusColor()),
                     ),
                   ],
                 ),
@@ -211,9 +208,7 @@ class _BleMenuState extends State<BleMenu> {
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(8),
-        ),
+        decoration: BoxDecoration(borderRadius: BorderRadius.circular(8)),
         child: Row(
           children: [
             Icon(icon, size: 14, color: const Color(0xFFAAAAAA)),
@@ -223,7 +218,9 @@ class _BleMenuState extends State<BleMenu> {
                 label,
                 style: TextStyle(
                   fontSize: 12,
-                  color: onTap == null ? const Color(0xFF666666) : const Color(0xFFE8E8E8),
+                  color: onTap == null
+                      ? const Color(0xFF666666)
+                      : const Color(0xFFE8E8E8),
                 ),
               ),
             ),

@@ -13,13 +13,13 @@ class _DevHttpOverrides extends HttpOverrides {
   HttpClient createHttpClient(SecurityContext? context) {
     return super.createHttpClient(context)
       ..badCertificateCallback = (cert, host, port) {
-        return host == 'api.z.ai';  // доверяем только Zhipu
+        return host == 'api.z.ai'; // доверяем только Zhipu
       };
   }
 }
 
 void main() async {
-  WidgetsFlutterBinding.ensureInitialized();  // ← обеспечиваем работу асинхронных операций
+  WidgetsFlutterBinding.ensureInitialized(); // ← обеспечиваем работу асинхронных операций
   HttpOverrides.global = _DevHttpOverrides();
   // Инициализируем БД и добавляем мок-данные при первом запуске
   final dbHelper = DatabaseHelper();

@@ -19,7 +19,8 @@ class ZaiInsightGenerator implements InsightGenerator {
   /// In-memory кэш ответов. Живёт до перезапуска приложения.
   static final Map<String, String> _cache = {};
 
-  static const String _systemPrompt = """Ты — технический эксперт по аудиокабелям. Ты пишешь короткий понятный
+  static const String _systemPrompt =
+      """Ты — технический эксперт по аудиокабелям. Ты пишешь короткий понятный
 комментарий для музыканта или звукорежиссёра — человека, который понимает
 звук, но не хочет читать отчёт по каждому тесту.
 
@@ -65,7 +66,7 @@ class ZaiInsightGenerator implements InsightGenerator {
     if (_apiKey.isEmpty) {
       throw const InsightAuthException(
         'ZAI_API_KEY не задан. Запустите приложение с '
-            '--dart-define-from-file=config/dev.json',
+        '--dart-define-from-file=config/dev.json',
       );
     }
 
@@ -79,25 +80,25 @@ class ZaiInsightGenerator implements InsightGenerator {
     try {
       response = await http
           .post(
-        Uri.parse(_endpoint),
-        headers: {
-          'Authorization': 'Bearer $_apiKey',
-          'Content-Type': 'application/json',
-        },
-        body: jsonEncode({
-          'model': _model,
-          'messages': [
-            {'role': 'system', 'content': _systemPrompt},
-            {'role': 'user', 'content': userPrompt},
-          ],
-        }),
-      )
+            Uri.parse(_endpoint),
+            headers: {
+              'Authorization': 'Bearer $_apiKey',
+              'Content-Type': 'application/json',
+            },
+            body: jsonEncode({
+              'model': _model,
+              'messages': [
+                {'role': 'system', 'content': _systemPrompt},
+                {'role': 'user', 'content': userPrompt},
+              ],
+            }),
+          )
           .timeout(
-        const Duration(seconds: 20),
-        onTimeout: () => throw const InsightNetworkException(
-          'Тайм-аут запроса LLM через 20 с.',
-        ),
-      );
+            const Duration(seconds: 20),
+            onTimeout: () => throw const InsightNetworkException(
+              'Тайм-аут запроса LLM через 20 с.',
+            ),
+          );
     } on InsightException {
       rethrow;
     } catch (e) {
@@ -162,7 +163,9 @@ class ZaiInsightGenerator implements InsightGenerator {
       final range = c.min == c.max
           ? '${c.min.toStringAsFixed(2)} Ом'
           : '${c.min.toStringAsFixed(2)}–${c.max.toStringAsFixed(2)} Ом';
-      buffer.writeln('- Целостность: $range (шкала: отлично < 5 Ом, удовл. 5–50 Ом, плохо > 50 Ом)');
+      buffer.writeln(
+        '- Целостность: $range (шкала: отлично < 5 Ом, удовл. 5–50 Ом, плохо > 50 Ом)',
+      );
     } else {
       buffer.writeln('- Целостность: не тестировано');
     }
@@ -183,7 +186,7 @@ class ZaiInsightGenerator implements InsightGenerator {
       } else if (input.freq!.peak != null && input.freq!.sigma != null) {
         buffer.writeln(
           '- АЧХ: пик отклонения ${input.freq!.peak!.toStringAsFixed(1)} дБ, '
-              'σ ${input.freq!.sigma!.toStringAsFixed(1)} дБ (шкала: отлично ≤ ±1 дБ, удовл. ≤ ±3 дБ, плохо > ±3 дБ)',
+          'σ ${input.freq!.sigma!.toStringAsFixed(1)} дБ (шкала: отлично ≤ ±1 дБ, удовл. ≤ ±3 дБ, плохо > ±3 дБ)',
         );
       } else {
         buffer.writeln('- АЧХ: не тестировано');

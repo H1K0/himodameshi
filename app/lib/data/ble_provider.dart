@@ -1,14 +1,10 @@
 import 'dart:async';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 /// Статус подключения
-enum ConnectionStatus {
-  disconnected,
-  connecting,
-  connected,
-  error,
-}
+enum ConnectionStatus { disconnected, connecting, connected, error }
 
 /// Результат подключения
 enum ConnectionResult {
@@ -35,7 +31,7 @@ class BleProvider {
   // Подписки
   StreamSubscription<BluetoothConnectionState>? _connectionSubscription;
   StreamSubscription<List<ScanResult>>? _scanSubscription;
-  Completer<BluetoothDevice?>? _scanCompleter;   // для safe stop
+  Completer<BluetoothDevice?>? _scanCompleter; // для safe stop
 
   // Геттеры
   BluetoothDevice? get connectedDevice => _connectedDevice;
@@ -199,11 +195,12 @@ class BleProvider {
       }
 
       // Подписываемся на изменения состояния
-      _connectionSubscription = device.connectionState.listen(_onConnectionStateChanged);
+      _connectionSubscription = device.connectionState.listen(
+        _onConnectionStateChanged,
+      );
 
       _setStatus(ConnectionStatus.connected);
       return ConnectionResult.success;
-
     } on TimeoutException {
       _lastError = 'Таймаут подключения';
       _setStatus(ConnectionStatus.error);
@@ -249,7 +246,7 @@ class BleProvider {
       _currentMtu = mtu;
       _mtuController.add(mtu);
 
-      print('MTU negotiated: $mtu');
+      debugPrint('MTU negotiated: $mtu');
 
       if (mtu < 100) {
         _lastError = 'MTU слишком мал: $mtu (минимум 100)';
@@ -275,7 +272,7 @@ class BleProvider {
       try {
         await _connectedDevice!.disconnect();
       } catch (e) {
-        print('Disconnect error: $e');
+        debugPrint('Disconnect error: $e');
       }
       _connectedDevice = null;
     }
@@ -298,7 +295,7 @@ class BleProvider {
     }
 
     // TODO: найти нужную характеристику и отправить данные
-    print('Sending command: $data');
+    debugPrint('Sending command: $data');
     return true;
   }
 
