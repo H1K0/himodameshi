@@ -9,6 +9,8 @@
 
 Workflow: [`hub-deploy-dev.yaml`](../.gitea/workflows/hub-deploy-dev.yaml) — при слиянии в `dev`, [`hub-deploy-prod.yaml`](../.gitea/workflows/hub-deploy-prod.yaml) — по тегу `hub/vX.Y.Z`.
 
+Веб (`web/`) отдельно не разворачивается: собранная SPA входит в образ Hub и раздаётся тем же сервером из `STATIC_DIR` ([ADR-015](../docs/adr/015-hub-stack.md)). Поэтому оба workflow запускаются и при изменениях в `web/`, а образ собирается из корня репозитория: `docker build -f hub/Dockerfile .`. Стадии веба и сервера в `hub/Dockerfile` кешируются независимо: если изменился только `hub/`, сборка веба берётся из кеша Docker хоста, и наоборот. Сборку веба в PR проверяет [`web-ci.yaml`](../.gitea/workflows/web-ci.yaml).
+
 ## Окружения
 
 |                | dev                             | prod                             |

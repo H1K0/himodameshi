@@ -1,4 +1,4 @@
-# Деплой Hub на dev при слиянии в dev (ADR-017).
+# Деплой Hub вместе с вебом на dev при слиянии в dev (ADR-015, ADR-017).
 # Задачи сливаются squash'ем, у коммита в dev свой SHA, поэтому образ sha-<коммит> собирается здесь.
 name: hub-deploy-dev
 
@@ -7,6 +7,8 @@ on:
     branches: [dev]
     paths:
       - hub/**
+      - web/**
+      - .dockerignore
       - deploy/**
       - .gitea/workflows/hub-deploy-dev.yaml
   workflow_dispatch:
@@ -33,7 +35,9 @@ jobs:
 
       - name: Сборка и публикация образа
         run: |
-          docker build -t "$IMAGE:$TAG" hub
+          # Контекст — корень репозитория: в образ входят hub/ и web/ (ADR-015).
+          # Неизменившаяся часть берётся из кеша Docker хоста, её стадия не пересобирается.
+          docker build -f hub/Dockerfile -t "$IMAGE:$TAG" .
           docker push "$IMAGE:$TAG"
 
       - name: Развёртывание

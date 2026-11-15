@@ -73,6 +73,9 @@ func (s *Server) Handler() (http.Handler, error) {
 			abortWithProblem(c, validationError(api.FieldError{Field: "params", Message: "некорректное значение параметра"}))
 		},
 	})
+	if s.cfg.StaticDir != "" {
+		r.NoRoute(s.serveStatic)
+	}
 	return r, nil
 }
 

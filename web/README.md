@@ -21,6 +21,15 @@ npm run dev
 ```
 Откройте браузер и перейдите по адресу: http://localhost:5173
 
+### Сборка и развёртывание
+
+Веб — SPA на `@sveltejs/adapter-static` ([ADR-015](../docs/adr/015-hub-stack.md)). `npm run build` складывает статику в `build/`, в образе её раздаёт сервер Hub: существующий файл — как есть, любой другой путь вне `/api` — `index.html`, дальше маршрут разбирает роутер SvelteKit в браузере. Отдельного деплоя у веба нет: после слияния в `dev` он выезжает на dev вместе с Hub, на prod — с тегом `hub/vX.Y.Z` (подробнее — [deploy/README.md](../deploy/README.md)). В PR сборку проверяет `web-ci`.
+
+Что из этого следует:
+
+- Серверной части у SvelteKit нет (`ssr = false` в `src/routes/+layout.ts`): файлы `+page.server.ts`, `+server.ts` и form actions не работают. Данные берутся только из API Hub.
+- После `git pull`, если изменился `package-lock.json`, выполните `npm install`.
+
 ### Структура папки web
 web/
 ├── src/
