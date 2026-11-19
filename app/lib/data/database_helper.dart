@@ -24,28 +24,43 @@ class DatabaseHelper {
     final directory = await getApplicationDocumentsDirectory();
     final path = join(directory.path, 'himo_database.db');
 
-    return await openDatabase(path, version: 1, onCreate: _onCreate);
+    return await openDatabase(
+      path,
+      version: 2,
+      onCreate: _onCreate,
+      onUpgrade: _onUpgrade,
+    );
   }
 
   Future<void> _onCreate(Database db, int version) async {
     await db.execute('''
       CREATE TABLE cables (
-        id          TEXT     PRIMARY KEY,
-        name        TEXT     NOT NULL,
-        color       TEXT     NOT NULL,
-        cable_type  TEXT     NOT NULL,
-        created_at  INTEGER  NOT NULL,
-        note        TEXT
+        id           TEXT     PRIMARY KEY,
+        name         TEXT     NOT NULL,
+        color        TEXT     NOT NULL,
+        cable_type   TEXT     NOT NULL,
+        created_at   INTEGER  NOT NULL,
+        note         TEXT,
+        team_id      TEXT,
+        synced       INTEGER  NOT NULL DEFAULT 0,
+        version      INTEGER  NOT NULL DEFAULT 0,
+        dirty        INTEGER  NOT NULL DEFAULT 0,
+        assignee_id  TEXT
       )
     ''');
 
     await db.execute('''
       CREATE TABLE test_sessions (
-        id             TEXT     PRIMARY KEY,
-        cable_id       TEXT     NOT NULL REFERENCES cables(id) ON DELETE CASCADE,
-        started_at     INTEGER  NOT NULL,
-        health_score   INTEGER,
-        ble_device_id  TEXT     NOT NULL
+        id                TEXT     PRIMARY KEY,
+        cable_id          TEXT     NOT NULL REFERENCES cables(id) ON DELETE CASCADE,
+        started_at        INTEGER  NOT NULL,
+        health_score      INTEGER,
+        ble_device_id     TEXT     NOT NULL,
+        synced            INTEGER  NOT NULL DEFAULT 0,
+        pv                INTEGER  NOT NULL DEFAULT 1,
+        rules_version     TEXT,
+        health_incomplete INTEGER  NOT NULL DEFAULT 0,
+        note              TEXT
       )
     ''');
 
@@ -72,6 +87,84 @@ class DatabaseHelper {
         points      TEXT NOT NULL
       )
     ''');
+
+    await db.execute('''
+      CREATE TABLE team_cursors (
+        team_id       TEXT     PRIMARY KEY,
+        cursor        INTEGER  NOT NULL DEFAULT 0,
+        last_sync_at  INTEGER,
+        last_status   TEXT
+      )
+    ''');
+  }
+
+  /// Миграция v1 → v2: добираем sync-колонки и таблицу team_cursors.
+  /// Существующие строки получают значения по умолчанию; health_incomplete и
+  /// rules_version для уже лежащих сессий пересчитываются, иначе push упадёт
+  /// на серверной валидации (testMetaErrors требует непустой rules_version).
+  Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
+    if (oldVersion < 2) {
+      // cables: sync-колонки. NOT NULL DEFAULT позволяет ALTER для существующих строк.
+      await db.execute('ALTER TABLE cables ADD COLUMN team_id TEXT');
+      await db.execute(
+        'ALTER TABLE cables ADD COLUMN synced INTEGER NOT NULL DEFAULT 0',
+      );
+      await db.execute(
+        'ALTER TABLE cables ADD COLUMN version INTEGER NOT NULL DEFAULT 0',
+      );
+      await db.execute(
+        'ALTER TABLE cables ADD COLUMN dirty INTEGER NOT NULL DEFAULT 0',
+      );
+      await db.execute('ALTER TABLE cables ADD COLUMN assignee_id TEXT');
+
+      // test_sessions: поля, требуемые NewTest при push.
+      await db.execute(
+        'ALTER TABLE test_sessions ADD COLUMN synced INTEGER NOT NULL DEFAULT 0',
+      );
+      await db.execute(
+        'ALTER TABLE test_sessions ADD COLUMN pv INTEGER NOT NULL DEFAULT 1',
+      );
+      await db.execute(
+        'ALTER TABLE test_sessions ADD COLUMN rules_version TEXT',
+      );
+      await db.execute(
+        'ALTER TABLE test_sessions ADD COLUMN health_incomplete INTEGER NOT NULL DEFAULT 0',
+      );
+      await db.execute('ALTER TABLE test_sessions ADD COLUMN note TEXT');
+
+      // rules_version — обязательно непустое (сервер: 1..32 символа).
+      await db.execute(
+        "UPDATE test_sessions SET rules_version = '0.1' WHERE rules_version IS NULL",
+      );
+
+      // health_incomplete: истина, если выполнены не все применимые измерения.
+      // jack_ts — только целостность; jack_trs/xlr — целостность + CMRR + АЧХ.
+      await db.execute('''
+        UPDATE test_sessions SET health_incomplete = 1
+        WHERE id IN (
+          SELECT ts.id
+          FROM test_sessions ts
+          JOIN cables c ON ts.cable_id = c.id
+          WHERE
+            (c.cable_type IN ('jack_trs','xlr') AND (
+               NOT EXISTS(SELECT 1 FROM cmrr_results cr WHERE cr.session_id = ts.id)
+               OR NOT EXISTS(SELECT 1 FROM freq_response_results fr WHERE fr.session_id = ts.id)
+            ))
+            OR (c.cable_type = 'jack_ts' AND
+               NOT EXISTS(SELECT 1 FROM continuity_results cr WHERE cr.session_id = ts.id))
+            OR (c.cable_type NOT IN ('jack_ts','jack_trs','xlr'))
+        )
+      ''');
+
+      await db.execute('''
+        CREATE TABLE team_cursors (
+          team_id       TEXT     PRIMARY KEY,
+          cursor        INTEGER  NOT NULL DEFAULT 0,
+          last_sync_at  INTEGER,
+          last_status   TEXT
+        )
+      ''');
+    }
   }
 
   // ---------- C A B L E S ----------
@@ -96,17 +189,41 @@ class DatabaseHelper {
     final String newId = generateUuidV7String();
     final Map<String, dynamic> data = Map.from(cable);
     data['id'] = newId;
+    // Новый локальный кабель: не выгружен (synced=0), без правок (dirty=0),
+    // версия 0 — сервер назначит version при приёме (sync.md §3.4).
+    // team_id не трогаем: null, пока пользователь не выберет команду для выгрузки.
+    data['synced'] = 0;
+    data['dirty'] = 0;
+    data['version'] = 0;
     await db.insert('cables', data);
     return newId; // Возвращаем сгенерированный ID
   }
 
   Future<int> updateCable(String id, Map<String, dynamic> cable) async {
     final db = await database;
-    return await db.update('cables', cable, where: 'id = ?', whereArgs: [id]);
+    final Map<String, dynamic> data = Map.from(cable);
+    // Правка атрибутов. Если кабель уже выгружен (synced=1) — помечаем dirty=1:
+    // правка уйдёт в push как cable_update (sync.md §3.1). Невыгруженный кабель
+    // остаётся в секции новых (synced=0), dirty не нужен.
+    final existing = await db.query(
+      'cables',
+      where: 'id = ?',
+      whereArgs: [id],
+      limit: 1,
+    );
+    if (existing.isNotEmpty && (existing.first['synced'] as int?) == 1) {
+      data['dirty'] = 1;
+    }
+    // version не трогаем: это последняя известная серверная версия, её шлём как
+    // базу правки (CableUpdateItem.version).
+    return await db.update('cables', data, where: 'id = ?', whereArgs: [id]);
   }
 
   Future<int> deleteCable(String id) async {
     final db = await database;
+    // Локальное удаление отслеживаемого кабеля = перестать отслеживать:
+    // сервер не оповещается, его копия остаётся (sync.md §5.5). CASCADE удаляет
+    // сессии и результаты локально.
     return await db.delete('cables', where: 'id = ?', whereArgs: [id]);
   }
 
@@ -117,6 +234,13 @@ class DatabaseHelper {
     final String newId = generateUuidV7String();
     final Map<String, dynamic> data = Map.from(session);
     data['id'] = newId;
+    // Новый тест: не выгружен (synced=0). Поля NewTest добираем дефолтами,
+    // если вызывающая сторона не задала явно. health_incomplete пересчитывается
+    // recomputeHealthIncomplete() после вставки результатов.
+    data['synced'] = 0;
+    data.putIfAbsent('pv', () => 1);
+    data.putIfAbsent('rules_version', () => '0.1');
+    data.putIfAbsent('health_incomplete', () => 0);
     await db.insert('test_sessions', data);
     return newId; // Возвращаем сгенерированный ID
   }
@@ -248,12 +372,22 @@ class DatabaseHelper {
         healthScore = (healthResult.score ?? 0).toInt();
       }
 
+      // health_incomplete: jack_ts — только целостность; jack_trs/xlr — + CMRR + АЧХ.
+      final bool healthIncomplete = cableType == null
+          ? false
+          : !(cableType.supportsCmrr
+                ? (cmrrDb != null && freqValues != null)
+                : true);
+
       // ИСПОЛЬЗУЕМ insertTestSession
       final String sessionId = await insertTestSession({
         'cable_id': cableId,
         'started_at': now,
         'health_score': healthScore,
         'ble_device_id': 'MOCK-DEVICE',
+        'pv': 1,
+        'rules_version': '0.1',
+        'health_incomplete': healthIncomplete ? 1 : 0,
       });
 
       // Вставляем результаты
@@ -536,5 +670,344 @@ class DatabaseHelper {
       'cmrr': cmrr.isNotEmpty ? cmrr.first : null,
       'freq_response': freq.isNotEmpty ? freq.first : null,
     };
+  }
+
+  // ---------- S Y N C   (Himo Hub) ----------
+  // Контракт: docs/spec/hub/sync.md. Методы для SyncEngine: что отправлять,
+  // как применять ответ pull и per-item результаты push.
+
+  /// Кабели для секции `cables` push: team_id задан, synced=0 (sync.md §3.1).
+  Future<List<Map<String, dynamic>>> getNewCablesForPush() async {
+    final db = await database;
+    return await db.query(
+      'cables',
+      where: 'team_id IS NOT NULL AND synced = 0',
+    );
+  }
+
+  /// Кабели для секции `cable_updates` push: synced=1 AND dirty=1 (sync.md §3.1).
+  Future<List<Map<String, dynamic>>> getDirtyCableUpdates() async {
+    final db = await database;
+    return await db.query('cables', where: 'synced = 1 AND dirty = 1');
+  }
+
+  /// Тесты для секции `tests` push: synced=0 у кабелей с team_id (sync.md §3.1).
+  Future<List<Map<String, dynamic>>> getUnsyncedTestsForPush() async {
+    final db = await database;
+    return await db.rawQuery('''
+      SELECT ts.* FROM test_sessions ts
+      JOIN cables c ON ts.cable_id = c.id
+      WHERE ts.synced = 0 AND c.team_id IS NOT NULL
+      ORDER BY ts.started_at ASC
+    ''');
+  }
+
+  /// Строки результатов сессии для сборки NewTest.
+  Future<
+    ({
+      Map<String, dynamic>? continuity,
+      Map<String, dynamic>? cmrr,
+      Map<String, dynamic>? freq,
+    })
+  >
+  getTestResults(String sessionId) async {
+    final db = await database;
+    final cont = await db.query(
+      'continuity_results',
+      where: 'session_id = ?',
+      whereArgs: [sessionId],
+    );
+    final cmrr = await db.query(
+      'cmrr_results',
+      where: 'session_id = ?',
+      whereArgs: [sessionId],
+    );
+    final freq = await db.query(
+      'freq_response_results',
+      where: 'session_id = ?',
+      whereArgs: [sessionId],
+    );
+    return (
+      continuity: cont.isNotEmpty ? cont.first : null,
+      cmrr: cmrr.isNotEmpty ? cmrr.first : null,
+      freq: freq.isNotEmpty ? freq.first : null,
+    );
+  }
+
+  /// Отслеживаемые кабели команды для pull (sync.md §5.2): team_id AND synced=1.
+  Future<List<String>> getTrackedCableIds(String teamId) async {
+    final db = await database;
+    final rows = await db.query(
+      'cables',
+      columns: ['id'],
+      where: 'team_id = ? AND synced = 1',
+      whereArgs: [teamId],
+    );
+    return rows.map((r) => r['id'] as String).toList();
+  }
+
+  /// Команды, по которым есть отслеживаемые кабели — для pull per team.
+  Future<List<String>> getTrackedTeamIds() async {
+    final db = await database;
+    final rows = await db.rawQuery(
+      'SELECT DISTINCT team_id FROM cables WHERE team_id IS NOT NULL AND synced = 1',
+    );
+    return rows.map((r) => r['team_id'] as String).toList();
+  }
+
+  /// Курсор команды (sync.md §5.1). 0 — ещё ничего не загружалось.
+  Future<int> getCursor(String teamId) async {
+    final db = await database;
+    final rows = await db.query(
+      'team_cursors',
+      where: 'team_id = ?',
+      whereArgs: [teamId],
+      limit: 1,
+    );
+    if (rows.isEmpty) return 0;
+    return (rows.first['cursor'] as int?) ?? 0;
+  }
+
+  /// Сохранить курсор команды и статус последней синхронизации.
+  Future<void> saveCursor(String teamId, int cursor, String status) async {
+    final db = await database;
+    final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+    await db.insert('team_cursors', {
+      'team_id': teamId,
+      'cursor': cursor,
+      'last_sync_at': now,
+      'last_status': status,
+    }, conflictAlgorithm: ConflictAlgorithm.replace);
+  }
+
+  /// upsert кабеля из pull (sync.md §5.4). [row] — готовая строка cables из
+  /// маппера `cableToRow` (без dirty — его проставляет этот метод). При local
+  /// dirty=1 атрибуты и version НЕ перезаписываем — локальная правка ещё не
+  /// выгружена, конфликт вернёт сервер при следующем push. Тесты такого кабеля
+  /// записываются как обычно.
+  Future<void> upsertCableFromPull(Map<String, dynamic> row) async {
+    final db = await database;
+    final id = row['id'] as String;
+    final existing = await db.query(
+      'cables',
+      where: 'id = ?',
+      whereArgs: [id],
+      limit: 1,
+    );
+    if (existing.isEmpty) {
+      // Новый для приложения кабель (первая загрузка из каталога, §6).
+      final r = Map<String, dynamic>.from(row)..['dirty'] = 0;
+      await db.insert(
+        'cables',
+        r,
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+      return;
+    }
+    final dirty = (existing.first['dirty'] as int?) == 1;
+    if (dirty) {
+      // Не трогаем атрибуты/version; только подтверждаем отслеживание.
+      await db.update(
+        'cables',
+        {'synced': 1, 'team_id': row['team_id']},
+        where: 'id = ?',
+        whereArgs: [id],
+      );
+    } else {
+      final r = Map<String, dynamic>.from(row)..['dirty'] = 0;
+      await db.update('cables', r, where: 'id = ?', whereArgs: [id]);
+    }
+  }
+
+  /// upsert теста из pull. Тесты неизменяемы — перезаписываем по id (sync.md §5.4).
+  /// Строки ([session], [continuity], [cmrr], [freq]) — готовые из маппера
+  /// `testToRows`. Состав результатов может измениться (например, тест
+  /// инвалидирован) — отсутствующие result-таблицы очищаем.
+  Future<void> upsertTestFromPull(
+    Map<String, dynamic> session,
+    Map<String, dynamic>? continuity,
+    Map<String, dynamic>? cmrr,
+    Map<String, dynamic>? freq,
+  ) async {
+    final db = await database;
+    final id = session['id'] as String;
+    await db.insert(
+      'test_sessions',
+      session,
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+    if (continuity != null) {
+      await db.insert(
+        'continuity_results',
+        continuity,
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+    } else {
+      await db.delete(
+        'continuity_results',
+        where: 'session_id = ?',
+        whereArgs: [id],
+      );
+    }
+    if (cmrr != null) {
+      await db.insert(
+        'cmrr_results',
+        cmrr,
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+    } else {
+      await db.delete('cmrr_results', where: 'session_id = ?', whereArgs: [id]);
+    }
+    if (freq != null) {
+      await db.insert(
+        'freq_response_results',
+        freq,
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+    } else {
+      await db.delete(
+        'freq_response_results',
+        where: 'session_id = ?',
+        whereArgs: [id],
+      );
+    }
+  }
+
+  /// Кабель удалён в Hub (sync.md §5.5): перестаём отслеживать, локальная
+  /// копия с историей остаётся.
+  Future<void> untrackCable(String id) async {
+    final db = await database;
+    await db.update(
+      'cables',
+      {'team_id': null, 'synced': 0},
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
+
+  /// Принять серверную версию кабеля при конфликте (sync.md §4): пользователь
+  /// выбрал версию Hub — перезаписываем локальные атрибуты, dirty=0.
+  /// [row] — готовая строка из `cableToRow`.
+  Future<void> applyServerCableVersion(Map<String, dynamic> row) async {
+    final db = await database;
+    final r = Map<String, dynamic>.from(row)..['dirty'] = 0;
+    await db.update(
+      'cables',
+      r,
+      where: 'id = ?',
+      whereArgs: [row['id'] as String],
+    );
+  }
+
+  /// Оставить свою версию при конфликте (sync.md §4): берём version из ответа
+  /// как базу, свои значения и dirty=1 оставляем — правка уйдёт со следующим push.
+  Future<void> keepLocalCableVersion(String id, int serverVersion) async {
+    final db = await database;
+    await db.update(
+      'cables',
+      {'version': serverVersion, 'dirty': 1},
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
+
+  /// Новый кабель принят сервером (sync.md §3.4): synced=1, version из ответа.
+  Future<void> markCableSynced(String id, int version) async {
+    final db = await database;
+    await db.update(
+      'cables',
+      {'synced': 1, 'version': version, 'dirty': 0},
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
+
+  /// Правка принята сервером (sync.md §3.4): dirty=0, version из ответа.
+  Future<void> markCableUpdateSynced(String id, int version) async {
+    final db = await database;
+    await db.update(
+      'cables',
+      {'dirty': 0, 'version': version},
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
+
+  /// Тест принят сервером (sync.md §3.4): synced=1.
+  Future<void> markTestSynced(String id) async {
+    final db = await database;
+    await db.update(
+      'test_sessions',
+      {'synced': 1},
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
+
+  /// Пересчитать health_incomplete по наличию результатов и типу кабеля.
+  /// Вызывается после вставки результатов нового теста (testing_results).
+  Future<void> recomputeHealthIncomplete(String sessionId) async {
+    final db = await database;
+    final sess = await db.query(
+      'test_sessions',
+      where: 'id = ?',
+      whereArgs: [sessionId],
+      limit: 1,
+    );
+    if (sess.isEmpty) return;
+    final cableId = sess.first['cable_id'] as String;
+    final cables = await db.query(
+      'cables',
+      where: 'id = ?',
+      whereArgs: [cableId],
+      limit: 1,
+    );
+    if (cables.isEmpty) return;
+    final cableType = cables.first['cable_type'] as String?;
+    final hasCont =
+        (Sqflite.firstIntValue(
+              await db.rawQuery(
+                'SELECT COUNT(*) FROM continuity_results WHERE session_id = ?',
+                [sessionId],
+              ),
+            ) ??
+            0) >
+        0;
+    final hasCmrr =
+        (Sqflite.firstIntValue(
+              await db.rawQuery(
+                'SELECT COUNT(*) FROM cmrr_results WHERE session_id = ?',
+                [sessionId],
+              ),
+            ) ??
+            0) >
+        0;
+    final hasFreq =
+        (Sqflite.firstIntValue(
+              await db.rawQuery(
+                'SELECT COUNT(*) FROM freq_response_results WHERE session_id = ?',
+                [sessionId],
+              ),
+            ) ??
+            0) >
+        0;
+    bool incomplete;
+    switch (cableType) {
+      case 'jack_ts':
+        incomplete = !hasCont;
+        break;
+      case 'jack_trs':
+      case 'xlr':
+        incomplete = !(hasCont && hasCmrr && hasFreq);
+        break;
+      default:
+        incomplete = true;
+    }
+    await db.update(
+      'test_sessions',
+      {'health_incomplete': incomplete ? 1 : 0},
+      where: 'id = ?',
+      whereArgs: [sessionId],
+    );
   }
 }

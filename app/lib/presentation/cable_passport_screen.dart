@@ -2,6 +2,10 @@ import 'package:flutter/material.dart';
 import 'dart:ui';
 import '/data/test_models.dart';
 import '/data/database_helper.dart';
+import '/data/auth_store.dart';
+import '/data/sync/himo_client.dart';
+import 'package:himo_api/himo_api.dart' hide Color, CableType;
+import '/data/sync/sync_engine.dart';
 import 'testing_screen.dart';
 import 'testing_results_screen.dart';
 
@@ -78,6 +82,141 @@ class _CablePassportScreenState extends State<CablePassportScreen> {
     await DatabaseHelper().deleteCable(widget.cableId);
     if (!mounted) return;
     Navigator.pop(context);
+  }
+
+  /// Выгрузить кабель в Himo Hub: выбрать команду (GET /api/v1/teams) и
+  /// назначить team_id — кабель и его тесты уйдут на сервер при следующем push
+  /// (sync.md §3.1, секция cables).
+  Future<void> _showUploadToTeamSheet() async {
+    final auth = AuthStore();
+    await auth.load();
+    if (!auth.isLoggedIn && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Войдите в Himo Hub в настройках'),
+          backgroundColor: Color(0xFF1F1F1F),
+        ),
+      );
+      return;
+    }
+    final client = HimoClient();
+    if (!client.configured) return;
+    // GET /api/v1/teams через сгенерированный TeamsApi (himo_api).
+    final teams = await client.listTeams();
+    if (!mounted) return;
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFF0F0F0F),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (sheetCtx) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Выгрузить в Hub',
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w500,
+                    color: Color(0xFFFAFAFA),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                const Text(
+                  'Выберите команду — кабель и его тесты уйдут на сервер.',
+                  style: TextStyle(fontSize: 11, color: Color(0xFF888888)),
+                ),
+                const SizedBox(height: 14),
+                ...teams.map((t) => _teamTile(t, sheetCtx)),
+                if (teams.isEmpty)
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 20),
+                    child: Text(
+                      'Нет доступных команд',
+                      style: TextStyle(fontSize: 12, color: Color(0xFF888888)),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _teamTile(Team team, BuildContext sheetCtx) {
+    final name = team.name;
+    final isPersonal = team.isPersonal;
+    final members = team.memberCount;
+    return InkWell(
+      onTap: () async {
+        Navigator.pop(sheetCtx);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Выгружаем в Hub…'),
+            backgroundColor: Color(0xFF1F1F1F),
+          ),
+        );
+        final out = await HimoSync().uploadCableToTeam(widget.cableId, team.id);
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              out.ok
+                  ? 'Выгружено: ${out.cablesPushed} кабель, ${out.testsPushed} тестов'
+                  : 'Выгрузка с ошибками: ${out.errors.length}',
+            ),
+            backgroundColor: const Color(0xFF1F1F1F),
+          ),
+        );
+        _loadCableData();
+      },
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 8),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: const Color(0xFF161616),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: const Color(0xFF2A2A2A)),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    name,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      color: Color(0xFFFAFAFA),
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    '${isPersonal ? "Личное" : "Команда"} · $members уч.',
+                    style: const TextStyle(
+                      fontSize: 10,
+                      color: Color(0xFF666666),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(
+              Icons.cloud_upload_outlined,
+              size: 18,
+              color: Color(0xFFEF9F27),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   void _openRenameSheet() {
@@ -529,6 +668,9 @@ class _CablePassportScreenState extends State<CablePassportScreen> {
             offset: const Offset(0, 45),
             onSelected: (String result) {
               switch (result) {
+                case 'upload':
+                  _showUploadToTeamSheet();
+                  break;
                 case 'rename':
                   _openRenameSheet();
                   break;
@@ -575,6 +717,27 @@ class _CablePassportScreenState extends State<CablePassportScreen> {
                   ],
                 ),
               ),
+              if (_cableData?['team_id'] == null)
+                const PopupMenuItem<String>(
+                  value: 'upload',
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.cloud_upload_outlined,
+                        size: 18,
+                        color: Color(0xFFAAAAAA),
+                      ),
+                      SizedBox(width: 12),
+                      Text(
+                        'Выгрузить в Hub',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Color(0xFFE8E8E8),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               const PopupMenuDivider(color: Color(0xFF2A2A2A)),
               const PopupMenuItem<String>(
                 value: 'delete',

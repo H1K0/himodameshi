@@ -7,6 +7,7 @@ import 'details_screen.dart';
 import 'testing_progress_screen.dart';
 import 'cable_passport_screen.dart';
 import '/domain/freq_response_stats.dart';
+import '/data/sync/sync_engine.dart';
 
 class TestingResultsScreen extends StatefulWidget {
   final CableType? cableType;
@@ -971,24 +972,24 @@ class _SaveToCollectionSheetState extends State<_SaveToCollectionSheet> {
     }
   }
 
-  Map<String, dynamic> _parseContinuityResult() {
+  List<Map<String, dynamic>> _parseContinuityResult() {
     if (widget.cableType == CableType.xlr) {
-      return {
-        'pin1': {'r': 0.9, 's': 'ok'},
-        'pin2': {'r': 1.2, 's': 'ok'},
-        'pin3': {'r': 1.4, 's': 'ok'},
-      };
+      return [
+        {'name': 'pin1', 'r': 0.9, 's': 'ok'},
+        {'name': 'pin2', 'r': 1.2, 's': 'ok'},
+        {'name': 'pin3', 'r': 1.4, 's': 'ok'},
+      ];
     } else if (widget.cableType == CableType.jackTrs) {
-      return {
-        'tip': {'r': 0.9, 's': 'ok'},
-        'ring': {'r': 1.2, 's': 'ok'},
-        'sleeve': {'r': 1.4, 's': 'ok'},
-      };
+      return [
+        {'name': 'tip', 'r': 0.9, 's': 'ok'},
+        {'name': 'ring', 'r': 1.2, 's': 'ok'},
+        {'name': 'sleeve', 'r': 1.4, 's': 'ok'},
+      ];
     } else {
-      return {
-        'tip': {'r': 0.9, 's': 'ok'},
-        'sleeve': {'r': 1.4, 's': 'ok'},
-      };
+      return [
+        {'name': 'tip', 'r': 0.9, 's': 'ok'},
+        {'name': 'sleeve', 'r': 1.4, 's': 'ok'},
+      ];
     }
   }
 
@@ -1002,20 +1003,39 @@ class _SaveToCollectionSheetState extends State<_SaveToCollectionSheet> {
     return 'fail';
   }
 
-  List<List<num>> _generateFreqPoints() {
+  List<num> _generateFreqPoints() {
+    // Плоский список магнитуд (дБ); частотную ось f добавляет сервер.
     return [
-      [10, 0.1],
-      [20, 0.1],
-      [50, 0.0],
-      [100, 0.0],
-      [200, -0.1],
-      [500, -0.2],
-      [1000, -0.2],
-      [2000, -0.3],
-      [5000, -0.5],
-      [10000, -0.8],
-      [20000, -2.1],
-      [40000, -4.5],
+      0.1,
+      0.1,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      -0.1,
+      -0.2,
+      -0.4,
+      -0.7,
+      -1.1,
+      -1.6,
+      -2.0,
+      -2.4,
+      -2.7,
+      -2.9,
+      -3.0,
+      -3.1,
     ];
   }
 
@@ -1065,6 +1085,12 @@ class _SaveToCollectionSheetState extends State<_SaveToCollectionSheet> {
         'points': jsonEncode(points),
       });
     }
+
+    // health_incomplete пересчитывается по наличию результатов (NewTest требует).
+    await DatabaseHelper().recomputeHealthIncomplete(sessionId);
+    // Push нового теста в Hub, если у кабеля есть команда (sync.md §7).
+    // Fire-and-forget: UI не ждёт сети; синхронизация докрутится в фоне.
+    HimoSync().run();
   }
 
   Future<void> _save() async {

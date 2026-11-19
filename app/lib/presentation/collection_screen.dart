@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:himo_api/himo_api.dart' hide Color;
 import '/data/ble_data_manager.dart';
+import '/data/sync/himo_client.dart';
+import '/data/sync/sync_engine.dart';
 import 'cable_passport_screen.dart';
 
 /// Статус фильтрации по цвету
@@ -75,6 +78,213 @@ class _CollectionScreenState extends State<CollectionScreen> {
         _isLoading = false;
       });
     }
+  }
+
+  /// Pull-to-refresh: синхронизировать с Hub, затем перечитать кабели.
+  Future<void> _onRefresh() async {
+    await HimoSync().run();
+    await _loadCables();
+  }
+
+  // ---------- первая загрузка кабеля из каталога команды (sync.md §6) ----------
+  //
+  // Обычная кнопка «Синхронизировать» (HimoSync.run) так НЕ делает: pull там
+  // инкрементальный и тянет только уже отслеживаемые кабели (synced=1 в команде).
+  // У свежего устройства Элис таких нет → Бобов кабель через sync не прилетит.
+  // Поэтому первая загрузка — отдельный путь: каталог команды → выбор кабеля →
+  // loadCableFromCatalog тянет его и ставит synced=1/team_id (становится
+  // отслеживаемым), после чего обычный sync уже поддерживает его актуальным.
+
+  void _showLoadFromTeamSheet() {
+    Team? selectedTeam;
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: const Color(0xFF0F0F0F),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setState) {
+          return Padding(
+            padding: EdgeInsets.fromLTRB(
+              16,
+              12,
+              16,
+              16 + MediaQuery.of(ctx).viewInsets.bottom,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  children: [
+                    if (selectedTeam != null)
+                      IconButton(
+                        icon: const Icon(
+                          Icons.arrow_back,
+                          color: Color(0xFFAAAAAA),
+                          size: 20,
+                        ),
+                        onPressed: () => setState(() => selectedTeam = null),
+                      )
+                    else
+                      const SizedBox(width: 48),
+                    Expanded(
+                      child: Text(
+                        selectedTeam == null
+                            ? 'Выберите команду'
+                            : selectedTeam!.name,
+                        style: const TextStyle(
+                          color: Color(0xFFFAFAFA),
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                    const SizedBox(width: 48),
+                  ],
+                ),
+                const Divider(color: Color(0xFF1A1A1A), height: 0.5),
+                const SizedBox(height: 4),
+                Flexible(
+                  child: selectedTeam == null
+                      ? _buildTeamsCatalog(
+                          onPick: (t) => setState(() => selectedTeam = t),
+                        )
+                      : _buildTeamCablesCatalog(selectedTeam!),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildTeamsCatalog({required ValueChanged<Team> onPick}) {
+    return FutureBuilder<List<Team>>(
+      future: HimoClient().listTeams(),
+      builder: (ctx, snap) {
+        if (snap.connectionState != ConnectionState.done) {
+          return const Padding(
+            padding: EdgeInsets.all(32),
+            child: Center(
+              child: CircularProgressIndicator(color: Color(0xFFEF9F27)),
+            ),
+          );
+        }
+        final teams = snap.data ?? const [];
+        if (teams.isEmpty) {
+          return const Padding(
+            padding: EdgeInsets.all(24),
+            child: Text(
+              'Нет команд. Войдите в аккаунт, состоящий в одной команде с Бобом.',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Color(0xFF888888), fontSize: 12),
+            ),
+          );
+        }
+        return ListView.separated(
+          shrinkWrap: true,
+          itemCount: teams.length,
+          separatorBuilder: (_, _) =>
+              const Divider(color: Color(0xFF1A1A1A), height: 0.5),
+          itemBuilder: (ctx, i) {
+            final t = teams[i];
+            return ListTile(
+              title: Text(
+                t.name,
+                style: const TextStyle(color: Color(0xFFE8E8E8), fontSize: 13),
+              ),
+              trailing: const Icon(
+                Icons.chevron_right,
+                color: Color(0xFF555555),
+                size: 18,
+              ),
+              onTap: () => onPick(t),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildTeamCablesCatalog(Team team) {
+    return FutureBuilder<List<Cable>>(
+      future: HimoClient().listTeamCables(team.id),
+      builder: (ctx, snap) {
+        if (snap.connectionState != ConnectionState.done) {
+          return const Padding(
+            padding: EdgeInsets.all(32),
+            child: Center(
+              child: CircularProgressIndicator(color: Color(0xFFEF9F27)),
+            ),
+          );
+        }
+        final cables = snap.data ?? const [];
+        if (cables.isEmpty) {
+          return const Padding(
+            padding: EdgeInsets.all(24),
+            child: Text(
+              'В команде пока нет кабелей.',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Color(0xFF888888), fontSize: 12),
+            ),
+          );
+        }
+        return ListView.separated(
+          shrinkWrap: true,
+          itemCount: cables.length,
+          separatorBuilder: (_, _) =>
+              const Divider(color: Color(0xFF1A1A1A), height: 0.5),
+          itemBuilder: (ctx, i) {
+            final c = cables[i];
+            return ListTile(
+              title: Text(
+                c.name,
+                style: const TextStyle(color: Color(0xFFE8E8E8), fontSize: 13),
+              ),
+              subtitle: Text(
+                '${c.cableType.toJson()} · v${c.version}',
+                style: const TextStyle(color: Color(0xFF666666), fontSize: 11),
+              ),
+              trailing: const Icon(
+                Icons.download_outlined,
+                color: Color(0xFFEF9F27),
+                size: 18,
+              ),
+              onTap: () => _loadCableFromCatalog(team.id, c.id),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Future<void> _loadCableFromCatalog(String teamId, String cableId) async {
+    Navigator.of(context).pop();
+    final out = await HimoSync().loadCableFromCatalog(teamId, cableId);
+    if (!mounted) return;
+    String msg;
+    if (out.authRequired) {
+      msg = 'Войдите, чтобы загрузить кабель';
+    } else if (out.cablesPulled > 0) {
+      msg = 'Кабель загружен из команды';
+    } else if (out.errors.isNotEmpty) {
+      msg = 'Ошибка: ${out.errors.first}';
+    } else {
+      msg = 'Кабель не найден в команде';
+    }
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(msg),
+        backgroundColor: const Color(0xFF1F1F1F),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+    await _loadCables(); // обновить коллекцию
   }
 
   void _applyFilters() {
@@ -293,6 +503,14 @@ class _CollectionScreenState extends State<CollectionScreen> {
         elevation: 0,
         actions: [
           IconButton(
+            tooltip: 'Загрузить из команды',
+            icon: const Icon(
+              Icons.cloud_download_outlined,
+              color: Color(0xFFAAAAAA),
+            ),
+            onPressed: _showLoadFromTeamSheet,
+          ),
+          IconButton(
             icon: Icon(
               _sortDirection == SortDirection.ascending
                   ? Icons.arrow_upward
@@ -435,139 +653,154 @@ class _CollectionScreenState extends State<CollectionScreen> {
                 const SizedBox(height: 10),
                 // Список кабелей
                 Expanded(
-                  child: _filteredCables.isEmpty
-                      ? const Center(
-                          child: Text(
-                            'Нет кабелей',
-                            style: TextStyle(color: Color(0xFF888888)),
-                          ),
-                        )
-                      : ListView.builder(
-                          padding: const EdgeInsets.fromLTRB(24, 0, 24, 80),
-                          itemCount: _filteredCables.length,
-                          itemBuilder: (context, index) {
-                            final cable = _filteredCables[index];
-                            final int? score = cable['healthScore'];
-                            final bool hasCatastrophic =
-                                cable['hasCatastrophic'] ?? false;
-
-                            Color stripColor = _getScoreColor(score);
-                            if (hasCatastrophic) {
-                              stripColor = const Color(0xFFE24B4A);
-                            }
-
-                            return GestureDetector(
-                              onTap: () => _navigateToCableDetail(cable),
-                              child: Container(
-                                margin: const EdgeInsets.only(bottom: 6),
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 10,
+                  child: RefreshIndicator(
+                    color: const Color(0xFFEF9F27),
+                    onRefresh: _onRefresh,
+                    child: _filteredCables.isEmpty
+                        ? ListView(
+                            physics: const AlwaysScrollableScrollPhysics(),
+                            children: const [
+                              SizedBox(height: 80),
+                              Center(
+                                child: Text(
+                                  'Нет кабелей',
+                                  style: TextStyle(color: Color(0xFF888888)),
                                 ),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFF111111),
-                                  borderRadius: BorderRadius.circular(10),
-                                  border: Border.all(
-                                    color: const Color(0xFF1F1F1F),
+                              ),
+                            ],
+                          )
+                        : ListView.builder(
+                            physics: const AlwaysScrollableScrollPhysics(),
+                            padding: const EdgeInsets.fromLTRB(24, 0, 24, 80),
+                            itemCount: _filteredCables.length,
+                            itemBuilder: (context, index) {
+                              final cable = _filteredCables[index];
+                              final int? score = cable['healthScore'];
+                              final bool hasCatastrophic =
+                                  cable['hasCatastrophic'] ?? false;
+
+                              Color stripColor = _getScoreColor(score);
+                              if (hasCatastrophic) {
+                                stripColor = const Color(0xFFE24B4A);
+                              }
+
+                              return GestureDetector(
+                                onTap: () => _navigateToCableDetail(cable),
+                                child: Container(
+                                  margin: const EdgeInsets.only(bottom: 6),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 10,
                                   ),
-                                ),
-                                child: Row(
-                                  children: [
-                                    Container(
-                                      width: 3,
-                                      height: 36,
-                                      decoration: BoxDecoration(
-                                        color: stripColor,
-                                        borderRadius: BorderRadius.circular(2),
-                                      ),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF111111),
+                                    borderRadius: BorderRadius.circular(10),
+                                    border: Border.all(
+                                      color: const Color(0xFF1F1F1F),
                                     ),
-                                    const SizedBox(width: 12),
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Row(
-                                            children: [
-                                              Text(
-                                                cable['name'],
-                                                style: const TextStyle(
-                                                  fontSize: 12,
-                                                  fontWeight: FontWeight.w500,
-                                                  color: Color(0xFFFAFAFA),
-                                                ),
-                                              ),
-                                              const SizedBox(width: 6),
-                                              Container(
-                                                padding:
-                                                    const EdgeInsets.symmetric(
-                                                      horizontal: 5,
-                                                      vertical: 2,
-                                                    ),
-                                                decoration: BoxDecoration(
-                                                  color: const Color(
-                                                    0xFF1A1A1A,
-                                                  ),
-                                                  borderRadius:
-                                                      BorderRadius.circular(3),
-                                                ),
-                                                child: Text(
-                                                  _getTypeLabelFromString(
-                                                    cable['cable_type'],
-                                                  ),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Container(
+                                        width: 3,
+                                        height: 36,
+                                        decoration: BoxDecoration(
+                                          color: stripColor,
+                                          borderRadius: BorderRadius.circular(
+                                            2,
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Row(
+                                              children: [
+                                                Text(
+                                                  cable['name'],
                                                   style: const TextStyle(
-                                                    fontSize: 8,
-                                                    color: Color(0xFF666666),
+                                                    fontSize: 12,
+                                                    fontWeight: FontWeight.w500,
+                                                    color: Color(0xFFFAFAFA),
                                                   ),
                                                 ),
+                                                const SizedBox(width: 6),
+                                                Container(
+                                                  padding:
+                                                      const EdgeInsets.symmetric(
+                                                        horizontal: 5,
+                                                        vertical: 2,
+                                                      ),
+                                                  decoration: BoxDecoration(
+                                                    color: const Color(
+                                                      0xFF1A1A1A,
+                                                    ),
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                          3,
+                                                        ),
+                                                  ),
+                                                  child: Text(
+                                                    _getTypeLabelFromString(
+                                                      cable['cable_type'],
+                                                    ),
+                                                    style: const TextStyle(
+                                                      fontSize: 8,
+                                                      color: Color(0xFF666666),
+                                                    ),
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                            const SizedBox(height: 2),
+                                            Text(
+                                              '${cable['checksCount'] ?? 0} ${_getChecksWord(cable['checksCount'] ?? 0)} · ${cable['lastCheck'] ?? 'нет данных'}',
+                                              style: const TextStyle(
+                                                fontSize: 10,
+                                                color: Color(0xFF888888),
                                               ),
-                                            ],
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.end,
+                                        children: [
+                                          Text(
+                                            _getScoreText(score),
+                                            style: const TextStyle(
+                                              fontSize: 15,
+                                              fontWeight: FontWeight.w500,
+                                              color: Color(0xFFFAFAFA),
+                                            ),
                                           ),
                                           const SizedBox(height: 2),
-                                          Text(
-                                            '${cable['checksCount'] ?? 0} ${_getChecksWord(cable['checksCount'] ?? 0)} · ${cable['lastCheck'] ?? 'нет данных'}',
-                                            style: const TextStyle(
-                                              fontSize: 10,
-                                              color: Color(0xFF888888),
+                                          const Text(
+                                            '/100',
+                                            style: TextStyle(
+                                              fontSize: 8,
+                                              color: Color(0xFF666666),
                                             ),
                                           ),
                                         ],
                                       ),
-                                    ),
-                                    Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.end,
-                                      children: [
-                                        Text(
-                                          _getScoreText(score),
-                                          style: const TextStyle(
-                                            fontSize: 15,
-                                            fontWeight: FontWeight.w500,
-                                            color: Color(0xFFFAFAFA),
-                                          ),
-                                        ),
-                                        const SizedBox(height: 2),
-                                        const Text(
-                                          '/100',
-                                          style: TextStyle(
-                                            fontSize: 8,
-                                            color: Color(0xFF666666),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                    const SizedBox(width: 8),
-                                    const Icon(
-                                      Icons.chevron_right,
-                                      size: 16,
-                                      color: Color(0xFF444444),
-                                    ),
-                                  ],
+                                      const SizedBox(width: 8),
+                                      const Icon(
+                                        Icons.chevron_right,
+                                        size: 16,
+                                        color: Color(0xFF444444),
+                                      ),
+                                    ],
+                                  ),
                                 ),
-                              ),
-                            );
-                          },
-                        ),
+                              );
+                            },
+                          ),
+                  ),
                 ),
               ],
             ),

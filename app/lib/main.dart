@@ -6,6 +6,9 @@ import 'presentation/app_settings_screen.dart';
 import 'presentation/bottom_nav_bar.dart';
 import 'presentation/ble_data_test_screen.dart';
 import 'data/database_helper.dart';
+import 'data/auth_store.dart';
+import 'data/sync/himo_client.dart';
+import 'data/sync/sync_engine.dart';
 import 'dart:io';
 
 class _DevHttpOverrides extends HttpOverrides {
@@ -25,6 +28,14 @@ void main() async {
   final dbHelper = DatabaseHelper();
   await dbHelper.importMockDataIfEmpty();
   await BleDataManager().switchTo(DataSourceType.mock);
+
+  // Himo Hub: версия приложения (X-App-Version) и сеанс из secure storage.
+  // HimoClient.init() грузит PackageInfo и строит API-клиенты (himo_api, ADR-025).
+  await HimoClient().init();
+  await AuthStore().load();
+  // Фоновый старт синхронизации, если уже залогинен (sync.md §7).
+  // Fire-and-forget — runApp не ждёт сети; ошибки ловятся внутри SyncEngine.
+  HimoSync().run();
 
   runApp(const MyApp());
 }
