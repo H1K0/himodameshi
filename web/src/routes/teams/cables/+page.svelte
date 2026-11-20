@@ -3,20 +3,13 @@
   import { page } from '$app/state';
   import { goto } from '$app/navigation';
 
-  // Получаем ID команды из URL
   const teamId = $derived(page.url.searchParams.get('id'));
 
-  // Состояния
   let cables = $state<any[]>([]);
   let teamName = $state('Загрузка...');
   let isLoading = $state(true);
   let errorMessage = $state('');
 
-  // Фильтры (пока оставим, но они не работают с API-данными, так как структура другая)
-  let filterValue = $state('Все');
-  let sortValue = $state('last_test_at');
-
-  // Загрузка данных с сервера
   async function loadData() {
     if (!teamId) {
       errorMessage = 'Не указан ID команды';
@@ -25,14 +18,12 @@
     }
 
     try {
-      // 1. Загружаем имя команды
       const teamRes = await fetch(`/api/v1/teams/${teamId}`, { credentials: 'include' });
       if (teamRes.ok) {
         const teamData = await teamRes.json();
         teamName = teamData.name;
       }
 
-      // 2. Загружаем кабели
       const cablesRes = await fetch(`/api/v1/teams/${teamId}/cables`, { credentials: 'include' });
       if (cablesRes.ok) {
         const data = await cablesRes.json();
@@ -54,7 +45,6 @@
     loadData();
   });
 
-  // Функция для цвета (адаптирована под API)
   function getCardColor(healthScore: number | null) {
     if (healthScore === null) return 'card-none';
     if (healthScore >= 80) return 'card-green';
@@ -75,7 +65,6 @@
       <p>В этой команде пока нет кабелей.</p>
     </div>
   {:else}
-    <!-- Сетка кабелей -->
     <div class="cables-grid">
       {#each cables as cable (cable.id)}
         <a href="/teams/cables/{cable.id}?teamId={teamId}" class="cable-card {getCardColor(cable.health_score)}">
@@ -111,7 +100,6 @@
     </div>
   {/if}
 
-  <!-- Кнопка назад -->
   <a href="/teams" class="back-btn">
     Назад к командам
   </a>
@@ -137,17 +125,10 @@
   .detail-label { color: rgba(0, 0, 0, 0.6); }
   .detail-value { font-weight: 600; color: #111; }
 
-  /* Цвета карточек */
   .card-green { background-color: #c8f2c8; }
   .card-yellow { background-color: #faed9e; }
   .card-red { background-color: #fa9e9e; }
   .card-none { background-color: #e5e5e5; }
-
-  /* Красивый скроллбар */
-  .cables-page::-webkit-scrollbar { width: 8px; }
-  .cables-page::-webkit-scrollbar-track { background: transparent; }
-  .cables-page::-webkit-scrollbar-thumb { background-color: #333; border-radius: 10px; }
-  .cables-page::-webkit-scrollbar-thumb:hover { background-color: #ff7a00; }
 
   .back-btn { display: flex; justify-content: center; align-items: center; width: 100%; max-width: 320px; margin: 40px auto 20px auto; padding: 16px 20px; background-color: #1a1a1a; color: #ffffff; border: 1px solid #333; border-radius: 45px; font-size: 16px; font-weight: 600; text-decoration: none; cursor: pointer; transition: all 0.2s ease; box-sizing: border-box; }
   .back-btn:hover { border-color: #ff7a00; color: #ff7a00; box-shadow: 0 0 15px rgba(255, 122, 0, 0.15); }

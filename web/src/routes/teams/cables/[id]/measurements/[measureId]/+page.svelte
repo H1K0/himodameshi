@@ -1,132 +1,168 @@
 <script lang="ts">
+  import { onMount } from 'svelte';
   import { page } from '$app/state';
-  import { browser } from '$app/environment';
-  import { teamsData } from '#lib/store.svelte';
+  import { goto } from '$app/navigation';
 
-  const cableId = $derived(Number(page.params.id));
-  const measureId = $derived(Number(page.params.measureId));
-  const teamId = $derived(Number(page.url.searchParams.get('teamId')));
-  const currentTeam = $derived(teamsData.find((t: any) => t.id === teamId));
-  const teamName = $derived(currentTeam ? currentTeam.name : 'Неизвестная команда');
+  // Получаем ID из URL
+  const cableId = $derived(page.params.id);
+  const measureId = $derived(page.params.measureId);
+  const teamId = $derived(page.url.searchParams.get('teamId'));
 
-  // ВОТ ЭТА СТРОКА:
-  console.log("Ищем ID:", teamId, "Доступные команды:", teamsData);
+  // Состояния
+  let test = $state<any>(null);
+  let cable = $state<any>(null);
+  let teamName = $state('Загрузка...');
+  let isLoading = $state(true);
+  let errorMessage = $state('');
 
-  // Массив для карточки кабеля
-  const allCables = [
-    { id: 1, name: 'Dynacord MXX1 1.0m', type: 'XLR', score: 80, dateAdded: '18/06/2026', owner: 'valery332', lastScan: '19/06/2026' },
-    { id: 2, name: 'Real Cable XLR 128 1.0 m', type: 'XLR', score: 44, dateAdded: '20/06/2026', owner: 'yakshnkoooo', lastScan: '20/06/2026' },
-    { id: 3, name: 'Optimum XLR 3m', type: 'XLR', score: 55, dateAdded: '21/06/2026', owner: 'vlad2121', lastScan: '24/06/2026' },
-    { id: 4, name: 'DREMAKE 6.35 MM TRS', type: 'TRS', score: 29, dateAdded: '18/06/2026', owner: 'valery332', lastScan: '20/06/2026' },
-    { id: 5, name: 'Hosa Stereo 1/8" TRS', type: 'TRS', score: 78, dateAdded: '19/06/2026', owner: 'savin67', lastScan: '22/06/2026' },
-    { id: 6, name: 'CAVEL TS 703J', type: 'TS', score: 85, dateAdded: '20/06/2026', owner: 'yakshnkoooo', lastScan: '21/06/2026' },
-    { id: 7, name: 'Тест1', type: 'XLR', score: 90, dateAdded: '20/06/2026', owner: 'savin67', lastScan: '22/06/2026' },
-    { id: 8, name: 'Тест2', type: 'TS', score: 62, dateAdded: '19/06/2026', owner: 'yakshnkoooo', lastScan: '21/06/2026' },
-    { id: 9, name: 'Тест3', type: 'TRS', score: 69, dateAdded: '17/06/2026', owner: 'vlad2121', lastScan: '19/06/2026' }
-  ];
+  async function loadData() {
+    if (!measureId || !cableId) return;
 
-  const cableInfo = $derived(allCables.find((c: any) => c.id === cableId) || allCables[0]);
+    try {
+      // 1. Загружаем название команды
+      if (teamId) {
+        const teamRes = await fetch(`/api/v1/teams/${teamId}`, { credentials: 'include' });
+        if (teamRes.ok) {
+          const teamData = await teamRes.json();
+          teamName = teamData.name;
+        }
+      }
 
-  // ОДНА И ТА ЖЕ ЗАГЛУШКА ДЛЯ ВСЕХ ИЗМЕРЕНИЙ
-  const currentMeasure = $derived({
-    title: `Тесты измерения №${measureId}`,
-    integrity: [
-      { name: 'pin1', value: '0.9 Ом' }, 
-      { name: 'pin2', value: '1.2 Ом' }, 
-      { name: 'pin3', value: '1.4 Ом' }
-    ],
-    cmrr: '40 дБ',
-    comment: 'Провод в полном порядке!'
+      // 2. Загружаем данные кабеля (для верхней карточки)
+      const cableRes = await fetch(`/api/v1/cables/${cableId}`, { credentials: 'include' });
+      if (cableRes.ok) {
+        cable = await cableRes.json();
+      }
+
+      // 3. Загружаем данные самого теста
+      const testRes = await fetch(`/api/v1/tests/${measureId}`, { credentials: 'include' });
+      if (testRes.ok) {
+        test = await testRes.json();
+      } else if (testRes.status === 404) {
+        errorMessage = 'Измерение не найдено';
+      } else {
+        errorMessage = 'Ошибка загрузки измерения';
+      }
+    } catch (e) {
+      console.error(e);
+      errorMessage = 'Сервер недоступен';
+    } finally {
+      isLoading = false;
+    }
+  }
+
+  onMount(() => {
+    loadData();
   });
 
-  function getCardColor(score: number) {
-    if (score >= 70) return 'card-green';
+  function getCardColor(score: number | null) {
+    if (score === null) return 'card-none';
+    if (score >= 80) return 'card-green';
     if (score >= 40) return 'card-yellow';
     return 'card-red';
+  }
+
+  // Функция для перевода статусов проводников на русский
+  function translateStatus(status: string) {
+    if (status === 'ok') return 'Норма';
+    if (status === 'warning') return 'Внимание';
+    if (status === 'open') return 'Обрыв';
+    if (status === 'short') return 'КЗ';
+    return status;
   }
 </script>
 
 <div class="measure-page">
-  
   <h2 class="page-title">Кабели команды “{teamName}”</h2>
 
-  <!-- ВЕРХНЯЯ КАРТОЧКА (динамическая, берет данные по cableId) -->
-  <div class="cable-card {getCardColor(cableInfo.score)}">
-    <div class="card-header">
-      <h1 class="cable-name">{cableInfo.name}</h1>
-      <div class="cable-score-badge">{cableInfo.score}/100</div>
+  {#if isLoading}
+    <p style="color: #fff;">Загрузка данных...</p>
+  {:else if errorMessage}
+    <p style="color: #ff4444;">{errorMessage}</p>
+  {:else if test && cable}
+    <!-- Верхняя карточка кабеля -->
+    <div class="cable-card {getCardColor(cable.health_score)}">
+      <div class="card-header">
+        <h1 class="cable-name">{cable.name}</h1>
+        <div class="cable-score-badge">
+          {cable.health_score !== null ? `${cable.health_score}/100` : '—'}
+        </div>
+      </div>
+      <div class="cable-type-tag">{cable.cable_type.toUpperCase()}</div>
+      <div class="cable-details">
+        <div class="detail-row">
+          <span class="detail-label">Владелец:</span>
+          <span class="detail-value">{cable.assignee ? cable.assignee.nickname : 'Не назначен'}</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">Добавлен:</span>
+          <span class="detail-value">{new Date(cable.created_at).toLocaleDateString('ru-RU')}</span>
+        </div>
+      </div>
     </div>
-    
-    <div class="cable-type-tag">{cableInfo.type}</div>
 
-    <div class="cable-details">
-      <div class="detail-row">
-        <span class="detail-label">Владелец:</span>
-        <span class="detail-value">{cableInfo.owner}</span>
-      </div>
-      <div class="detail-row">
-        <span class="detail-label">Добавлен:</span>
-        <span class="detail-value">{cableInfo.dateAdded}</span>
-      </div>
-      <div class="detail-row">
-        <span class="detail-label">Последнее сканирование:</span>
-        <span class="detail-value">{cableInfo.lastScan}</span>
-      </div>
-    </div>
-  </div>
+    <!-- Заголовок теста -->
+    <h3 class="section-title">Тесты измерения</h3>
 
-  <!-- Подзаголовок тестов -->
-  <h3 class="section-title">{currentMeasure.title}</h3>
-
-  <!-- Основной блок с результатами -->
-  <div class="results-layout">
-    
-    <!-- Левая колонка: Тесты -->
-    <div class="tests-column">
-      <div class="test-block">
-        <h4 class="test-title">Целостность</h4>
-        <div class="test-list">
-          {#each currentMeasure.integrity as item}
-            <div class="test-row">
-              <span>{item.name}</span>
-              <span>{item.value}</span>
+    <!-- Блок с результатами -->
+    <div class="results-layout">
+      
+      <!-- Левая колонка: Целостность -->
+      <div class="tests-column">
+        {#if test.results?.continuity}
+          <div class="test-block">
+            <h4 class="test-title">Целостность</h4>
+            <div class="test-list">
+              {#each Object.entries(test.results.continuity.conductors) as [pin, data]}
+                <div class="test-row">
+                  <span>{pin}</span>
+                  <span>{data.r} Ом <span class="status">({translateStatus(data.s)})</span></span>
+                </div>
+              {/each}
             </div>
-          {/each}
+          </div>
+        {/if}
+
+        <!-- Блок CMRR (если есть) -->
+        {#if test.results?.cmrr}
+          <div class="test-block cmrr-block">
+            <h4 class="test-title">CMRR</h4>
+            <span class="cmrr-value">{test.results.cmrr.cmrr_db} дБ ({translateStatus(test.results.cmrr.status)})</span>
+          </div>
+        {/if}
+      </div>
+
+      <!-- Правая колонка: Комментарий -->
+      <div class="comment-column">
+        <div class="comment-box">
+          <h4 class="comment-title">Комментарий ИИ-агента</h4>
+          <p class="comment-text">
+            {test.insight ? test.insight.body : 'Комментарий ещё не сгенерирован.'}
+          </p>
         </div>
       </div>
 
-      <div class="test-block cmrr-block">
-        <h4 class="test-title">CMRR</h4>
-        <span class="cmrr-value">{currentMeasure.cmrr}</span>
-      </div>
     </div>
-
-    <!-- Правая колонка: Комментарий -->
-    <div class="comment-column">
-      <div class="comment-box">
-        <h4 class="comment-title">Комментарий ИИ-агента</h4>
-        <p class="comment-text">{currentMeasure.comment}</p>
-      </div>
-    </div>
-
-  </div>
+  {:else}
+    <p class="error-msg">Данные не найдены</p>
+  {/if}
 
   <!-- Кнопка назад -->
   <a href="/teams/cables/{cableId}?teamId={teamId}" class="back-btn">
-    Назад
+    Назад к кабелю
   </a>
-
 </div>
 
 <style>
-  /* Стили остаются без изменений, они уже идеально совпадают */
+  /* Стили остались прежними, я добавил лишь .status для красоты */
   .measure-page { display: flex; flex-direction: column; align-items: center; width: 100%; height: 100%; padding: 40px; box-sizing: border-box; overflow-y: auto; }
   .page-title { color: #ffffff; font-size: 24px; font-weight: 700; margin: 0 0 40px 0; text-align: center; }
-  
+
   .cable-card { width: 100%; max-width: 900px; border-radius: 20px; padding: 30px 40px; display: flex; flex-direction: column; color: #111; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2); margin-bottom: 40px; box-sizing: border-box; }
   .card-green { background-color: #c8f2c8; }
   .card-yellow { background-color: #faed9e; }
   .card-red { background-color: #fa9e9e; }
+  .card-none { background-color: #e5e5e5; }
 
   .card-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 20px; margin-bottom: 16px; }
   .cable-name { font-size: 32px; font-weight: 700; margin: 0; line-height: 1.2; flex: 1; }
@@ -138,44 +174,26 @@
   .detail-value { font-weight: 600; color: #111; }
 
   .section-title { color: #fff; font-size: 22px; font-weight: 600; margin: 0 0 30px 0; text-align: center; }
-
   .results-layout { display: flex; gap: 30px; width: 100%; max-width: 900px; align-items: flex-start; }
   .tests-column { flex: 1; display: flex; flex-direction: column; gap: 20px; }
+  
   .test-block { background-color: #1a1a1a; border: 1px solid #333; border-radius: 16px; padding: 20px 24px; }
   .test-title { color: #fff; font-size: 16px; font-weight: 700; margin: 0 0 16px 0; }
   .test-list { display: flex; flex-direction: column; gap: 8px; }
   .test-row { display: flex; justify-content: space-between; color: #aaa; font-size: 14px; }
+  .status { color: #fff; font-weight: 600; }
+  
   .cmrr-block { display: flex; justify-content: space-between; align-items: center; }
   .cmrr-block .test-title { margin: 0; }
   .cmrr-value { color: #fff; font-weight: 600; font-size: 15px; }
-
+  
   .comment-column { flex: 1; height: 100%; }
-  .comment-box { 
-    background-color: #1a1a1a; /* Темный фон, как у тестов */
-    border: 1px solid #333;    /* Тонкая рамка */
-    border-radius: 16px; 
-    padding: 24px; 
-    height: 100%; 
-    box-sizing: border-box; 
-    display: flex; 
-    flex-direction: column; 
-    color: #ffffff;            /* Белый текст */
-  }
-
-  .comment-title { 
-    font-size: 16px; 
-    font-weight: 700; 
-    margin: 0 0 16px 0; 
-    color: #ffffff;            /* Заголовок тоже белый */
-  }
-
-  .comment-text { 
-    font-size: 15px; 
-    line-height: 1.5; 
-    margin: 0; 
-    color: #aaaaaa;            /* Текст сделаем чуть серым для иерархии, как в тестах */
-  }
+  .comment-box { background-color: #1a1a1a; border: 1px solid #333; border-radius: 16px; padding: 24px; height: 100%; box-sizing: border-box; display: flex; flex-direction: column; color: #fff; }
+  .comment-title { font-size: 16px; font-weight: 700; margin: 0 0 16px 0; }
+  .comment-text { font-size: 15px; line-height: 1.5; margin: 0; color: #aaa; }
 
   .back-btn { display: flex; justify-content: center; align-items: center; width: 100%; max-width: 320px; margin: 40px auto 20px auto; padding: 16px 20px; background-color: #1a1a1a; color: #ffffff; border: 1px solid #333; border-radius: 45px; font-size: 16px; font-weight: 600; text-decoration: none; cursor: pointer; transition: all 0.2s ease; box-sizing: border-box; }
   .back-btn:hover { border-color: #ff7a00; color: #ff7a00; box-shadow: 0 0 15px rgba(255, 122, 0, 0.15); }
+
+  .error-msg { color: #ff4444; font-size: 18px; }
 </style>
